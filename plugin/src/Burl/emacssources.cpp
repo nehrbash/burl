@@ -61,8 +61,8 @@ EmacsSources::EmacsSources(QObject* parent) : QObject(parent) {
         scheduleReload();
     });
 
-    m_stateDb = QDir::homePath() + QStringLiteral("/.config/emacs/var/emacs-state.db");
-    m_roamDb = QDir::homePath() + QStringLiteral("/.config/emacs/org-roam.db");
+    m_stateDb = qEnvironmentVariable("BURL_EMACS_STATE_DB");
+    m_roamDb = qEnvironmentVariable("BURL_ORG_ROAM_DB");
     rewatch();
     QTimer::singleShot(0, this, &EmacsSources::reload);
 }

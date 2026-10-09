@@ -1,0 +1,96 @@
+#!/bin/sh
+# Report each Guix channel's local commit against its upstream tip, as JSON.
+#
+# Emitted for burl's Guix settings page (modules/nexus/pages/GuixPage.qml); a
+# standalone script rather than QML plumbing so it can be run and diffed by
+# hand:  guix-channel-status | jq .
+#
+# Fields per channel: name url branch local upstream behind current
+#   upstream/behind are null when --local-only is passed or the remote is
+#   unreachable — the page distinguishes "not checked yet" from "up to date".
+#
+# `behind' comes from Guix's OWN per-channel git cache under
+# ~/.cache/guix/checkouts, located by matching each checkout's origin URL (guix
+# names those directories by a hash of the URL, which is not reproducible from
+# shell). No clone of our own, but it does need a fetch, which is why the whole
+# upstream check costs seconds and the page only runs it on demand.
+set -eu
+
+local_only=0
+[ "${1:-}" = "--local-only" ] && local_only=1
+
+guix=$(command -v guix || echo "$HOME/.config/guix/current/bin/guix")
+cache="${XDG_CACHE_HOME:-$HOME/.cache}/guix/checkouts"
+
+# Locate the checkout whose origin is URL.
+cache_for() {
+    for d in "$cache"/*/; do
+        [ -d "$d" ] || continue
+        if [ "$(git -C "$d" remote get-url origin 2>/dev/null)" = "$1" ]; then
+            printf '%s' "$d"
+            return 0
+        fi
+    done
+    return 1
+}
+
+"$guix" describe -f json | python3 -c '
+import json, os, subprocess, sys
+
+local_only = sys.argv[1] == "1"
+cache_root = sys.argv[2]
+
+def cache_for(url):
+    if not os.path.isdir(cache_root):
+        return None
+    for name in os.listdir(cache_root):
+        d = os.path.join(cache_root, name)
+        try:
+            got = subprocess.run(["git", "-C", d, "remote", "get-url", "origin"],
+                                 capture_output=True, text=True, timeout=10)
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        if got.returncode == 0 and got.stdout.strip() == url:
+            return d
+    return None
+
+def upstream_tip(url, branch):
+    try:
+        r = subprocess.run(["git", "ls-remote", url, "refs/heads/" + branch],
+                           capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if r.returncode != 0 or not r.stdout.strip():
+        return None
+    return r.stdout.split("\t", 1)[0].strip() or None
+
+def behind(url, lo, up):
+    d = cache_for(url)
+    if not d:
+        return None
+    subprocess.run(["git", "-C", d, "fetch", "--quiet", "origin"],
+                   capture_output=True, timeout=300)
+    r = subprocess.run(["git", "-C", d, "rev-list", "--count", f"{lo}..{up}"],
+                       capture_output=True, text=True, timeout=60)
+    if r.returncode != 0:
+        return None
+    try:
+        return int(r.stdout.strip())
+    except ValueError:
+        return None
+
+out = []
+for c in json.load(sys.stdin):
+    url, branch, lo = c["url"], c.get("branch") or "master", c.get("commit") or ""
+    up = None if local_only else upstream_tip(url, branch)
+    n = None
+    if up and up != lo:
+        n = behind(url, lo, up)
+    elif up:
+        n = 0
+    out.append({"name": c["name"], "url": url, "branch": branch, "local": lo,
+                "upstream": up, "behind": n,
+                "current": (up == lo) if up else None})
+json.dump({"channels": out}, sys.stdout)
+sys.stdout.write("\n")
+' "$local_only" "$cache"

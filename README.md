@@ -26,3 +26,9 @@ native QML components in a running Wayland session with the Burl plugin on
 The optional Org/task integration requires a compatible Emacs configuration;
 it is not required to use the desktop shell. Guix actions are configurable
 command arrays; the default action runs `guix pull`.
+
+Desktop defaults can be supplied as JSON through `BURL_DEFAULTS_FILE`.
+Values in the writable `shell.json` override those defaults. Restart the shell
+after changing the defaults file. Optional personal integrations use
+`BURL_CALENDAR_FILE`, `BURL_EMACS_STATE_DB`, `BURL_ORG_ROAM_DB`, and
+`BURL_EMACS_INTEGRATION=1` for task actions. They are disabled by default.

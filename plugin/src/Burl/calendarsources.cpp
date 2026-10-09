@@ -23,7 +23,7 @@ CalendarSources::CalendarSources(QObject* parent) : QObject(parent) {
         scheduleReload();
     });
 
-    m_agendaFile = QDir::homePath() + QStringLiteral("/doc/gcal.org");
+    m_agendaFile = qEnvironmentVariable("BURL_CALENDAR_FILE");
     rewatch();
     QTimer::singleShot(0, this, &CalendarSources::reload);
 }

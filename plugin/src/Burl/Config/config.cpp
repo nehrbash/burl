@@ -22,6 +22,8 @@
 #include "winfoconfig.hpp"
 
 #include <qqmlengine.h>
+#include <qfile.h>
+#include <qjsondocument.h>
 #include <qstandardpaths.h>
 
 namespace burl::config {
@@ -30,6 +32,24 @@ namespace {
 
 QString configDir() {
     return QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + QStringLiteral("/burl/");
+}
+
+void loadDesktopDefaults(ConfigObject* config) {
+    const auto path = qEnvironmentVariable("BURL_DEFAULTS_FILE");
+    if (path.isEmpty())
+        return;
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qCWarning(lcConfig) << "Cannot read desktop defaults:" << path;
+        return;
+    }
+    QJsonParseError error{};
+    const auto document = QJsonDocument::fromJson(file.readAll(), &error);
+    if (error.error != QJsonParseError::NoError || !document.isObject()) {
+        qCWarning(lcConfig) << "Invalid desktop defaults:" << path << error.errorString();
+        return;
+    }
+    config->loadFromJson(document.object());
 }
 
 } // namespace
@@ -55,6 +75,7 @@ GlobalConfig::GlobalConfig(QObject* parent)
     , m_utilities(new UtilitiesConfig(this))
     , m_winfo(new WInfoConfig(this))
     , m_paths(new UserPaths(this)) {
+    loadDesktopDefaults(this);
     setupFileBackend(configDir() + QStringLiteral("shell.json"));
 }
 
@@ -79,6 +100,8 @@ GlobalConfig::GlobalConfig(GlobalConfig* fallback, const QString& filePath, cons
     , m_utilities(new UtilitiesConfig(this))
     , m_winfo(new WInfoConfig(this))
     , m_paths(new UserPaths(this)) {
+    if (!fallback && filePath.isEmpty())
+        loadDesktopDefaults(this);
     if (!filePath.isEmpty())
         setupFileBackend(filePath, screen);
     if (fallback)

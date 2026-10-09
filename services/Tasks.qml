@@ -7,6 +7,8 @@ import Quickshell.Io
 Singleton {
     id: root
 
+    readonly property bool integrationEnabled: Quickshell.env("BURL_EMACS_INTEGRATION") === "1"
+
     readonly property var pomodoro: _snapshot.pomodoro ?? _defaultPomo
     readonly property var tasks: _snapshot.tasks ?? []
     readonly property string filter: _snapshot.filter ?? "work"
@@ -158,6 +160,7 @@ Singleton {
     }
 
     function runSideEffect(sexp: string): void {
+        if (!integrationEnabled) return;
         // Fire-and-forget: reusing a single Process and toggling running aborts
         // any in-flight emacsclient, which the daemon logs as "connection broken
         // by remote peer". Detached invocations avoid the cancellation race.
@@ -165,6 +168,7 @@ Singleton {
     }
 
     function fetchReport(period: string): void {
+        if (!integrationEnabled) return;
         if (period === "today") {
             if (dailyProc.running)
                 return;
@@ -211,7 +215,7 @@ Singleton {
         onFileChanged: reload()
         onLoaded: root._parseSnapshot(text())
         onLoadFailed: err => {
-            if (err === FileViewError.FileNotFound)
+            if (root.integrationEnabled && err === FileViewError.FileNotFound)
                 bootstrapProc.running = true;
         }
     }
