@@ -63,10 +63,7 @@ Singleton {
         channelProc.running = true;
     }
 
-    // Expand $VAR / ${VAR} and a leading ~/ in one argv element. Process execs
-    // directly with no shell, so nothing else does this — the config defaults
-    // reference $DOTFILES_DIR and shipped broken without it:
-    //   make: *** $DOTFILES_DIR: No such file or directory
+    // Process executes argv directly, without shell expansion.
     function _expand(arg: string): string {
         let out = arg;
         if (out.startsWith("~/"))

@@ -35,3 +35,7 @@ after changing the defaults file. Optional personal integrations use
 
 `BURL_MANAGE_LLAMA=1` lets performance mode pause a running Shepherd
 `llama-server` service and resume it afterward. It is disabled by default.
+
+The Windows boot action is hidden unless `session.commands.windows` is set
+in the desktop defaults or user settings. Its command must select the next
+boot target without prompting; Burl reboots only after it succeeds.

@@ -273,7 +273,7 @@ Item {
             command: Config.session.commands.shutdown,
             destructive: true
         }
-    ]
+    ].filter(action => action.command.length > 0)
 
     function rootNodeGeom(i: int): var {
         const a = root.rootAnchors[i];

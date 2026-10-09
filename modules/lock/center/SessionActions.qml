@@ -10,25 +10,16 @@ import qs.components
 import qs.components.controls
 import qs.services
 
-// Power actions on the lock screen. This surface is also the greeter on a warm
-// login (systems/redfish.scm #:warm-login-user), so without these the only way
-// to shut the machine down before authenticating is the power button.
-//
-// Logout/switch-user are deliberately absent: there is one user and the session
-// behind the lock is the one you want back.
 RowLayout {
     id: root
 
     spacing: Tokens.spacing.small
 
-    // Flip the firmware's one-shot BootNext, then reboot through logind so
-    // inhibitors still get their say. The helper needs root; see the NOPASSWD
-    // rule in systems/redfish.scm. `sudo -n` so a misconfigured rule fails
-    // immediately instead of hanging on a prompt nobody can see.
+    // The configured helper selects the next boot target; logind handles rebooting.
     Process {
         id: bootToWindows
 
-        command: ["sudo", "-n", "/run/current-system/profile/bin/boot-to-windows"]
+        command: Config.session.commands.windows
         onExited: code => {
             if (code === 0)
                 SessionManager.reboot();
@@ -48,9 +39,7 @@ RowLayout {
     Action {
         icon: "desktop_windows"
         text: qsTr("Windows")
-        // Nothing to select if the firmware has no such entry, and the helper
-        // would just exit non-zero — but the button still reads as broken, so
-        // say so once it has actually failed.
+        visible: Config.session.commands.windows.length > 0
         disabled: root.failed
         onClicked: bootToWindows.running = true
     }

@@ -34,12 +34,7 @@ class SessionCommands : public ConfigObject {
     CONFIG_PROPERTY(QStringList, hibernate, { u"hibernate"_s })
     CONFIG_PROPERTY(QStringList, reboot, { u"reboot"_s })
     CONFIG_PROPERTY(QStringList, lock, { u"loginctl"_s, u"lock-session"_s })
-    // Sets the firmware's one-shot BootNext only; the caller reboots.  Needs
-    // root -- see the NOPASSWD rule in systems/redfish.scm.  `-n' so a missing
-    // rule fails at once instead of blocking on a prompt nobody can answer.
-    CONFIG_PROPERTY(QStringList, windows,
-                    { u"sudo"_s, u"-n"_s,
-                      u"/run/current-system/profile/bin/boot-to-windows"_s })
+    CONFIG_PROPERTY(QStringList, windows, {})
 
 public:
     explicit SessionCommands(QObject* parent = nullptr)

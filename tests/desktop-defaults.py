@@ -31,6 +31,7 @@ Item {
     Component.onCompleted: {
         if (GlobalConfig.general.apps.terminal[0] !== "user-choice") throw new Error("user override lost");
         if (GlobalConfig.general.apps.explorer[0] !== "default-explorer") throw new Error("desktop defaults missing");
+        if (GlobalConfig.session.commands.windows.length !== 0) throw new Error("host boot action enabled by default");
         console.log("DEFAULTS-PASS");
         if (EmacsSources.stateDb !== "" || EmacsSources.roamDb !== "") throw new Error("personal databases enabled by default");
     }
