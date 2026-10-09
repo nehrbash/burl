@@ -54,3 +54,16 @@ Item {
                    cwd=Path(__file__).resolve().parent.parent, env=env,
                    check=True, timeout=30)
     assert json.loads(settings.read_text())["general"]["apps"]["terminal"] == ["edited-choice"], "user edits were not saved"
+
+    settings.unlink()
+    fixture.write_text(fixture.read_text().replace('!== "user-choice"', '!== "desktop-default"'))
+    subprocess.run(["bash", "scripts/qs-shot.sh", "--root", directory, "--size", "10x10",
+                    "--settle", "1600", "--log", str(root / "fresh.log"),
+                    "Fixture.qml", str(root / "fresh.png")],
+                   cwd=Path(__file__).resolve().parent.parent, env=env,
+                   check=True, timeout=30)
+    log = (root / "fresh.log").read_text()
+    assert "DEFAULTS-PASS" in log and "Error:" not in log, log
+    apps = json.loads(settings.read_text())["general"]["apps"]
+    assert apps["terminal"] == ["edited-choice"], "first edit was not saved"
+    assert "explorer" not in apps, "desktop defaults became user overrides"

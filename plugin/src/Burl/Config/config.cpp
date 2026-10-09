@@ -50,6 +50,7 @@ void loadDesktopDefaults(ConfigObject* config) {
         return;
     }
     config->loadFromJson(document.object());
+    config->clearLoadedKeys();
 }
 
 } // namespace
