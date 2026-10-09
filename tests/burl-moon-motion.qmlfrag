@@ -1,0 +1,34 @@
+property real initialPhase: 0
+property bool reduced: Quickshell.env('BURL_NO_AMBIENT') === '1'
+function check(ok, message) {
+    if (!ok) { console.error('MOON-FAIL', message); Qt.quit(); }
+    else console.log('MOON-PASS', message);
+}
+Timer {
+    interval: 400; running: true
+    onTriggered: {
+        host.check(subject.moving === !host.reduced, 'ritual respects motion preference');
+        host.initialPhase = subject.ritualPhase;
+    }
+}
+Timer {
+    interval: 900; running: true
+    onTriggered: {
+        host.check(host.reduced ? subject.ritualPhase === host.initialPhase : subject.ritualPhase > host.initialPhase, 'ritual advances only with motion enabled');
+        host.check(subject.phase === 0.4, 'ritual preserves weather phase');
+        subject.active = false;
+        host.initialPhase = subject.ritualPhase;
+    }
+}
+Timer {
+    interval: 1400; running: true
+    onTriggered: {
+        host.check(!subject.moving && subject.ritualPhase === host.initialPhase, 'inactive ritual stops');
+        subject.visible = false;
+        subject.active = true;
+    }
+}
+Timer {
+    interval: 1800; running: true
+    onTriggered: host.check(!subject.moving && subject.ritualPhase === host.initialPhase, 'hidden ritual stays stopped')
+}

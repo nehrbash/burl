@@ -1,0 +1,93 @@
+            property var cycleState: Qt.createQmlObject('import Quickshell; import qs.components; ScreenState { modelData: Quickshell.screens[0] }', host)
+            property int cycleStep: 0
+            property bool cyclePassed: false
+
+            function findCycleItem(item, predicate) {
+                if (predicate(item))
+                    return item;
+                for (const child of item.children ?? []) {
+                    const found = findCycleItem(child, predicate);
+                    if (found)
+                        return found;
+                }
+                return null;
+            }
+
+            function cycleCheck(condition, label) {
+                if (!condition) {
+                    console.error("LAUNCHER-CYCLE-FAIL: " + label);
+                    Qt.quit();
+                } else {
+                    console.log("LAUNCHER-CYCLE-PASS: " + label);
+                }
+            }
+
+            function checkCycleRoom(sky, label) {
+                const scene = findCycleItem(subject, item => typeof item.syncCamera === "function");
+                console.log("LAUNCHER-CYCLE-STATE", label, "visible", subject.visible, "offset", subject.offsetScale, "reveal", scene?.revealP, "open", scene?.wasOpen, "pan", scene?.panP);
+                cycleCheck(scene && subject.visible && subject.offsetScale < 0.01
+                    && scene.revealP > 0.99 && scene.wasOpen
+                    && Math.abs(scene.panP - (sky ? 1 : 0)) < 0.01, label);
+                return scene;
+            }
+
+            Timer {
+                interval: 1400
+                running: true
+                repeat: true
+                onTriggered: {
+                    const scene = host.findCycleItem(subject, item => typeof item.syncCamera === "function");
+                    switch (host.cycleStep++) {
+                    case 0:
+                        host.cycleState.openWorldRoom("dashboard");
+                        break;
+                    case 1:
+                        host.checkCycleRoom(false, "first tree open").ascend();
+                        break;
+                    case 2:
+                        host.checkCycleRoom(true, "sky arrival").dismiss();
+                        break;
+                    case 3:
+                        host.cycleCheck(scene?.revealP === 0 && !subject.visible, "fully closed");
+                        host.cycleState.openWorldRoom("dashboard");
+                        break;
+                    case 4: {
+                        host.checkCycleRoom(false, "cold tree reopen");
+                        const search = host.findCycleItem(subject, item => typeof item.syncOpen === "function");
+                        console.log("LAUNCHER-FOCUS", search?.focus, search?.activeFocus, host.Window.active);
+                        host.cycleCheck(search?.activeFocus, "cold reopen restores keyboard focus");
+                        host.cycleState.growDashboardSection("tasks");
+                        break;
+                    }
+                    case 5: {
+                        const book = host.findCycleItem(subject, item => item.sectionId === "tasks" && item.flightP !== undefined);
+                        host.cycleCheck(book?.visible && book.flightP > 0.99, "book opens after cold reopen");
+                        const rendered = host.findCycleItem(book, item => item.renderedFrames !== undefined);
+                        host.cycleCheck(rendered?.renderReady && rendered.renderedFrames === 25 && rendered.coverFrame === 24, "Blender book render is loaded and open");
+                        scene.dismiss();
+                        rapidCycleReopen.restart();
+                        break;
+                    }
+                    case 6:
+                        host.checkCycleRoom(true, "rapid sky reopen").descend();
+                        break;
+                    case 7:
+                        host.checkCycleRoom(false, "tree remains reachable");
+                        host.cyclePassed = true;
+                        stop();
+                        break;
+                    }
+                }
+            }
+
+            Timer {
+                id: rapidCycleReopen
+                interval: 80
+                onTriggered: host.cycleState.openWorldRoom("launcher")
+            }
+
+            Timer {
+                interval: 12000
+                running: true
+                onTriggered: host.cycleCheck(host.cyclePassed, "lifecycle completed")
+            }

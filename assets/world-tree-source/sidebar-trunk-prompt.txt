@@ -1,0 +1,9 @@
+Reference: assets/images/tree/rendered/world-tree-painted.png (material and style).
+
+Tall transparent portrait PNG, 1024x1536. One uninterrupted ancient walnut
+trunk extends beyond the top and bottom edges. Central 70% of the canvas,
+slightly irregular silhouette, straight overall axis and twisting grain.
+Deep fissures, sculpted ridges, dark walnut with muted gold ridge highlights,
+nearly black crevices, painterly 2.5D volume. Broad detail readable at 70px wide.
+Real alpha outside the opaque wood. No branches, roots, canopy, leaves, grass,
+scenery, text, stipple, orange tint, or green tint.

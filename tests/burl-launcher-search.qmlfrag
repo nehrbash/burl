@@ -1,0 +1,52 @@
+property var cycleState: Qt.createQmlObject('import Quickshell; import qs.components; ScreenState { modelData: Quickshell.screens[0] }', host)
+function find(item, predicate) {
+    if (predicate(item)) return item;
+    for (const child of item.children ?? []) {
+        const found = find(child, predicate);
+        if (found) return found;
+    }
+    return null;
+}
+function check(ok, label) {
+    if (!ok) { console.error('SEARCH-FAIL', label); Qt.quit(); }
+    else console.log('SEARCH-PASS', label);
+}
+Timer { interval: 300; running: true; onTriggered: host.cycleState.openWorldRoom('launcher') }
+Timer {
+    interval: 2200; running: true
+    onTriggered: {
+        const search = host.find(subject, item => typeof item.syncOpen === 'function');
+        host.check(search && search.activeFocus, 'search keyboard focus');
+        search.text = 'burl';
+    }
+}
+Timer {
+    interval: 4300; running: true
+    onTriggered: {
+        const graph = host.find(subject, item => item._renderIntervalMs !== undefined);
+        const edges = host.find(graph, item => typeof item.rebuildPaths === 'function');
+        host.check(graph.matchIndices.length > 0 && graph.currentNode >= 0, 'query produces a selection');
+        host.check(edges.paths.some(p => p.length > 0), 'filtered edges render');
+        const before = graph.currentNode;
+        graph.navDirection(1, 0);
+        if (graph.currentNode !== before) {
+            graph.navigateBack();
+            host.check(graph.currentNode === before, 'spatial navigation backtracks');
+        }
+    }
+}
+
+Timer {
+    interval: 4700; running: true
+    onTriggered: {
+        const graph = host.find(subject, item => item._renderIntervalMs !== undefined);
+        graph.nodes = graph.nodes.slice(0, -3);
+    }
+}
+Timer {
+    interval: 4900; running: true
+    onTriggered: {
+        const graph = host.find(subject, item => item._renderIntervalMs !== undefined);
+        graph.rebuild();
+    }
+}

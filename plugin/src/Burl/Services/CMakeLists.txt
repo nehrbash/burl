@@ -1,0 +1,30 @@
+qml_module(burl-services
+    URI Burl.Services
+    SOURCES
+        service.cpp
+        serviceref.cpp
+        beattracker.cpp
+        audiocollector.cpp
+        audioprovider.cpp
+        cavaprovider.cpp
+        tickingservice.cpp
+        sensorslib.cpp
+        usagefmt.cpp
+        cpu.cpp
+        gpu.cpp
+        memory.cpp
+        diskinfo.cpp
+        storage.cpp
+        lyriccandidate.cpp
+        lyrics.cpp
+        sessionmanager.cpp
+    LIBRARIES
+        Qt::DBus
+        PkgConfig::Pipewire
+        PkgConfig::Aubio
+        PkgConfig::Cava
+        Sensors::Sensors
+        burl-core
+        burl-config
+        burl-internal
+)

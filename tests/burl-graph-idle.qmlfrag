@@ -1,0 +1,75 @@
+property var cycleState: Qt.createQmlObject('import Quickshell; import qs.components; ScreenState { modelData: Quickshell.screens[0] }', host)
+property var graph: null
+property var before: []
+property real beforePhase: 0
+property var samples: []
+property int fixedIndex: -1
+property var movingPoint: null
+property var fixedPoint: null
+function find(item, predicate) {
+    if (predicate(item)) return item;
+    for (const child of item.children ?? []) {
+        const found = find(child, predicate);
+        if (found) return found;
+    }
+    return null;
+}
+function check(ok, message) {
+    if (!ok) {
+        console.error('BURL-IDLE-FAIL', message);
+        Qt.quit();
+    } else console.log('BURL-IDLE-PASS', message);
+}
+FrameAnimation {
+    running: host.before.length > 0
+    onTriggered: host.samples.push(frameTime * 1000)
+}
+Timer { interval: 300; running: true; onTriggered: host.cycleState.openWorldRoom('launcher') }
+Timer {
+    interval: 5000; running: true
+    onTriggered: {
+        const graph = host.find(subject, item => item.driftStrength !== undefined);
+        graph.selectNode(1);
+    }
+}
+Timer {
+    interval: 7500; running: true
+    onTriggered: {
+        host.graph = host.find(subject, item => item.driftStrength !== undefined);
+        host.check(host.graph && !host.graph.paused && host.graph.driftStrength > 0.9, 'settled graph keeps ambient motion');
+        host.before = Array.from(host.graph.snap);
+        host.fixedIndex = host.graph.currentNode;
+        const i = host.fixedIndex === 0 ? 1 : 0;
+        host.movingPoint = host.graph.mapToItem(subject, host.graph._w2sX(host.graph._nx(i)), host.graph._w2sY(host.graph._ny(i)));
+        if (host.fixedIndex >= 0)
+            host.fixedPoint = host.graph.mapToItem(subject, host.graph._w2sX(host.graph._nx(host.fixedIndex)), host.graph._w2sY(host.graph._ny(host.fixedIndex)));
+    }
+}
+Timer {
+    interval: 10000; running: true
+    onTriggered: {
+        const graph = host.graph;
+        const i = host.fixedIndex === 0 ? 1 : 0;
+        const moved = graph.mapToItem(subject, graph._w2sX(graph._nx(i)), graph._w2sY(graph._ny(i)));
+        host.check(Math.hypot(moved.x-host.movingPoint.x, moved.y-host.movingPoint.y) > 0.2, 'idle node travels');
+        host.check(graph.snap.every((v,i) => v === host.before[i]), 'ambient motion preserves simulation positions');
+        if (host.fixedIndex >= 0) {
+            const fixed = graph.mapToItem(subject, graph._w2sX(graph._nx(host.fixedIndex)), graph._w2sY(graph._ny(host.fixedIndex)));
+            host.check(Math.hypot(fixed.x-host.fixedPoint.x, fixed.y-host.fixedPoint.y) < 0.1, 'selected node stays still');
+        }
+        const frames = host.samples.slice().sort((a,b)=>a-b);
+        console.log('BURL-IDLE-PERF', 'frames', frames.length, 'mean', frames.reduce((a,b)=>a+b,0)/frames.length, 'p95', frames[Math.floor(frames.length*0.95)], 'max', frames[frames.length-1]);
+        host.cycleState.openWorldRoom('dashboard');
+    }
+}
+Timer {
+    interval: 11700; running: true
+    onTriggered: {
+        host.check(host.graph.paused, 'tree view pauses graph');
+        host.beforePhase = host.graph.driftSeconds;
+    }
+}
+Timer {
+    interval: 12200; running: true
+    onTriggered: host.check(host.beforePhase === host.graph.driftSeconds, 'hidden graph performs no ambient work')
+}

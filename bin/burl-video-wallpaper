@@ -1,0 +1,148 @@
+#!/bin/sh
+# Animated (video) wallpaper control for burl.
+#
+# Usage:
+#   burl-video-wallpaper -f <video>        set a video wallpaper
+#   burl-video-wallpaper -c                clear it (back to stills)
+#   burl-video-wallpaper -s                show current state
+#   burl-video-wallpaper -r <speed>        playback speed (1.0 = native,
+#                                          0.5 = half); applied live
+#   burl-video-wallpaper -T <video>        print the cached palette frame for
+#                                          <video>, extracting it if needed,
+#                                          and change nothing else
+#   burl-video-wallpaper -f <video> -F     force re-extraction of the frame
+#
+# burl owns the mpvpaper process and the selection (shell.json's
+# background.video), so -f/-c/-s/-r are thin wrappers over its IPC — the shell
+# has to be running for them to work.  See services/Wallpapers.qml.
+#
+# -T is the exception, and the reason this script still exists: burl derives
+# its whole Material You scheme from the wallpaper *image*, a video has no
+# still, and pulling one out needs ffmpeg.  Frame choice: seek 10% into the
+# clip (capped at 5s) so a fade-in from black is not what gets sampled, then
+# let ffmpeg's `thumbnail' filter pick the most representative frame out of the
+# next 100.  Never frame 0.
+#
+# Frames live under $XDG_STATE_HOME, not $XDG_CACHE_HOME: `burl wallpaper -f
+# "$frame"' points path.txt (the picker's "current" and the still-image
+# fallback) straight at this file, so in the cache dir a routine cache clean
+# would leave path.txt dangling at a deleted file — non-empty, so the fallback
+# in Wallpapers.qml never fires, and the image just fails to load.
+
+set -eu
+
+FRAME_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/burl/video-wallpapers"
+
+VIDEO=
+ACTION=show
+FORCE=0
+
+die() {
+    echo "burl-video-wallpaper: $*" >&2
+    exit 1
+}
+
+usage() {
+    sed -n '2,/^$/p' "$0" | sed 's/^# \{0,1\}//'
+    exit "${1:-0}"
+}
+
+# burl's IPC. Fails loudly rather than silently doing nothing when the shell
+# is down, since every action but -T depends on it.
+ipc() {
+    burl-shell ipc --any-display call wallpaper "$@" ||
+        die "could not reach burl (is the shell running?)"
+}
+
+abspath() {
+    (cd "$(dirname "$1")" && printf '%s/%s' "$(pwd -P)" "$(basename "$1")")
+}
+
+while [ $# -gt 0 ]; do
+    case $1 in
+        -f|--file)  ACTION=set; VIDEO=${2:?-f needs a path}; shift 2 ;;
+        -c|--clear) ACTION=clear; shift ;;
+        -s|--show)  ACTION=show; shift ;;
+        -r|--speed) ACTION=speed; SPEED=${2:?-r needs a number}; shift 2 ;;
+        -T|--thumb) ACTION=thumb; VIDEO=${2:?-T needs a path}; shift 2 ;;
+        -F|--force) FORCE=1; shift ;;
+        -h|--help)  usage 0 ;;
+        *)          die "unknown argument: $1 (try -h)" ;;
+    esac
+done
+
+# Echo the cached palette frame for $1, extracting it first if needed.
+palette_frame() {
+    video=$1
+    command -v ffmpeg >/dev/null 2>&1 || die "ffmpeg not on PATH"
+    command -v ffprobe >/dev/null 2>&1 || die "ffprobe not on PATH"
+
+    # Content hash, so the same file always maps to the same cached frame and
+    # re-selecting a video costs nothing.
+    hash=$(sha256sum "$video" | cut -d' ' -f1)
+    dir="$FRAME_DIR/$hash"
+    frame="$dir/frame.jpg"
+
+    if [ "$FORCE" = 1 ] || [ ! -s "$frame" ]; then
+        mkdir -p "$dir"
+        dur=$(ffprobe -v error -show_entries format=duration \
+                      -of default=nw=1:nk=1 "$video" 2>/dev/null || echo 0)
+        # 10% in, capped at 5s; 0 if the duration is unknown.
+        start=$(awk -v d="$dur" 'BEGIN {
+                    if (d <= 0) { print 0; exit }
+                    s = d * 0.10; if (s > 5) s = 5; printf "%.3f", s }')
+        tmp="$dir/.frame.jpg"
+        # thumbnail=100 scores 100 frames and emits the most representative
+        # one; -q:v 3 keeps it small but clean enough for colour extraction.
+        ffmpeg -v error -y -ss "$start" -i "$video" -frames:v 1 \
+               -vf "thumbnail=100,scale=1920:-2" -q:v 3 "$tmp" 2>/dev/null || true
+        # Very short clips can end before the filter's batch fills; fall back
+        # to a plain grab at the same timestamp.  stderr is NOT swallowed on
+        # this attempt: if the fallback fails too we are about to die, and
+        # ffmpeg's own -v error message is the only clue why.
+        if [ ! -s "$tmp" ]; then
+            ffmpeg -v error -y -ss "$start" -i "$video" -frames:v 1 \
+                   -vf "scale=1920:-2" -q:v 3 "$tmp" || true
+        fi
+        [ -s "$tmp" ] || die "could not extract a palette frame from $video"
+        mv -f "$tmp" "$frame"
+    fi
+
+    echo "$frame"
+}
+
+case $ACTION in
+    thumb)
+        [ -f "$VIDEO" ] || die "no such file: $VIDEO"
+        palette_frame "$(abspath "$VIDEO")"
+        ;;
+    set)
+        [ -f "$VIDEO" ] || die "no such file: $VIDEO"
+        # Absolute: burl reads this path with a different working directory.
+        VIDEO=$(abspath "$VIDEO")
+        # Warm the frame cache here so the shell's own -T call is instant, and
+        # so a bad file fails with ffmpeg's reason instead of silently.
+        palette_frame "$VIDEO" >/dev/null
+        ipc setVideo "$VIDEO"
+        echo "video wallpaper: $VIDEO"
+        ;;
+    clear)
+        ipc clearVideo
+        echo "video wallpaper cleared"
+        ;;
+    speed)
+        case $SPEED in
+            ''|*[!0-9.]*|*.*.*) die "speed must be a number, e.g. 0.5 (got: $SPEED)" ;;
+        esac
+        ipc setVideoSpeed "$SPEED"
+        echo "playback speed: $SPEED"
+        ;;
+    show)
+        video=$(ipc getVideo)
+        if [ -n "$video" ]; then
+            echo "video: $video"
+        else
+            echo "video: (none — still-image mode)"
+        fi
+        ;;
+esac

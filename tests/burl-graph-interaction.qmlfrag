@@ -1,0 +1,76 @@
+property var cycleState: Qt.createQmlObject('import Quickshell; import qs.components; ScreenState { modelData: Quickshell.screens[0] }', host)
+property var pointer: null
+property var edges: null
+property var pathsBefore: []
+property var pointsBefore: []
+property var frames: []
+property bool panTest: false
+property real elapsed: 0
+property int chosen: -1
+function find(item, predicate) {
+    if (predicate(item)) return item;
+    for (const child of item.children ?? []) {
+        const result = find(child, predicate);
+        if (result) return result;
+    }
+    return null;
+}
+function check(ok, message) {
+    if (!ok) { console.error('INTERACTION-FAIL', message); Qt.quit(); }
+    else console.log('INTERACTION-PASS', message);
+}
+Timer {
+    interval: 5500; running: true
+    onTriggered: {
+        host.pointer = host.find(subject, item => typeof item.pressAt === 'function');
+        host.edges = host.find(subject, item => typeof item.rebuildPaths === 'function');
+        host.check(host.pointer && host.edges, 'input and edge layers mounted');
+        const graph = subject;
+        host.chosen = graph.appIndices.find(i => {
+            const x = graph._w2sX(graph._nx(i)), y = graph._w2sY(graph._ny(i));
+            return x > 200 && x < graph.width-450 && y > 150 && y < graph.height-200;
+        }) ?? 0;
+        const x = graph._w2sX(graph._nx(host.chosen)), y = graph._w2sY(graph._ny(host.chosen));
+        host.pointer.pressAt(x, y);
+        host.pointer.releaseAt();
+        host.check(graph.currentNode === host.chosen, 'pointer selects the rendered node');
+    }
+}
+Timer {
+    interval: 6100; running: true
+    onTriggered: {
+        host.check(Math.abs(subject._nr(host.chosen)-subject.previewRadius) < 0.1, 'selected icon reaches preview size');
+        const icon = host.find(subject, item => item.isPreview === true && item.node?.kind === 'app');
+        host.check(icon && Math.abs(icon.width-subject.previewRadius*1.5) < 0.1, 'app image grows with its disc');
+        const centre = icon.mapToItem(subject, icon.width/2, icon.height/2);
+        host.check(Math.hypot(centre.x-subject._w2sX(subject._nx(host.chosen)), centre.y-subject._w2sY(subject._ny(host.chosen))) < 0.1, 'rendered icon and hit target agree');
+        host.pathsBefore = Array.from(host.edges.paths);
+        host.pointsBefore = Array.from(subject.snap);
+        host.panTest = true;
+        let x = 10, y = 10;
+        while (host.pointer.hitTest(x, y) >= 0 && x < subject.width) x += 20;
+        host.pointer.pressAt(x, y);
+        host.check(host.pointer.panning, 'empty-space press starts camera drag');
+    }
+}
+FrameAnimation {
+    running: host.panTest
+    onTriggered: {
+        host.frames.push(frameTime * 1000);
+        host.elapsed += frameTime;
+        host.pointer.moveTo(200 + 100 * Math.sin(host.elapsed * 2), 180 + 80 * Math.cos(host.elapsed * 2));
+    }
+}
+Timer {
+    interval: 8800; running: true
+    onTriggered: {
+        host.panTest = false;
+        host.pointer.releaseAt();
+        host.check(host.edges.paths.every((p,i) => p === host.pathsBefore[i]), 'camera drag preserves edge geometry');
+        host.check(subject.snap.every((p,i) => p === host.pointsBefore[i]), 'camera drag preserves simulation positions');
+        host.check(Math.abs(subject.panX) > 10 && Math.abs(subject.panY) > 10, 'camera follows drag');
+        const frames = host.frames.slice(3).sort((a,b)=>a-b);
+        console.log('INTERACTION-PERF', 'frames', frames.length, 'mean', frames.reduce((a,b)=>a+b,0)/frames.length, 'p95', frames[Math.floor(frames.length*0.95)], 'max', frames[frames.length-1]);
+        subject.panX = 0; subject.panY = 0;
+    }
+}

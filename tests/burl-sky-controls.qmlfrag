@@ -1,0 +1,64 @@
+property var cycleState: Qt.createQmlObject('import Quickshell; import qs.components; ScreenState { modelData: Quickshell.screens[0] }', host)
+property var registry: Qt.createQmlObject('import QtQuick; import qs.services; QtObject { property var state: ShellState }', host).state
+Item {
+    id: sidebarStub
+    property bool shouldBeVisible: true
+    property real trunkX: -50
+    property real trunkWidth: 350
+    width: 60
+    height: host.height
+}
+function find(item, name) {
+    if (item.objectName === name) return item;
+    for (const child of item.children ?? []) {
+        const found = find(child, name);
+        if (found) return found;
+    }
+    return null;
+}
+function check(ok, message) {
+    if (!ok) { console.error('SKY-CONTROLS-FAIL', message); Qt.quit(); }
+    else console.log('SKY-CONTROLS-PASS', message);
+}
+Timer {
+    interval: 100; running: true
+    onTriggered: {
+        host.registry.componentsFor(host.cycleState.modelData).bar = sidebarStub;
+        host.cycleState.openWorldRoom('launcher');
+    }
+}
+Timer {
+    interval: 4000; running: true
+    onTriggered: {
+        host.check(host.checkedAscent, 'ascent was exercised');
+        const down = host.find(subject, 'skyDescend');
+        const close = host.find(subject, 'skyClose');
+        host.check(down && close && down.enabled && close.enabled, 'sky exposes descent and close');
+        host.check(down.mapToItem(host, 0, 0).x >= sidebarStub.trunkX + sidebarStub.trunkWidth, 'descent clears sidebar roots');
+        host.check(close.x >= down.x + down.width && close.x + close.width <= host.width, 'close is separate and on screen');
+        close.clicked(null);
+        host.check(!host.cycleState.launcher && !host.cycleState.dashboard, 'close exits both rooms');
+        host.cycleState.openWorldRoom('launcher');
+    }
+}
+Timer {
+    interval: 5500; running: true
+    onTriggered: {
+        host.find(subject, 'skyDescend').clicked(null);
+        host.check(host.cycleState.dashboard && !host.cycleState.launcher, 'descent opens world tree');
+    }
+}
+
+property bool checkedAscent: false
+FrameAnimation {
+    running: !host.checkedAscent
+    onTriggered: {
+        if (subject.panP > 0.2 && subject.panP < 0.8) {
+            const graph = host.find(subject, "skyGraph");
+            host.check(graph.y < -subject.height * 0.2
+                && Math.abs(graph.y + subject.height * 1.12 * (1-subject.panP)) < 0.1,
+                "nodes enter with the sky camera");
+            host.checkedAscent = true;
+        }
+    }
+}

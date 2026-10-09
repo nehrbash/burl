@@ -1,0 +1,23 @@
+[project]
+name = "burl-py"
+version = "0.1.0"
+description = "burl theme/wallpaper utilities (scheme + wallpaper subcommands)"
+requires-python = ">=3.12"
+dependencies = [
+    "materialyoucolor>=2.0.10",
+    "pillow>=10.0.0",
+]
+
+[project.scripts]
+burl = "burl:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["burl*"]
+
+[tool.setuptools.package-data]
+burl = ["data/**/*"]

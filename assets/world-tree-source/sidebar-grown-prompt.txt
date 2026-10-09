@@ -1,0 +1,12 @@
+Reference: rendered/world-tree-painted.png.
+
+One continuous slender upright walnut trunk on real alpha, with an integrated
+three-root foot. Tall 1:3 canvas; trunk axis near 23% width, body roughly 16%
+width, running beyond the top. Most right-hand space remains transparent.
+The bottom organically thickens into three roots that continue off the bottom;
+no sprawling miniature root web. Match the world tree's sculpted fissures and
+restrained gold grazing light. A dark oval hollow sits near 8% height for the
+owl. No animals, icons, text, scenery, leaves, or ground plane.
+
+Runtime scales the transparent canvas to place the narrow wood behind the bar;
+roots belong to the same image. Bar content aligns the owl with the hollow.

@@ -1,0 +1,71 @@
+property var cycleState: Qt.createQmlObject('import Quickshell; import qs.components; ScreenState { modelData: Quickshell.screens[0] }', host)
+property var pointer: null
+property var edges: null
+property var frames: []
+property var pointsBefore: []
+property var pathsBefore: []
+property int dragged: -1
+property bool dragging: false
+property real elapsed: 0
+property real startX: 0
+property real startY: 0
+function check(ok, message) {
+    if (!ok) { console.error('DRAG-FAIL', message); Qt.quit(); }
+    else console.log('DRAG-PASS', message);
+}
+function find(item, method) {
+    if (typeof item[method] === 'function') return item;
+    for (const child of item.children ?? []) {
+        const found = find(child, method);
+        if (found) return found;
+    }
+    return null;
+}
+Timer {
+    interval: 6000; running: true
+    onTriggered: {
+        host.pointer = host.find(subject, 'pressAt');
+        host.edges = host.find(subject, 'rebuildPaths');
+        const i = subject.appIndices.find(i => {
+            const x = subject._w2sX(subject._nx(i)), y = subject._w2sY(subject._ny(i));
+            return x > 200 && x < subject.width-200 && y > 200 && y < subject.height-200;
+        });
+        host.startX = subject._w2sX(subject._nx(i));
+        host.startY = subject._w2sY(subject._ny(i));
+        host.pointer.pressAt(host.startX, host.startY);
+        host.dragging = true;
+        host.dragged = host.pointer.dragIndex;
+        host.check(host.dragged >= 0, 'press grabs a visible node');
+        host.pointsBefore = Array.from(subject.snap);
+    }
+}
+Timer {
+    interval: 6500; running: true
+    onTriggered: host.pathsBefore = Array.from(host.edges.paths)
+}
+FrameAnimation {
+    running: host.dragging
+    onTriggered: {
+        host.frames.push(frameTime * 1000);
+        host.elapsed += frameTime;
+        host.pointer.moveTo(host.startX + 100*Math.sin(host.elapsed*2), host.startY + 80*Math.cos(host.elapsed*2));
+    }
+}
+Timer {
+    interval: 9000; running: true
+    onTriggered: {
+        host.dragging = false;
+        const frames = host.frames.slice(3).sort((a,b) => a-b);
+        console.log('DRAG-PERF', 'mean', frames.reduce((a,b) => a+b, 0)/frames.length,
+            'p95', frames[Math.floor(frames.length*0.95)], 'max', frames[frames.length-1]);
+        host.check(subject.snap.some((p,i) => Math.floor(i/3) !== host.dragged && i%3 !== 2
+            && Math.abs(p-host.pointsBefore[i]) > 0.1), 'drag moves other nodes through the simulation');
+        host.check(host.edges.paths.some((p,i) => p !== host.pathsBefore[i]), 'edges follow the moving graph');
+        const expectedX = host.startX + 100*Math.sin(host.elapsed*2);
+        const expectedY = host.startY + 80*Math.cos(host.elapsed*2);
+        host.check(Math.hypot(subject._w2sX(subject._nx(host.dragged))-expectedX,
+            subject._w2sY(subject._ny(host.dragged))-expectedY) < 20, 'grabbed node follows the pointer');
+        host.pointer.releaseAt();
+        host.check(host.pointer.dragIndex === -1, 'release unpins the node');
+    }
+}

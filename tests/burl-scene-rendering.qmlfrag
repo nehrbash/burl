@@ -1,0 +1,9 @@
+Timer {
+    interval: 2500; running: true
+    onTriggered: {
+        console.log('SCENE-BLOCK-BEGIN');
+        const end = Date.now() + 600;
+        while (Date.now() < end) {}
+        console.log('SCENE-BLOCK-END');
+    }
+}

@@ -1,0 +1,33 @@
+property var cycleState: Qt.createQmlObject('import Quickshell; import qs.components; ScreenState { modelData: Quickshell.screens[0] }', host)
+property var samples: []
+property int stage: 0
+function find(item, predicate) {
+    if (predicate(item)) return item;
+    for (const child of item.children ?? []) {
+        const found = find(child, predicate);
+        if (found) return found;
+    }
+    return null;
+}
+FrameAnimation {
+    running: host.stage > 0
+    onTriggered: host.samples.push(frameTime * 1000)
+}
+Timer {
+    interval: 2400; running: true; repeat: true
+    onTriggered: {
+        if (host.stage > 0) {
+            const a = host.samples.slice().sort((a,b) => a-b);
+            const graph = host.find(subject, item => item._renderIntervalMs !== undefined);
+            console.log('BURL-PERF', host.stage, 'nodes', graph?.nodes.length, 'frames', a.length,
+                'mean', a.reduce((a,b)=>a+b,0)/a.length, 'p95', a[Math.floor(a.length*.95)], 'max', a[a.length-1]);
+        }
+        host.samples = [];
+        host.stage++;
+        if (host.stage === 1) host.cycleState.openWorldRoom('dashboard');
+        if (host.stage === 2) host.cycleState.openWorldRoom('launcher');
+        if (host.stage === 3) host.cycleState.openWorldRoom('dashboard');
+        if (host.stage === 4) host.cycleState.openWorldRoom('launcher');
+        if (host.stage === 5) stop();
+    }
+}

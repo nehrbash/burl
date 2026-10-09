@@ -1,0 +1,279 @@
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import Quickshell.Bluetooth
+import Quickshell.Services.UPower
+import Burl.Config
+import qs.components
+import qs.components.widgets
+import qs.services
+import qs.utils
+
+Item {
+    id: root
+
+    property color colour: Woodland.parchmentEdge
+    readonly property alias items: iconColumn
+
+    clip: false
+    implicitWidth: Tokens.sizes.bar.innerWidth
+    implicitHeight: iconColumn.implicitHeight + Tokens.padding.medium * 2 - (Config.bar.status.showLockStatus && !Hypr.capsLock && !Hypr.numLock ? iconColumn.spacing : 0)
+
+    ColumnLayout {
+        id: iconColumn
+
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: Tokens.padding.medium
+
+        spacing: Tokens.spacing.medium / 2
+
+        WrappedLoader {
+            name: "submap"
+            active: Hypr.activeSubmap !== ""
+
+            sourceComponent: StyledText {
+                animate: true
+                text: Hypr.activeSubmap.charAt(0).toUpperCase()
+                color: Colours.palette.m3primary
+                font.family: Tokens.font.mono.medium.family
+                font.bold: true
+            }
+        }
+
+        WrappedLoader {
+            name: "lockstatus"
+            active: Config.bar.status.showLockStatus
+
+            sourceComponent: ColumnLayout {
+                spacing: 0
+
+                Item {
+                    implicitWidth: capslockIcon.implicitWidth
+                    implicitHeight: Hypr.capsLock ? capslockIcon.implicitHeight : 0
+
+                    MaterialIcon {
+                        id: capslockIcon
+
+                        anchors.centerIn: parent
+
+                        scale: Hypr.capsLock ? 1 : 0.5
+                        opacity: Hypr.capsLock ? 1 : 0
+
+                        text: "keyboard_capslock_badge"
+                        color: root.colour
+
+                        Behavior on opacity {
+                            Anim {
+                                type: Anim.DefaultEffects
+                            }
+                        }
+
+                        Behavior on scale {
+                            Anim {}
+                        }
+                    }
+
+                    Behavior on implicitHeight {
+                        Anim {}
+                    }
+                }
+
+                Item {
+                    Layout.topMargin: Hypr.capsLock && Hypr.numLock ? iconColumn.spacing : 0
+
+                    implicitWidth: numlockIcon.implicitWidth
+                    implicitHeight: Hypr.numLock ? numlockIcon.implicitHeight : 0
+
+                    MaterialIcon {
+                        id: numlockIcon
+
+                        anchors.centerIn: parent
+
+                        scale: Hypr.numLock ? 1 : 0.5
+                        opacity: Hypr.numLock ? 1 : 0
+
+                        text: "looks_one"
+                        color: root.colour
+
+                        Behavior on opacity {
+                            Anim {
+                                type: Anim.DefaultEffects
+                            }
+                        }
+
+                        Behavior on scale {
+                            Anim {}
+                        }
+                    }
+
+                    Behavior on implicitHeight {
+                        Anim {}
+                    }
+                }
+            }
+        }
+
+        WrappedLoader {
+            name: "audio"
+            active: Config.bar.status.showAudio
+
+            sourceComponent: MaterialIcon {
+                animate: true
+                text: Icons.getVolumeIcon(Audio.volume, Audio.muted)
+                color: root.colour
+            }
+        }
+
+        WrappedLoader {
+            name: "audio"
+            active: Config.bar.status.showMicrophone
+
+            sourceComponent: MaterialIcon {
+                animate: true
+                text: Icons.getMicVolumeIcon(Audio.sourceVolume, Audio.sourceMuted)
+                color: root.colour
+            }
+        }
+
+        WrappedLoader {
+            name: "kblayout"
+            active: Config.bar.status.showKbLayout
+
+            sourceComponent: StyledText {
+                animate: true
+                text: Hypr.kbLayout
+                color: root.colour
+                font: Tokens.font.mono.medium
+            }
+        }
+
+        WrappedLoader {
+            name: "network"
+            active: Config.bar.status.showNetwork && (!Nmcli.activeEthernet || Config.bar.status.showWifi)
+
+            sourceComponent: MaterialIcon {
+                animate: true
+                text: Nmcli.active ? Icons.getNetworkIcon(Nmcli.active.strength ?? 0) : "wifi_off"
+                color: root.colour
+            }
+        }
+
+        WrappedLoader {
+            name: "ethernet"
+            active: Config.bar.status.showNetwork && Nmcli.activeEthernet
+
+            sourceComponent: MaterialIcon {
+                animate: true
+                text: "cable"
+                color: root.colour
+            }
+        }
+
+        WrappedLoader {
+            Layout.preferredHeight: implicitHeight
+
+            name: "bluetooth"
+            active: Config.bar.status.showBluetooth
+
+            sourceComponent: ColumnLayout {
+                spacing: Tokens.spacing.medium / 2
+
+                MaterialIcon {
+                    animate: true
+                    text: {
+                        if (!Bluetooth.defaultAdapter?.enabled) // qmllint disable unresolved-type
+                            return "bluetooth_disabled";
+                        if (Bluetooth.devices.values.some(d => d.connected)) // qmllint disable unresolved-type
+                            return "bluetooth_connected";
+                        return "bluetooth";
+                    }
+                    color: root.colour
+                }
+
+                Repeater {
+                    model: ScriptModel {
+                        values: Bluetooth.devices.values.filter(d => d.state !== BluetoothDeviceState.Disconnected) // qmllint disable unresolved-type
+                    }
+
+                    MaterialIcon {
+                        id: device
+
+                        required property BluetoothDevice modelData
+
+                        animate: true
+                        text: Icons.getBluetoothIcon(modelData?.icon)
+                        color: root.colour
+                        fill: 1
+
+                        SequentialAnimation on opacity {
+                            running: device.modelData?.state !== BluetoothDeviceState.Connected // qmllint disable unresolved-type
+                            alwaysRunToEnd: true
+                            loops: Animation.Infinite
+
+                            Anim {
+                                from: 1
+                                to: 0
+                                duration: Tokens.anim.durations.large
+                                easing: Tokens.anim.standardAccel
+                            }
+                            Anim {
+                                from: 0
+                                to: 1
+                                duration: Tokens.anim.durations.large
+                                easing: Tokens.anim.standardDecel
+                            }
+                        }
+                    }
+                }
+            }
+
+            Behavior on Layout.preferredHeight {
+                Anim {}
+            }
+        }
+
+        WrappedLoader {
+            name: "disks"
+            active: Disks.mounted.length > 0
+
+            sourceComponent: MaterialIcon {
+                animate: true
+                text: "usb"
+                color: root.colour
+            }
+        }
+
+        WrappedLoader {
+            name: "battery"
+            active: Config.bar.status.showBattery
+
+            sourceComponent: MaterialIcon {
+                animate: true
+                text: {
+                    if (!UPower.displayDevice.isLaptopBattery) {
+                        if (PowerProfiles.profile === PowerProfile.PowerSaver)
+                            return "energy_savings_leaf";
+                        if (PowerProfiles.profile === PowerProfile.Performance)
+                            return "rocket_launch";
+                        return "balance";
+                    }
+                    return Icons.getBatteryIcon(UPower.displayDevice.percentage, [UPowerDeviceState.Charging, UPowerDeviceState.FullyCharged, UPowerDeviceState.PendingCharge].includes(UPower.displayDevice.state));
+                }
+                color: !UPower.onBattery || UPower.displayDevice.percentage > 0.2 ? root.colour : Colours.palette.m3error
+                fill: 1
+            }
+        }
+    }
+
+    component WrappedLoader: Loader {
+        required property string name
+
+        asynchronous: true
+        Layout.alignment: Qt.AlignHCenter
+        visible: active
+    }
+}

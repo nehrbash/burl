@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Gear carved into bark — same cream/grain idiom as the other tree glyphs -->
+  <!-- Teeth -->
+  <path d="M19.10 12.00 L21.60 12.00 M17.02 17.02 L18.79 18.79 M12.00 19.10 L12.00 21.60 M6.98 17.02 L5.21 18.79 M4.90 12.00 L2.40 12.00 M6.98 6.98 L5.21 5.21 M12.00 4.90 L12.00 2.40 M17.02 6.98 L18.79 5.21"
+    stroke="#c4a882" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+  <!-- Rim -->
+  <circle cx="12" cy="12" r="7.1" stroke="#c4a882" stroke-width="2.4" fill="none"/>
+  <!-- Inner grain, one shade down like the bark's own linework -->
+  <circle cx="12" cy="12" r="7.8" stroke="#a08060" stroke-width="0.6" fill="none" opacity="0.5"/>
+  <circle cx="12" cy="12" r="6.3" stroke="#a08060" stroke-width="0.5" fill="none" opacity="0.45"/>
+  <!-- Bore -->
+  <circle cx="12" cy="12" r="3.0" stroke="#c4a882" stroke-width="1.9" fill="none"/>
+</svg>

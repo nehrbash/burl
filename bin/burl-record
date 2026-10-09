@@ -1,0 +1,244 @@
+#!/bin/sh
+# Screen recording lifecycle.
+# Usage:
+#   burl-record              # fullscreen (focused monitor), no sound
+#   burl-record -s           # with sound
+#   burl-record -r           # region (via slurp)
+#   burl-record -p           # pause/resume current recording
+#   burl-record -c           # copy resulting file path to clipboard on stop
+# Flags combine: e.g. burl-record -r -s.
+#
+# Idempotent toggle — running again while a recording is active stops
+# it. Notifications fire on start and stop; the stop notification
+# carries Watch/Open/Delete actions.
+
+set -eu
+
+RECORDER=gpu-screen-recorder
+PICTURES_DIR="${XDG_PICTURES_DIR:-$HOME/Pictures}"
+SAVE_DIR="$PICTURES_DIR/Recordings"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/burl"
+ACTIVE_PATH="$STATE_DIR/recording.mp4"
+NOTIF_ID_FILE="$STATE_DIR/recording.notif"
+CLIPBOARD_FLAG="$STATE_DIR/recording.clip"
+LOG_PATH="$STATE_DIR/recording.log"
+
+REGION=
+SOUND=0
+PAUSE=0
+CLIP=0
+
+set_flag() {
+    case "$1" in
+        r) REGION="${REGION:-slurp}" ;;
+        s) SOUND=1 ;;
+        p) PAUSE=1 ;;
+        c) CLIP=1 ;;
+        *) echo "burl-record: unknown flag: -$1" >&2; exit 2 ;;
+    esac
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        # A missing value — or a following flag — means "ask slurp"; taking
+        # it literally would hand gpu-screen-recorder a bogus capture target.
+        --region)
+            case "${2:-}" in
+                '' | -*) REGION=slurp ;;
+                *) REGION=$2; shift ;;
+            esac
+            ;;
+        --sound) SOUND=1 ;;
+        --pause) PAUSE=1 ;;
+        --clipboard) CLIP=1 ;;
+        -*)
+            # Combined short flags: -sr / -sc / etc.
+            i=2
+            while [ "$i" -le "${#1}" ]; do
+                ch=$(printf '%s' "$1" | cut -c "$i")
+                set_flag "$ch"
+                i=$((i + 1))
+            done
+            ;;
+        *) echo "burl-record: unknown arg: $1" >&2; exit 2 ;;
+    esac
+    shift
+done
+
+is_running() { pidof "$RECORDER" >/dev/null 2>&1; }
+
+notify() { notify-send -a burl "$1" "$2" >/dev/null 2>&1 || true; }
+
+# gpu-screen-recorder's region format: WxH+X+Y. Offsets may be negative
+# (a monitor placed left of or above 0,0), sizes may not.
+region_is_valid() {
+    printf '%s' "$1" | grep -qE '^[0-9]+x[0-9]+\+-?[0-9]+\+-?[0-9]+$'
+}
+
+notify_close() {
+    id=$1
+    gdbus call --session \
+        --dest=org.freedesktop.Notifications \
+        --object-path=/org/freedesktop/Notifications \
+        --method=org.freedesktop.Notifications.CloseNotification "$id" >/dev/null 2>&1 || true
+}
+
+start() {
+    mkdir -p "$STATE_DIR"
+    [ "$CLIP" = 1 ] && : >"$CLIPBOARD_FLAG" || rm -f "$CLIPBOARD_FLAG"
+
+    if ! monitors=$(hyprctl monitors -j 2>/dev/null) || [ -z "$monitors" ]; then
+        notify "Recording failed" "Could not query Hyprland monitors"
+        exit 1
+    fi
+
+    if [ -n "$REGION" ]; then
+        if [ "$REGION" = "slurp" ]; then
+            # slurp exits non-zero when the selection is cancelled (Escape,
+            # or a click without a drag). Backing out is a normal user
+            # action, not a failure: say so and exit 0 so callers — and the
+            # shell's recorder card — don't report an error.
+            if ! REGION=$(slurp -f "%wx%h+%x+%y"); then
+                notify "Recording cancelled" "Region selection cancelled"
+                exit 0
+            fi
+        fi
+        if ! region_is_valid "$REGION"; then
+            notify "Recording cancelled" "No usable region selected"
+            exit 0
+        fi
+        # Refresh rate: max across monitors that intersect the region.
+        # The -? in the coordinate patterns matters: monitors (and regions
+        # on them) can sit at negative offsets, and a jq `capture` miss
+        # exits 0 with empty output, silently leaving $rr blank.
+        rr=$(echo "$monitors" | jq --arg r "$REGION" '
+            ($r | capture("(?<w>[0-9]+)x(?<h>[0-9]+)\\+(?<x>-?[0-9]+)\\+(?<y>-?[0-9]+)")
+                | map_values(tonumber)) as $reg
+            | [ .[]
+                | select(
+                    .x < $reg.x + $reg.w and .x + .width > $reg.x and
+                    .y < $reg.y + $reg.h and .y + .height > $reg.y
+                  )
+                | .refreshRate | round
+              ] | max // 60') || rr=
+        # Pass the region as the capture target itself: the separate -region
+        # flag is deprecated as of gpu-screen-recorder 5.13 and warns on
+        # every start.
+        target=$REGION
+    else
+        focused=$(echo "$monitors" | jq -r \
+            'first(.[] | select(.focused)) | "\(.name) \(.refreshRate | round)"') || focused=
+        # Nothing reports .focused around monitor hotplug / VR handoff;
+        # fall back to the first monitor rather than passing an empty -w.
+        [ -n "$focused" ] || focused=$(echo "$monitors" | jq -r \
+            'first(.[]) | "\(.name) \(.refreshRate | round)"') || focused=
+        target=$(echo "$focused" | cut -d' ' -f1)
+        rr=$(echo "$focused" | cut -d' ' -f2)
+    fi
+
+    if [ -z "$target" ]; then
+        notify "Recording failed" "No monitor available to record"
+        exit 1
+    fi
+    # Last line of defence: anything non-numeric here (including the empty
+    # string, or the monitor name that `cut -f2` echoes back when jq printed
+    # a single field) would leave a valueless -f in the argument list.
+    case "$rr" in
+        '' | *[!0-9]*) rr=60 ;;
+    esac
+    [ "$rr" -gt 0 ] || rr=60
+
+    args="-w $target -f $rr"
+
+    [ "$SOUND" = 1 ] && args="$args -a default_output"
+
+    rm -f "$ACTIVE_PATH"
+    # setsid *without* -f execs the recorder into a new session (so it
+    # outlives this script and won't take a SIGHUP when we exit) while
+    # keeping $! pointed at the recorder's real PID.
+    # shellcheck disable=SC2086
+    setsid "$RECORDER" $args -o "$ACTIVE_PATH" >"$LOG_PATH" 2>&1 &
+    rec_pid=$!
+
+    # Confirm startup event-driven — no fixed delay. gpu-screen-recorder
+    # emits a periodic "update fps:" line once capture+encode are live, so
+    # we follow the log until it appears. `tail --pid` terminates the
+    # instant the recorder dies, so a failed init reaches EOF before any
+    # match and grep returns non-zero. Process liveness is authoritative:
+    # if that marker's wording ever changes upstream we still accept a
+    # surviving process (the 10s timeout is only a safety cap, not timing).
+    if timeout 10 sh -c 'tail -n +1 -f --pid="$1" "$2" | grep -qm1 "update fps:"' \
+            _ "$rec_pid" "$LOG_PATH" || is_running; then
+        notify-send -a burl -p "Recording started" "Recording..." >"$NOTIF_ID_FILE" 2>/dev/null || true
+    else
+        # Prefer the diagnostic line over the last line: when the recorder
+        # rejects an argument it follows the error with a ~40-line usage
+        # string, which is useless in a notification bubble.
+        err=$(grep -m1 'gsr error:' "$LOG_PATH" 2>/dev/null || true)
+        [ -n "$err" ] || err=$(tail -n 1 "$LOG_PATH" 2>/dev/null || true)
+        notify "Recording failed" "gpu-screen-recorder exited: $err"
+        exit 1
+    fi
+}
+
+stop() {
+    # Grab the PID before signalling so we can wait on it deterministically.
+    set -- $(pidof "$RECORDER")
+    rec_pid=$1
+    pkill -f "$RECORDER" >/dev/null 2>&1 || true
+    # why: pkill's SIGTERM is async; gpu-screen-recorder must flush the mp4
+    # muxer (moov atom) before exit, so we block until it's fully gone
+    # before the mv. `tail --pid` waits on the kernel rather than spin-
+    # polling, and returns at once if the PID is already gone.
+    if [ -n "$rec_pid" ]; then
+        tail --pid="$rec_pid" -f /dev/null
+    fi
+
+    [ -f "$ACTIVE_PATH" ] || { echo "burl-record: no recording file" >&2; exit 1; }
+    mkdir -p "$SAVE_DIR"
+    final="$SAVE_DIR/recording_$(date +%Y%m%d_%H-%M-%S).mp4"
+    mv "$ACTIVE_PATH" "$final"
+
+    if [ -f "$NOTIF_ID_FILE" ]; then
+        notify_close "$(cat "$NOTIF_ID_FILE")"
+        rm -f "$NOTIF_ID_FILE"
+    fi
+
+    if [ -f "$CLIPBOARD_FLAG" ]; then
+        printf 'file://%s\n' "$final" | wl-copy --type text/uri-list
+        rm -f "$CLIPBOARD_FLAG"
+    fi
+
+    chosen=$(notify-send -a burl \
+        --action=watch=Watch \
+        --action=open=Open \
+        --action=delete=Delete \
+        "Recording stopped" \
+        "Recording saved in $final" || true)
+
+    case "$chosen" in
+        watch) setsid -f app2unit -O "$final" >/dev/null 2>&1 ;;
+        open)
+            dbus-send --session \
+                --dest=org.freedesktop.FileManager1 \
+                --type=method_call \
+                /org/freedesktop/FileManager1 \
+                org.freedesktop.FileManager1.ShowItems \
+                "array:string:file://$final" string: 2>/dev/null \
+              || setsid -f app2unit -O "$SAVE_DIR" >/dev/null 2>&1
+            ;;
+        delete) rm -f "$final"; notify-send -a burl "Recording deleted" "$final" ;;
+    esac
+}
+
+pause() {
+    is_running && pkill -USR2 -f "$RECORDER" || true
+}
+
+if [ "$PAUSE" = 1 ]; then
+    pause
+elif is_running; then
+    stop
+else
+    start
+fi

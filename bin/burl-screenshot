@@ -1,0 +1,54 @@
+#!/bin/sh
+# Fullscreen / region screenshot.
+# Usage:
+#   burl-screenshot           # fullscreen + notification
+#   burl-screenshot -r        # region selection (delegated to qs picker)
+#
+#   * grim → wl-copy + cache file + notification with Open / Save actions.
+#     Open hands off to satty, the same annotator the QML picker uses.
+#   * region mode hands off to the QML AreaPicker (via qs ipc).
+
+set -eu
+
+PICTURES_DIR="${XDG_PICTURES_DIR:-$HOME/Pictures}"
+CACHE_ROOT="${XDG_CACHE_HOME:-$HOME/.cache}"
+CACHE_DIR="$CACHE_ROOT/burl/screenshots"
+SAVE_DIR="$PICTURES_DIR/Screenshots"
+
+region() {
+    burl-shell ipc --any-display call picker open
+}
+
+fullscreen() {
+    mkdir -p "$CACHE_DIR"
+    ts=$(date +%Y%m%d%H%M%S)
+    tmpfile="$CACHE_DIR/$ts"
+
+    grim - >"$tmpfile"
+    wl-copy <"$tmpfile"
+
+    # notify-send with --action=KEY=Label echoes the chosen key on stdout.
+    chosen=$(notify-send -a burl \
+        -i image-x-generic-symbolic \
+        -h "STRING:image-path:$tmpfile" \
+        --action=open=Open \
+        --action=save=Save \
+        "Screenshot taken" \
+        "Screenshot stored in $tmpfile and copied to clipboard" || true)
+
+    case "$chosen" in
+        open) setsid -f satty -f "$tmpfile" >/dev/null 2>&1 ;;
+        save)
+            mkdir -p "$SAVE_DIR"
+            dest="$SAVE_DIR/$ts.png"
+            mv "$tmpfile" "$dest"
+            notify-send -a burl "Screenshot saved" "Saved to $dest"
+            ;;
+    esac
+}
+
+case "${1:-}" in
+    -r|--region) region ;;
+    "") fullscreen ;;
+    *) echo "burl-screenshot: unknown arg: $1" >&2; exit 2 ;;
+esac

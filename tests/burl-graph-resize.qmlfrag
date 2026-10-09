@@ -1,0 +1,32 @@
+property var cycleState: Qt.createQmlObject('import Quickshell; import qs.components; ScreenState { modelData: Quickshell.screens[0] }', host)
+property var before: []
+function check(ok, label) {
+    if (!ok) { console.error('RESIZE-FAIL', label); Qt.quit(); }
+    else console.log('RESIZE-PASS', label);
+}
+Timer {
+    interval: 4500; running: true
+    onTriggered: {
+        host.check(subject.layoutReady && !subject.preparing, 'initial layout settles');
+        subject.selectNode(1);
+        host.before = Array.from(subject.snap);
+        subject.transitioning = true;
+        subject.width -= 70;
+        subject.height -= 20;
+    }
+}
+Timer {
+    interval: 4850; running: true
+    onTriggered: {
+        host.check(subject.resizePending && subject.snap.every((v,i) => v === host.before[i]), 'camera transition defers resize layout');
+        subject.transitioning = false;
+    }
+}
+Timer {
+    interval: 5300; running: true
+    onTriggered: {
+        host.check(!subject.resizePending && !subject.preparing, 'resize retains settled layout');
+        host.check(subject.currentNode === 1, 'resize preserves selection');
+        host.check(subject.snap.every((v,i) => i % 3 === 2 || Math.abs(v-host.before[i]) < .01), 'resize preserves node positions');
+    }
+}

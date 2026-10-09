@@ -1,0 +1,58 @@
+<!-- Active-workspace ring. HAND-DRAWN VECTOR, deliberately not generated raster:
+     the generated ivy-ring.png measured perfectly (81.5% hole, 5.1px stroke) and
+     still looked bad at its 60px draw size, because a 1024px illustration
+     averages into blobs when minified that far, and its vine was bark-brown
+     drawn on bark. Everything here is authored at the size it renders, and the
+     moss carries a dark halo so it separates from the trunk underneath.
+
+     Palette mirrors components/Woodland.qml (assets carry their own colours, as
+     leaf1.svg does): barkEdge #2f2117, olive #567436, oliveLight #688a41,
+     oliveDark #46602c, leaf #3d6b3d / vein #2d5a2d.
+
+     Clear centre is a construction, not a hope: every element is centred on the
+     r=27.5 band, so nothing paints inside r~20 of 32 — a 40px hole at frame 64,
+     which clears the 42px active sloth. Re-measure if any element moves inward.
+     (An SVG mask was tried instead and abandoned: ImageMagick's built-in SVG
+     renderer flattens it to a filled square, so previews lie.) -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Dark halo. The separation from bark comes from this, not from the moss. -->
+  <circle cx="32" cy="32" r="27.5" fill="none" stroke="#2f2117" stroke-width="7" stroke-opacity="0.85"/>
+  <!-- Moss body. -->
+  <circle cx="32" cy="32" r="27.5" fill="none" stroke="#567436" stroke-width="5"/>
+  <!-- Lit crown, up-left, where trunk.png's light comes from. Dashes are clumps,
+       not a dotted line: coarse enough to survive the downscale. -->
+  <circle cx="32" cy="32" r="27.5" fill="none" stroke="#688a41" stroke-width="5"
+          stroke-linecap="round" stroke-dasharray="14 9 6 12 10 7 5 14"
+          stroke-dashoffset="6" transform="rotate(-140 32 32)"/>
+  <!-- Shaded underside. -->
+  <circle cx="32" cy="32" r="27.5" fill="none" stroke="#46602c" stroke-width="5"
+          stroke-linecap="round" stroke-dasharray="11 46 8 30" stroke-dashoffset="34"
+          transform="rotate(40 32 32)"/>
+  <!-- Moss cushions on the band: a few chunky lobes read at 60px; fine fuzz does not. -->
+  <g fill="#688a41" stroke="#2f2117" stroke-width="0.9">
+    <circle cx="32" cy="4.9" r="3.8"/>
+    <circle cx="51.4" cy="12.6" r="3.0"/>
+    <circle cx="12.6" cy="51.4" r="3.4"/>
+    <circle cx="49" cy="49" r="2.8"/>
+  </g>
+  <!-- Four ivy leaves, centred on the band on the diagonals and pointing outward.
+       Same silhouette as leaf1.svg so the bar's vector leaves stay one family. -->
+  <g fill="#3d6b3d" stroke="#2d5a2d" stroke-width="0.7">
+    <g transform="translate(4.6 4.6) rotate(-45 8.0 8.0) scale(0.8)">
+      <path d="M10 2 C6 4, 3 8, 4 14 C5 12, 7 10, 10 9 C13 10, 15 12, 16 14 C17 8, 14 4, 10 2Z"/>
+      <path d="M10 2 L10 14" fill="none"/>
+    </g>
+    <g transform="translate(42.9 4.1) rotate(45 8.5 8.5) scale(0.85)">
+      <path d="M10 2 C6 4, 3 8, 4 14 C5 12, 7 10, 10 9 C13 10, 15 12, 16 14 C17 8, 14 4, 10 2Z"/>
+      <path d="M10 2 L10 14" fill="none"/>
+    </g>
+    <g transform="translate(5.1 43.9) rotate(-135 7.5 7.5) scale(0.75)">
+      <path d="M10 2 C6 4, 3 8, 4 14 C5 12, 7 10, 10 9 C13 10, 15 12, 16 14 C17 8, 14 4, 10 2Z"/>
+      <path d="M10 2 L10 14" fill="none"/>
+    </g>
+    <g transform="translate(44.4 44.4) rotate(135 7.0 7.0) scale(0.7)">
+      <path d="M10 2 C6 4, 3 8, 4 14 C5 12, 7 10, 10 9 C13 10, 15 12, 16 14 C17 8, 14 4, 10 2Z"/>
+      <path d="M10 2 L10 14" fill="none"/>
+    </g>
+  </g>
+</svg>

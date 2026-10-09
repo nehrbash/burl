@@ -1,0 +1,54 @@
+property bool reduced: Quickshell.env('BURL_NO_AMBIENT') === '1'
+function check(ok, message) {
+    if (!ok) { console.error('SCENE-FAIL', message); Qt.quit(); }
+    else console.log('SCENE-PASS', message);
+}
+function banks(item, found) {
+    if (item.baseX !== undefined && item.period !== undefined) found.push(item);
+    for (const child of item.children ?? []) banks(child, found);
+    return found;
+}
+Timer {
+    interval: 500; running: true
+    onTriggered: {
+        const body = host.planet(subject);
+        host.check(subject.moving === !host.reduced && body.drifting === !host.reduced,
+            'scene render-thread motion respects preference');
+        host.check(host.banks(subject, []).every(bank => bank.period < body.period/2),
+            'clouds drift faster than architecture');
+    }
+}
+Timer {
+    interval: 1000; running: true
+    onTriggered: subject.visible = false
+}
+Timer {
+    interval: 1400; running: true
+    onTriggered: {
+        host.check(!subject.moving && !host.planet(subject).drifting, 'hidden scene stops advancing');
+        subject.active = false;
+        subject.visible = true;
+    }
+}
+Timer {
+    interval: 1800; running: true
+    onTriggered: host.check(!subject.moving && !host.planet(subject).drifting, 'inactive scene stays stopped')
+}
+
+function planet(item) {
+    if (item.cell === 6 && item.parallax !== undefined) return item;
+    for (const child of item.children ?? []) { const found = planet(child); if (found) return found; }
+    return null;
+}
+Timer {
+    interval: 1850; running: true
+    onTriggered: {
+        if (subject.scene !== "sky") return;
+        const body = host.planet(subject);
+        host.check(body !== null, "sky planet is mounted");
+        const x = body.x, scale = body.scale;
+        subject.viewPanX = 120;
+        subject.viewZoom = 2;
+        Qt.callLater(() => host.check(body.x > x && body.scale > scale, "planets respond to pan and zoom"));
+    }
+}

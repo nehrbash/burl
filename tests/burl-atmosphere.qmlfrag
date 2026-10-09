@@ -1,0 +1,28 @@
+property string capturePrefix: Quickshell.env("BURL_MOTION_CAPTURE")
+property bool reduced: Quickshell.env('BURL_NO_AMBIENT') === '1'
+function check(ok, message) {
+    if (!ok) { console.error('ATMOSPHERE-FAIL', message); Qt.quit(); }
+    else console.log('ATMOSPHERE-PASS', message);
+}
+Timer {
+    interval: 2200; running: true
+    onTriggered: {
+        host.check(subject.ready && subject.moving === !host.reduced, 'cloud playback respects motion preference');
+        if (host.capturePrefix) CUtils.saveItem(subject, Qt.resolvedUrl("file://"+host.capturePrefix+"-a.png"), () => {}, () => host.check(false, "first cloud capture"));
+    }
+}
+Timer {
+    interval: 3200; running: true
+    onTriggered: {
+        host.check(subject.animating === !host.reduced, 'render-thread playback respects motion preference');
+        if (host.capturePrefix) CUtils.saveItem(subject, Qt.resolvedUrl("file://"+host.capturePrefix+"-b.png"), () => { subject.active = false; }, () => host.check(false, "second cloud capture"));
+        if (!host.capturePrefix) subject.active = false;
+    }
+}
+Timer {
+    interval: 3700; running: true
+    onTriggered: {
+        host.check(!subject.moving && !subject.animating, 'hidden clouds stop advancing');
+        subject.active = true;
+    }
+}

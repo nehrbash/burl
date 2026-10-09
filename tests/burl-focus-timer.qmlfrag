@@ -1,0 +1,36 @@
+property var timerService: Qt.createQmlObject('import QtQuick; import qs.services; QtObject { readonly property var timer: Pomodoro }', host).timer
+function findControl(item, name) {
+    if (item.objectName === name) return item;
+    for (const child of item.children ?? []) {
+        const found = findControl(child, name);
+        if (found) return found;
+    }
+    return null;
+}
+function check(condition, message) {
+    if (!condition) {
+        console.error(message);
+        Qt.exit(1);
+    }
+}
+Timer {
+    interval: 200
+    running: true
+    onTriggered: {
+        const timer = host.timerService;
+        const toggle = host.findControl(subject, 'focusTimerToggle');
+        const reset = host.findControl(subject, 'focusTimerReset');
+        host.check(toggle && reset, 'Timer controls missing');
+        host.check(reset.disabled && toggle.text === 'Start focus', 'Idle controls');
+        toggle.clicked();
+        host.check(timer.running && toggle.text === 'Pause' && !reset.disabled, 'Start controls');
+        timer.remaining = 731;
+        toggle.clicked();
+        host.check(timer.paused && toggle.text === 'Resume' && timer.remainingStr === '12:11', 'Pause preserves time');
+        toggle.clicked();
+        host.check(timer.running && timer.remaining === 731, 'Resume preserves time');
+        reset.clicked();
+        host.check(!timer.active && !timer.running && timer.remaining === 1500 && reset.disabled, 'Reset restores ready state');
+        console.log('FOCUS-TIMER-PASS');
+    }
+}

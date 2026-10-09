@@ -1,0 +1,36 @@
+qml_module(burl-config
+    URI Burl.Config
+    SOURCES
+        config.cpp
+        configattached.cpp
+        configobject.cpp
+        rootconfig.cpp
+        appearanceconfig.cpp
+        font.cpp
+        fontbuilder.cpp
+        tokens.cpp
+        tokensattached.cpp
+        anim.cpp
+        monitorconfigmanager.cpp
+        backgroundconfig.hpp
+        barconfig.hpp
+        borderconfig.hpp
+        dashboardconfig.hpp
+        generalconfig.hpp
+        guixconfig.hpp
+        launcherconfig.hpp
+        lockconfig.hpp
+        nexusconfig.hpp
+        notifsconfig.hpp
+        osdconfig.hpp
+        serviceconfig.hpp
+        tasknudgeconfig.hpp
+        sessionconfig.hpp
+        sidebarconfig.hpp
+        userpaths.hpp
+        utilitiesconfig.hpp
+        winfoconfig.hpp
+    LIBRARIES
+        Qt::Quick
+        Qt::QuickControls2
+)

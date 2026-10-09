@@ -1,0 +1,5 @@
+Generate each subject separately as a 1254×1254 transparent RGBA sprite, using the matching subject from astral-fragments.png as the visual reference. Preserve design, viewing angle, palette, silhouette and proportions. Reconstruct crisp stone carvings, gold tracery, violet stained glass, planetary texture and throne detail. Center one whole object within the square with a transparent margin; omit all other subjects, scenery and text.
+
+Cell order: broken pointed arch with two columns; cathedral spire on floating rocks; rose-window facade; curved floating stairway; suspended buttress with violet window; ruined double-arch bridge; violet ringed planet; turquoise planet; throne and long occult table.
+
+Pack the nine outputs without resampling into a 3×3 atlas with ffmpeg tile=3x3. The runtime cell extent is 1254 pixels.

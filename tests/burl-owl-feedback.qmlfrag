@@ -1,0 +1,13 @@
+function check(ok, message) {
+    if (!ok) { console.error('OWL-FAIL', message); Qt.quit(); }
+    else console.log('OWL-PASS', message);
+}
+Timer { interval: 500; running: true; onTriggered: subject.acknowledge() }
+Timer {
+    interval: 530; running: true
+    onTriggered: host.check(subject.response > 0.7, 'owl immediately acknowledges a press')
+}
+Timer {
+    interval: 1700; running: true
+    onTriggered: host.check(subject.response === 0 && subject.headTilt === 0, 'owl settles after acknowledgement')
+}
