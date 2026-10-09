@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+"""One-time Spotify OAuth setup for burl.
+
+Run once with SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET in the env
+(or pass them as args). Opens your browser, catches the redirect on
+127.0.0.1:8888/callback, and stores the credentials + refresh token
+in `pass` under `burl/spotify` (GPG-encrypted) — read at runtime
+by the shell's SpotifySources C++ component via `pass show`.
+
+Set the app's Redirect URI in developer.spotify.com/dashboard to
+exactly:  http://127.0.0.1:8888/callback
+"""
+
+from __future__ import annotations
+
+import base64
+import http.server
+import json
+import os
+import secrets
+import socketserver
+import subprocess
+import sys
+import threading
+import urllib.parse
+import urllib.request
+import webbrowser
+from pathlib import Path
+
+REDIRECT_URI = "http://127.0.0.1:8888/callback"
+SCOPES = " ".join([
+    "playlist-read-private",
+    "playlist-read-collaborative",
+    "user-read-recently-played",
+    "user-top-read",
+    "user-read-playback-state",
+    "user-modify-playback-state",
+    "user-library-read",
+])
+PASS_ENTRY = "burl/spotify"
+
+
+def basic_auth(cid: str, secret: str) -> str:
+    return base64.b64encode(f"{cid}:{secret}".encode()).decode()
+
+
+class CallbackHandler(http.server.BaseHTTPRequestHandler):
+    code: str | None = None
+    state: str | None = None
+
+    def do_GET(self):  # noqa: N802
+        parsed = urllib.parse.urlparse(self.path)
+        if parsed.path != "/callback":
+            self.send_response(404)
+            self.end_headers()
+            return
+        q = urllib.parse.parse_qs(parsed.query)
+        CallbackHandler.code = q.get("code", [None])[0]
+        CallbackHandler.state = q.get("state", [None])[0]
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(
+            b"<html><body><h2>Spotify connected.</h2>"
+            b"<p>You can close this tab.</p></body></html>"
+        )
+
+    def log_message(self, *args, **kwargs):  # silence access log
+        pass
+
+
+def run_callback_server(stop_event: threading.Event):
+    with socketserver.TCPServer(("127.0.0.1", 8888), CallbackHandler) as httpd:
+        httpd.timeout = 0.5
+        while not stop_event.is_set():
+            httpd.handle_request()
+            if CallbackHandler.code is not None:
+                return
+
+
+def main():
+    cid = os.environ.get("SPOTIFY_CLIENT_ID") or (sys.argv[1] if len(sys.argv) > 1 else "")
+    secret = os.environ.get("SPOTIFY_CLIENT_SECRET") or (sys.argv[2] if len(sys.argv) > 2 else "")
+    if not cid or not secret:
+        sys.exit(
+            "missing client id/secret — set SPOTIFY_CLIENT_ID and "
+            "SPOTIFY_CLIENT_SECRET, or pass them as args"
+        )
+
+    state = secrets.token_urlsafe(16)
+    params = urllib.parse.urlencode({
+        "client_id": cid,
+        "response_type": "code",
+        "redirect_uri": REDIRECT_URI,
+        "scope": SCOPES,
+        "state": state,
+    })
+    auth_url = f"https://accounts.spotify.com/authorize?{params}"
+
+    stop = threading.Event()
+    t = threading.Thread(target=run_callback_server, args=(stop,), daemon=True)
+    t.start()
+
+    print(f"opening browser: {auth_url}")
+    webbrowser.open(auth_url)
+    t.join(timeout=180)
+    stop.set()
+
+    if not CallbackHandler.code:
+        sys.exit("no auth code received (timed out)")
+    if CallbackHandler.state != state:
+        sys.exit("state mismatch — possible csrf, abort")
+
+    req = urllib.request.Request(
+        "https://accounts.spotify.com/api/token",
+        data=urllib.parse.urlencode({
+            "grant_type": "authorization_code",
+            "code": CallbackHandler.code,
+            "redirect_uri": REDIRECT_URI,
+        }).encode(),
+        headers={
+            "Authorization": f"Basic {basic_auth(cid, secret)}",
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req) as resp:
+        body = json.loads(resp.read().decode())
+
+    refresh = body.get("refresh_token")
+    if not refresh:
+        sys.exit(f"no refresh_token in response: {body}")
+
+    payload = json.dumps({
+        "client_id": cid,
+        "client_secret": secret,
+        "refresh_token": refresh,
+    }, indent=2)
+    # `pass insert -m` reads the multi-line entry from stdin, terminated
+    # by EOF. `-f` overwrites any existing entry of the same name.
+    subprocess.run(
+        ["pass", "insert", "-m", "-f", PASS_ENTRY],
+        input=payload,
+        text=True,
+        check=True,
+    )
+    print(f"stored credentials in pass: {PASS_ENTRY}")
+
+
+if __name__ == "__main__":
+    main()

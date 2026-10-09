@@ -6,7 +6,7 @@ set -uo pipefail
 # The shell service supplies this path; standalone probes need it too.
 QT_QML_DIR=$HOME/.guix-home/profile/lib/qt6/qml
 export QML_IMPORT_PATH=${QML_IMPORT_PATH:-$QT_QML_DIR}
-export QML2_IMPORT_PATH=${QML2_IMPORT_PATH:-$QT_QML_DIR}
+export QML2_IMPORT_PATH=${QML2_IMPORT_PATH:-$QML_IMPORT_PATH}
 
 ROOT=${QS_ROOT:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}
 GEOM=1

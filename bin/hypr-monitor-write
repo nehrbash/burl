@@ -1,0 +1,67 @@
+#!/usr/bin/env python3
+"""Write monitor rules to an optional path from a JSON array argument or stdin."""
+import json
+import os
+import sys
+
+HEADER = "-- Machine-local monitor settings; saving in Burl replaces this file.\n"
+
+
+def fmt_scale(s):
+    r = round(float(s), 6)
+    if r == int(r):
+        return f"{int(r)}.0"
+    return repr(r).rstrip("0").rstrip(".")
+
+
+def monitor_line(cfg):
+    out = cfg.get("output")
+    if not out:
+        return None
+    if cfg.get("disabled"):
+        return f'hl.monitor({{ output = "{out}", disabled = true }})'
+    # A monitor with no known mode (never probed / long disabled) reports 0x0;
+    # Hyprland rejects that outright, so let it pick.
+    if int(cfg.get("width") or 0) > 0 and int(cfg.get("height") or 0) > 0:
+        mode = f'{cfg["width"]}x{cfg["height"]}@{cfg["refresh"]}'
+    else:
+        mode = "preferred"
+    pos = f'{cfg["x"]}x{cfg["y"]}'
+    parts = [
+        f'output = "{out}"',
+        f'mode = "{mode}"',
+        f'position = "{pos}"',
+        f'scale = {fmt_scale(cfg["scale"])}',
+    ]
+    if int(cfg.get("transform", 0)) != 0:
+        parts.append(f'transform = {int(cfg["transform"])}')
+    if "vrr" in cfg and cfg["vrr"] is not None:
+        parts.append(f'vrr = {int(cfg["vrr"])}')
+    if int(cfg.get("bitdepth", 8)) == 10:
+        parts.append("bitdepth = 10")
+    return "hl.monitor({ " + ", ".join(parts) + " })"
+
+
+def main():
+    args = sys.argv[1:]
+    default_path = os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")), "hypr/monitors-generated.lua")
+    if len(args) >= 2:
+        path, raw = args[0], args[1]
+    elif len(args) == 1:
+        path, raw = default_path, args[0]
+    else:
+        path, raw = default_path, sys.stdin.read()
+
+    configs = json.loads(raw)
+    lines = [l for l in (monitor_line(c) for c in configs) if l]
+    out = HEADER + "\n" + "\n".join(lines) + "\n"
+
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(out)
+    os.replace(tmp, path)
+
+
+if __name__ == "__main__":
+    main()

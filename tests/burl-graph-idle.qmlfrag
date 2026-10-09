@@ -49,29 +49,29 @@ Timer {
             host.stableSamples = stable ? host.stableSamples + 1 : 0;
             host.lastSnapshot = snapshot;
             if (host.stableSamples < 6) return;
-        host.check(host.graph && !host.graph.paused && host.graph.driftStrength > 0.9, 'settled graph keeps ambient motion');
-        host.before = Array.from(host.graph.snap);
-        host.fixedIndex = host.graph.currentNode;
-        const i = host.fixedIndex === 0 ? 1 : 0;
-        host.movingPoint = host.graph.mapToItem(subject, host.graph._w2sX(host.graph._nx(i)), host.graph._w2sY(host.graph._ny(i)));
-        if (host.fixedIndex >= 0)
-            host.fixedPoint = host.graph.mapToItem(subject, host.graph._w2sX(host.graph._nx(host.fixedIndex)), host.graph._w2sY(host.graph._ny(host.fixedIndex)));
+            host.check(host.graph && !host.graph.paused && host.graph.driftStrength > 0.9, 'settled graph keeps ambient motion');
+            host.before = Array.from(host.graph.snap);
+            host.fixedIndex = host.graph.currentNode;
+            const i = host.fixedIndex === 0 ? 1 : 0;
+            host.movingPoint = host.graph.mapToItem(subject, host.graph._w2sX(host.graph._nx(i)), host.graph._w2sY(host.graph._ny(i)));
+            if (host.fixedIndex >= 0)
+                host.fixedPoint = host.graph.mapToItem(subject, host.graph._w2sX(host.graph._nx(host.fixedIndex)), host.graph._w2sY(host.graph._ny(host.fixedIndex)));
 
             host.phase = 1;
             host.phaseStart = now;
         } else if (host.phase === 1 && now - host.phaseStart >= 2500) {
-        const graph = host.graph;
-        const i = host.fixedIndex === 0 ? 1 : 0;
-        const moved = graph.mapToItem(subject, graph._w2sX(graph._nx(i)), graph._w2sY(graph._ny(i)));
-        host.check(Math.hypot(moved.x-host.movingPoint.x, moved.y-host.movingPoint.y) > 0.2, 'idle node travels');
-        host.check(graph.snap.every((v,i) => v === host.before[i]), 'ambient motion preserves simulation positions');
-        if (host.fixedIndex >= 0) {
-            const fixed = graph.mapToItem(subject, graph._w2sX(graph._nx(host.fixedIndex)), graph._w2sY(graph._ny(host.fixedIndex)));
-            host.check(Math.hypot(fixed.x-host.fixedPoint.x, fixed.y-host.fixedPoint.y) < 0.1, 'selected node stays still');
-        }
-        const frames = host.samples.slice().sort((a,b)=>a-b);
-        console.log('BURL-IDLE-PERF', 'frames', frames.length, 'mean', frames.reduce((a,b)=>a+b,0)/frames.length, 'p95', frames[Math.floor(frames.length*0.95)], 'max', frames[frames.length-1]);
-        host.cycleState.openWorldRoom('dashboard');
+            const graph = host.graph;
+            const i = host.fixedIndex === 0 ? 1 : 0;
+            const moved = graph.mapToItem(subject, graph._w2sX(graph._nx(i)), graph._w2sY(graph._ny(i)));
+            host.check(Math.hypot(moved.x-host.movingPoint.x, moved.y-host.movingPoint.y) > 0.2, 'idle node travels');
+            host.check(graph.snap.every((v,i) => v === host.before[i]), 'ambient motion preserves simulation positions');
+            if (host.fixedIndex >= 0) {
+                const fixed = graph.mapToItem(subject, graph._w2sX(graph._nx(host.fixedIndex)), graph._w2sY(graph._ny(host.fixedIndex)));
+                host.check(Math.hypot(fixed.x-host.fixedPoint.x, fixed.y-host.fixedPoint.y) < 0.1, 'selected node stays still');
+            }
+            const frames = host.samples.slice().sort((a,b)=>a-b);
+            console.log('BURL-IDLE-PERF', 'frames', frames.length, 'mean', frames.reduce((a,b)=>a+b,0)/frames.length, 'p95', frames[Math.floor(frames.length*0.95)], 'max', frames[frames.length-1]);
+            host.cycleState.openWorldRoom('dashboard');
 
             host.phase = 2;
             host.phaseStart = now;

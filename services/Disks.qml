@@ -21,11 +21,9 @@ Singleton {
         lsblkProc.running = true;
     }
 
-    // Open the mountpoint in the default file manager (app2unit -O defers to
-    // the inode/directory handler — nautilus here).
     function open(item: var): void {
         if (item?.mountpoint)
-            Quickshell.execDetached(["app2unit", "-O", "--", item.mountpoint]);
+            Quickshell.execDetached(["xdg-open", item.mountpoint]);
     }
 
     function eject(item: var): void {

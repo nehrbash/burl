@@ -30,7 +30,7 @@ BURL_NO_AMBIENT=0 "$REPO/scripts/qs-shot.sh" \
     modules/launcher/Content.qml "$WORK/idle.png"
 
 BURL_NO_AMBIENT=0 "$REPO/scripts/qs-shot.sh" \
-    --root "$ROOT" --size 1600x1000 --settle 9200 \
+    --root "$ROOT" --size 1600x1000 --settle 41000 \
     --decl "$REPO/tests/burl-graph-interaction.qmlfrag" \
     --set 'visibilities: host.cycleState' \
     modules/launcher/GraphView.qml "$WORK/interaction.png"
@@ -43,9 +43,9 @@ BURL_NO_AMBIENT=0 "$REPO/scripts/qs-shot.sh" \
     modules/launcher/Wrapper.qml "$WORK/deferred.png"
 
 BURL_NO_AMBIENT=0 "$REPO/scripts/qs-shot.sh" \
-    --root "$ROOT" --size 1600x1000 --settle 5600 \
+    --root "$ROOT" --size 1600x1000 --settle 41000 \
     --decl "$REPO/tests/burl-graph-resize.qmlfrag" \
-    --set 'visibilities: host.cycleState' --set 'paused: true' \
+    --set 'visibilities: host.cycleState' \
     modules/launcher/GraphView.qml "$WORK/resize.png"
 
 BURL_NO_AMBIENT=0 "$REPO/scripts/qs-shot.sh" \

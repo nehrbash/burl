@@ -44,7 +44,7 @@ Singleton {
     }
 
     function restoreLlama(): void {
-        if (!enabled && props.llamaStopped) {
+        if (Quickshell.env("BURL_MANAGE_LLAMA") === "1" && !enabled && props.llamaStopped) {
             props.llamaStopped = false;
             Quickshell.execDetached(["herd", "start", "llama-server"]);
         }
@@ -56,7 +56,7 @@ Singleton {
         props.effectsApplied = enabled;
         if (enabled) {
             setDynamicConfs();
-            if (!props.llamaStopped && !stopLlama.running)
+            if (Quickshell.env("BURL_MANAGE_LLAMA") === "1" && !props.llamaStopped && !stopLlama.running)
                 stopLlama.running = true;
         } else {
             Hypr.extras.message("reload");

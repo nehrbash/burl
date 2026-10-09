@@ -7,6 +7,9 @@ property var frames: []
 property bool panTest: false
 property real elapsed: 0
 property int chosen: -1
+property var previous: []
+property int stableSamples: 0
+property bool finished: false
 function find(item, predicate) {
     if (predicate(item)) return item;
     for (const child of item.children ?? []) {
@@ -37,8 +40,16 @@ Timer {
     }
 }
 Timer {
-    interval: 6100; running: true
+    interval: 100; running: true; repeat: true
     onTriggered: {
+        if (host.chosen < 0) return;
+        const snapshot = Array.from(subject.snap);
+        const stable = !subject.preparing && snapshot.length === host.previous.length
+            && snapshot.every((v, i) => v === host.previous[i]);
+        host.stableSamples = stable ? host.stableSamples + 1 : 0;
+        host.previous = snapshot;
+        if (host.stableSamples < 6) return;
+        stop();
         host.check(Math.abs(subject._nr(host.chosen)-subject.previewRadius) < 0.1, 'selected icon reaches preview size');
         const icon = host.find(subject, item => item.isPreview === true && item.node?.kind === 'app');
         host.check(icon && Math.abs(icon.width-subject.previewRadius*1.5) < 0.1, 'app image grows with its disc');
@@ -62,8 +73,11 @@ FrameAnimation {
     }
 }
 Timer {
-    interval: 8800; running: true
+    interval: 100; running: true; repeat: true
     onTriggered: {
+        if (!host.panTest || host.elapsed < 2.7) return;
+        stop();
+        host.finished = true;
         host.panTest = false;
         host.pointer.releaseAt();
         host.check(host.edges.paths.every((p,i) => p === host.pathsBefore[i]), 'camera drag preserves edge geometry');
@@ -73,4 +87,9 @@ Timer {
         console.log('INTERACTION-PERF', 'frames', frames.length, 'mean', frames.reduce((a,b)=>a+b,0)/frames.length, 'p95', frames[Math.floor(frames.length*0.95)], 'max', frames[frames.length-1]);
         subject.panX = 0; subject.panY = 0;
     }
+}
+
+Timer {
+    interval: 40000; running: true
+    onTriggered: host.check(host.finished, 'interaction lifecycle finishes within its deadline')
 }

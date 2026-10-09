@@ -1,32 +1,49 @@
 property var cycleState: Qt.createQmlObject('import Quickshell; import qs.components; ScreenState { modelData: Quickshell.screens[0] }', host)
 property var before: []
+property var previous: []
+property int stableSamples: 0
+property int phase: 0
+property double phaseStart: 0
 function check(ok, label) {
     if (!ok) { console.error('RESIZE-FAIL', label); Qt.quit(); }
     else console.log('RESIZE-PASS', label);
 }
 Timer {
-    interval: 4500; running: true
+    interval: 100; running: true; repeat: true
     onTriggered: {
-        host.check(subject.layoutReady && !subject.preparing, 'initial layout settles');
-        subject.selectNode(1);
-        host.before = Array.from(subject.snap);
-        subject.transitioning = true;
-        subject.width -= 70;
-        subject.height -= 20;
+        const now = Date.now();
+        if (host.phase === 0) {
+            const snapshot = Array.from(subject.snap);
+            const stable = subject.layoutReady && !subject.preparing && snapshot.length > 0
+                && snapshot.length === host.previous.length
+                && snapshot.every((v, i) => v === host.previous[i]);
+            host.stableSamples = stable ? host.stableSamples + 1 : 0;
+            host.previous = snapshot;
+            if (host.stableSamples < 6) return;
+            host.check(true, 'initial layout settles');
+            subject.selectNode(1);
+            host.before = snapshot;
+            subject.transitioning = true;
+            subject.paused = true;
+            subject.width -= 70;
+            subject.height -= 20;
+        } else if (host.phase === 1 && now - host.phaseStart >= 350) {
+            host.check(subject.resizePending && subject.snap.every((v,i) => v === host.before[i]), 'camera transition defers resize layout');
+            subject.transitioning = false;
+        } else if (host.phase === 2 && now - host.phaseStart >= 350) {
+            host.check(subject.resizePending, 'hidden graph defers resize layout');
+            subject.paused = false;
+        } else if (host.phase === 3 && now - host.phaseStart >= 350) {
+            host.check(!subject.resizePending && !subject.preparing, 'resize retains settled layout');
+            host.check(subject.currentNode === 1, 'resize preserves selection');
+            host.check(subject.snap.every((v,i) => i % 3 === 2 || Math.abs(v-host.before[i]) < .01), 'resize preserves node positions');
+            stop();
+        } else return;
+        host.phase++;
+        host.phaseStart = now;
     }
 }
 Timer {
-    interval: 4850; running: true
-    onTriggered: {
-        host.check(subject.resizePending && subject.snap.every((v,i) => v === host.before[i]), 'camera transition defers resize layout');
-        subject.transitioning = false;
-    }
-}
-Timer {
-    interval: 5300; running: true
-    onTriggered: {
-        host.check(!subject.resizePending && !subject.preparing, 'resize retains settled layout');
-        host.check(subject.currentNode === 1, 'resize preserves selection');
-        host.check(subject.snap.every((v,i) => i % 3 === 2 || Math.abs(v-host.before[i]) < .01), 'resize preserves node positions');
-    }
+    interval: 40000; running: true
+    onTriggered: host.check(host.phase === 4, 'resize lifecycle finishes within its deadline')
 }

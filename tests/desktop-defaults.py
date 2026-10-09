@@ -12,6 +12,8 @@ wrapper = (package / "bin/burl-shell").read_text()
 for key in ("QML_IMPORT_PATH", "QT_PLUGIN_PATH"):
     env[key] = re.search(r'export ' + key + r'="([^"$]+)', wrapper).group(1)
 
+env["QML2_IMPORT_PATH"] = env["QML_IMPORT_PATH"]
+
 with tempfile.TemporaryDirectory(prefix="burl-defaults-test-") as directory:
     root = Path(directory)
     (root / "burl").mkdir()
@@ -29,6 +31,7 @@ Item {
     Component.onCompleted: {
         if (GlobalConfig.general.apps.terminal[0] !== "user-choice") throw new Error("user override lost");
         if (GlobalConfig.general.apps.explorer[0] !== "default-explorer") throw new Error("desktop defaults missing");
+        console.log("DEFAULTS-PASS");
         if (EmacsSources.stateDb !== "" || EmacsSources.roamDb !== "") throw new Error("personal databases enabled by default");
     }
 }
@@ -36,7 +39,17 @@ Item {
     env.update(XDG_CONFIG_HOME=directory, BURL_DEFAULTS_FILE=str(defaults),
                BURL_EMACS_STATE_DB="", BURL_ORG_ROAM_DB="")
     subprocess.run(["bash", "scripts/qs-shot.sh", "--root", directory, "--size", "10x10",
-                    "--settle", "1200", "Fixture.qml", str(root / "result.png")],
+                    "--settle", "1200", "--log", str(root / "probe.log"), "Fixture.qml", str(root / "result.png")],
                    cwd=Path(__file__).resolve().parent.parent, env=env,
                    check=True, timeout=30)
+    log = (root / "probe.log").read_text()
+    assert "DEFAULTS-PASS" in log and "Error:" not in log, log
     assert before == settings.read_bytes(), "loading defaults changed user settings"
+    fixture = root / "Fixture.qml"
+    fixture.write_text(fixture.read_text().replace("width: 10; height: 10", """width: 10; height: 10
+    Timer { interval: 300; running: true; onTriggered: GlobalConfig.general.apps.terminal = ["edited-choice"] }"""))
+    subprocess.run(["bash", "scripts/qs-shot.sh", "--root", directory, "--size", "10x10",
+                    "--settle", "1600", "Fixture.qml", str(root / "edited.png")],
+                   cwd=Path(__file__).resolve().parent.parent, env=env,
+                   check=True, timeout=30)
+    assert json.loads(settings.read_text())["general"]["apps"]["terminal"] == ["edited-choice"], "user edits were not saved"

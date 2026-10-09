@@ -6,14 +6,7 @@ import Quickshell.Io
 import Burl
 import qs.services
 
-// Live-apply + persist monitor configuration.
-//
-// Live changes go through `eval hl.monitor(...)` over the IPC socket (instant,
-// but transient — lost on `hyprctl reload`).  Persisting rewrites the
-// machine-local, gitignored `monitors-generated.lua` (loaded by hyprland.lua
-// via pcall(dofile)) through the hypr-monitor-write script.  ~/.config/hypr is
-// a direct symlink into the dotfiles source, so the generated file is writable
-// at runtime — no `make update-home` needed to persist.
+// Generated monitor rules must remain writable beside the compositor configuration.
 Singleton {
     id: root
 
@@ -44,7 +37,7 @@ Singleton {
     }
 
     // Per-host: no cross-machine clobbering.
-    readonly property string luaPath: Quickshell.env("HOME") + "/.config/hypr/monitors-generated.lua"
+    readonly property string luaPath: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/hypr/monitors-generated.lua"
 
     property bool persisting: false
     signal persisted(bool success, string message)

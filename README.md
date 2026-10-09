@@ -32,3 +32,6 @@ Values in the writable `shell.json` override those defaults. Restart the shell
 after changing the defaults file. Optional personal integrations use
 `BURL_CALENDAR_FILE`, `BURL_EMACS_STATE_DB`, `BURL_ORG_ROAM_DB`, and
 `BURL_EMACS_INTEGRATION=1` for task actions. They are disabled by default.
+
+`BURL_MANAGE_LLAMA=1` lets performance mode pause a running Shepherd
+`llama-server` service and resume it afterward. It is disabled by default.

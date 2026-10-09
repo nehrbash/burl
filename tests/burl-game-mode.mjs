@@ -6,7 +6,7 @@ import { runInNewContext } from "node:vm";
 const source = readFileSync(new URL("../services/GameMode.qml", import.meta.url), "utf8");
 const PowerProfile = { PowerSaver: 0, Balanced: 1, Performance: 2 };
 
-function harness(profile = PowerProfile.Balanced) {
+function harness(profile = PowerProfile.Balanced, manageLlama = true) {
     const commands = [];
     const options = [];
     const reloads = [];
@@ -16,7 +16,7 @@ function harness(profile = PowerProfile.Balanced) {
     const root = { ready: true };
     const context = {
         root, props, stopLlama, PowerProfiles, PowerProfile,
-        Quickshell: { execDetached: args => commands.push(Array.from(args)) },
+        Quickshell: { env: key => key === "BURL_MANAGE_LLAMA" && manageLlama ? "1" : "", execDetached: args => commands.push(Array.from(args)) },
         Hypr: { extras: { applyOptions: opts => options.push(opts), message: msg => reloads.push(msg) } },
         GlobalConfig: { utilities: { toasts: { gameModeChanged: false } } },
     };
@@ -133,4 +133,14 @@ test("hot reload waits for restored ownership before applying effects", () => {
     h.root.setEnabled(false);
     h.root.syncEffects();
     assert.deepEqual(h.commands, [["herd", "start", "llama-server"]]);
+});
+
+test("performance mode leaves personal services alone without opt-in", () => {
+    const h = harness(PowerProfile.Performance, false);
+    h.root.syncEffects();
+    assert.equal(h.options.length, 1);
+    assert.equal(h.stopLlama.running, false);
+    h.root.setEnabled(false);
+    h.root.syncEffects();
+    assert.equal(h.commands.length, 0);
 });
