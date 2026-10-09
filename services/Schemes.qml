@@ -92,8 +92,10 @@ Singleton {
         id: apply
         stderr: StdioCollector {}
         onExited: (code, status) => {
-            if (code !== 0)
+            if (code !== 0) {
                 root.applyError = qsTr("Could not apply colour scheme: %1").arg(stderr.text.trim());
+                Quickshell.execDetached(["notify-send", "-a", "burl", qsTr("Colour scheme error"), stderr.text.trim()]);
+            }
             Colours.reloadScheme();
             root.refresh();
         }

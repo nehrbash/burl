@@ -25,6 +25,9 @@ with tempfile.TemporaryDirectory(prefix="burl-theme-test-") as directory:
     cli = root / "bin/burl"
     cli.write_text("#!/bin/sh\nexec " + shlex.quote(sys.executable) + ' -m burl "$@"\n')
     cli.chmod(0o755)
+    notification = root / "bin/notify-send"
+    notification.write_text("#!/bin/sh\nprintf '%s\\n' \"$*\" > " + shlex.quote(str(root / "notification")) + "\n")
+    notification.chmod(0o755)
     env.update(XDG_CONFIG_HOME=str(root / "config"), XDG_STATE_HOME=str(root / "state"),
                XDG_CACHE_HOME=str(root / "cache"), XDG_DATA_HOME=str(root / "data"),
                PYTHONPATH=str(source / "cli"), PATH=str(root / "bin") + ":" + env["PATH"])
@@ -55,7 +58,7 @@ Item {
                 return;
             }
             if (Schemes.busy || Schemes.entries.length === 0) return;
-            if (Schemes.error) throw new Error(Schemes.error);
+            if (Schemes.error && parent.phase < 3) throw new Error(Schemes.error);
             if (parent.phase === 0) {
                 if (!Colours.light) return;
                 console.log("THEME-MODE-PASS");
@@ -70,6 +73,11 @@ Item {
                 if (Woodland.brass !== Colours.palette.m3primary) throw new Error("accent ignored dark palette");
                 if (Colours.palette.m3surface.toString() !== "#111319") throw new Error("wrong dark surface");
                 console.log("THEME-DARK-PASS");
+                Schemes.setMode("light");
+                parent.phase++;
+            } else if (parent.phase === 3 && Schemes.error) {
+                if (Colours.scheme !== "nocturne" || Colours.light) throw new Error("failed mode changed palette");
+                console.log("THEME-FAILURE-PASS");
                 parent.phase++;
             }
         }
@@ -81,8 +89,9 @@ Item {
                     "--settle", "6000", "--log", str(log), "ThemeProbe.qml", str(root / "result.png")],
                    cwd=source, env=env, check=True, timeout=30)
     output = log.read_text()
-    assert all(marker in output for marker in ("THEME-MODE-PASS", "THEME-LIGHT-PASS", "THEME-DARK-PASS")), output
+    assert all(marker in output for marker in ("THEME-MODE-PASS", "THEME-LIGHT-PASS", "THEME-DARK-PASS", "THEME-FAILURE-PASS")), output
     assert "Error:" not in output, output
     saved = json.loads((root / "state/burl/scheme.json").read_text())
+    assert "has no light appearance" in (root / "notification").read_text()
     assert saved["name"] == "nocturne" and saved["mode"] == "dark", saved
     print("PASS: settings command → atomic save → file watcher → light/dark palette bindings")
