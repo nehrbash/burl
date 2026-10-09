@@ -1,0 +1,18 @@
+stateDiagram-v2
+    [*] --> Unlocated
+    Unlocated --> Locating: open weather or apply settings
+    Ready --> Locating: change location / explicit retry
+    Ready --> Ready: automatic location cache younger than 15 minutes
+    Locating --> Locating: new selection supersedes request
+    Locating --> LookupError: invalid coordinates / no city / network error
+    LookupError --> Locating: edit location or retry
+    Locating --> Ready: explicit coordinates / city result / IP detection
+    Ready --> Fetching: coordinates change / hourly refresh
+    Fetching --> Ready: current-location weather response
+    Fetching --> Ready: network failure retains last forecast
+    note right of Locating
+        Empty setting selects IP detection.
+        Changing location clears old forecast.
+        Superseded callbacks are ignored.
+        Failures never restart lookup automatically.
+    end note

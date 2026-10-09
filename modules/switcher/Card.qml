@@ -35,7 +35,7 @@ Item {
 
         radius: Tokens.rounding.large
         framed: root.selected
-        fill: root.selected ? Woodland.mix(Woodland.barkLit, Woodland.parchment, 0.18) : Woodland.rimShadow
+        fill: root.selected ? Colours.palette.m3secondaryContainer : Colours.palette.m3surfaceContainerHigh
     }
 
     StyledClippingRect {
@@ -48,7 +48,7 @@ Item {
         anchors.margins: Tokens.padding.small
 
         radius: Tokens.rounding.small
-        color: Woodland.rimShadow
+        color: Colours.palette.m3surfaceContainerLowest
 
         ScreencopyView {
             anchors.centerIn: parent
@@ -93,7 +93,7 @@ Item {
             text: root.client?.title ?? ""
             elide: Text.ElideRight
             maximumLineCount: 1
-            color: root.selected ? Woodland.creamPrimary : Woodland.creamSecondary
+            color: root.selected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
             font: Tokens.font.label.medium
         }
 
@@ -107,7 +107,7 @@ Item {
             elide: Text.ElideRight
             horizontalAlignment: Text.AlignRight
             text: root.wsName
-            color: Woodland.oliveLight
+            color: root.selected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurfaceVariant
             font: Tokens.font.label.small
         }
     }

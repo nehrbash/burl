@@ -65,12 +65,12 @@ PageBase {
         Variants {
             id: playerVariants
 
-            model: [...new Set(Players.list.map(p => Players.getIdentity(p)).filter(id => id))]
+            model: ["", ...new Set(Players.list.map(p => Players.getIdentity(p)).filter(id => id))]
 
             MenuItem {
                 required property string modelData
 
-                text: modelData
+                text: modelData || qsTr("Auto")
                 icon: modelData === GlobalConfig.services.defaultPlayer ? "check" : ""
                 activeIcon: "music_note"
             }
@@ -144,10 +144,10 @@ PageBase {
             label: qsTr("Default player")
             subtext: qsTr("Preferred media player when several are open")
             menuItems: playerVariants.instances
-            active: menuItems.find(i => i.text === GlobalConfig.services.defaultPlayer) ?? null
+            active: menuItems.find(i => i.modelData === GlobalConfig.services.defaultPlayer) ?? null
             fallbackIcon: "music_note"
             fallbackText: GlobalConfig.services.defaultPlayer || qsTr("Auto")
-            onSelected: item => GlobalConfig.services.defaultPlayer = item.text
+            onSelected: item => GlobalConfig.services.defaultPlayer = item.modelData
         }
 
         SectionHeader {

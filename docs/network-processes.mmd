@@ -1,0 +1,9 @@
+stateDiagram-v2
+    [*] --> Created: executeCommand
+    Created --> Scheduled: retain Process under Nmcli
+    Scheduled --> Running: Qt.callLater / exec
+    Running --> CallbackDelivered: password error or exit result
+    Running --> Finished: exit without callback
+    CallbackDelivered --> Finished: process exits
+    Finished --> Released: remove from activeProcesses and destroy
+    Released --> [*]

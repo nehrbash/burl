@@ -35,7 +35,7 @@ PageBase {
                 return Math.min(Math.round(cWidth * 0.4), cWidth / screen.width * screen.height);
             }
 
-            color: Woodland.surface(Colours.tPalette.m3surfaceContainer, Colours.light)
+            color: Colours.tPalette.m3surfaceContainer
             radius: Tokens.rounding.large
 
             Loader {
@@ -192,7 +192,16 @@ PageBase {
             last: true
             text: qsTr("Dark theme")
             checked: !Colours.light
-            onToggled: Colours.setMode(checked ? "dark" : "light")
+            enabled: !Schemes.busy && Schemes.modes.length > 1
+            Component.onCompleted: Schemes.refresh()
+            onToggled: Schemes.setMode(checked ? "dark" : "light")
+        }
+        StyledText {
+            Layout.fillWidth: true
+            visible: Schemes.error !== ""
+            text: Schemes.error
+            color: Colours.palette.m3error
+            wrapMode: Text.WordWrap
         }
     }
 }

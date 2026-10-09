@@ -299,51 +299,40 @@ def apply_colours(colours: dict[str, str], mode: str) -> None:
     lock_file = c_state_dir / "theme.lock"
     c_state_dir.mkdir(parents=True, exist_ok=True)
     
-    try:
-        with open(lock_file, 'w') as lock_fd:
-            try:
-                fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except BlockingIOError:
-                return
-            
-            try:
-                cfg = json.loads(user_config_path.read_text())["theme"]
-            except (FileNotFoundError, json.JSONDecodeError, KeyError):
-                cfg = {}
-
-            def check(key: str) -> bool:
-                return cfg[key] if key in cfg else True
-
-            if check("enableTerm"):
-                apply_terms(gen_sequences(colours))
-            if check("enableHypr"):
-                apply_hypr(gen_conf(colours))
-            if check("enableDiscord"):
-                apply_discord(gen_scss(colours))
-            if check("enableSpicetify"):
-                apply_spicetify(colours, mode)
-            if check("enablePandora"):
-                apply_pandora(colours, mode)
-            if check("enableFuzzel"):
-                apply_fuzzel(colours)
-            if check("enableSatty"):
-                apply_satty(colours)
-            if check("enableBtop"):
-                apply_btop(colours)
-            if check("enableNvtop"):
-                apply_nvtop(colours)
-            if check("enableHtop"):
-                apply_htop(colours)
-            if check("enableQt"):
-                apply_qt(colours, mode)
-            if check("enableWarp"):
-                apply_warp(colours, mode)
-            if check("enableCava"):
-                apply_cava(colours)
-            apply_user_templates(colours, mode)
-            
-    finally:
+    with open(lock_file, "a") as lock_fd:
+        fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX)
         try:
-            lock_file.unlink()
-        except FileNotFoundError:
-            pass
+            cfg = json.loads(user_config_path.read_text())["theme"]
+        except (FileNotFoundError, json.JSONDecodeError, KeyError):
+            cfg = {}
+
+        def check(key: str) -> bool:
+            return cfg[key] if key in cfg else True
+
+        if check("enableTerm"):
+            apply_terms(gen_sequences(colours))
+        if check("enableHypr"):
+            apply_hypr(gen_conf(colours))
+        if check("enableDiscord"):
+            apply_discord(gen_scss(colours))
+        if check("enableSpicetify"):
+            apply_spicetify(colours, mode)
+        if check("enablePandora"):
+            apply_pandora(colours, mode)
+        if check("enableFuzzel"):
+            apply_fuzzel(colours)
+        if check("enableSatty"):
+            apply_satty(colours)
+        if check("enableBtop"):
+            apply_btop(colours)
+        if check("enableNvtop"):
+            apply_nvtop(colours)
+        if check("enableHtop"):
+            apply_htop(colours)
+        if check("enableQt"):
+            apply_qt(colours, mode)
+        if check("enableWarp"):
+            apply_warp(colours, mode)
+        if check("enableCava"):
+            apply_cava(colours)
+        apply_user_templates(colours, mode)

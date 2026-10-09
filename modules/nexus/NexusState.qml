@@ -6,7 +6,7 @@ QtObject {
     property ShellScreen screen
     property bool isWindow
     property bool animatingContainer
-    property int currentPageIdx
+    property string currentPageId: "appearance"
     property list<int> subPageIdxStack
     property bool searchOpen
 
@@ -29,5 +29,5 @@ QtObject {
         subPageIdxStack.pop();
     }
 
-    onCurrentPageIdxChanged: subPageIdxStack.length = 0
+    onCurrentPageIdChanged: subPageIdxStack.length = 0
 }

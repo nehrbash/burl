@@ -30,7 +30,7 @@ Item {
     BlobGroup {
         id: blobGroup
 
-        color: Woodland.surface(Colours.palette.m3surfaceContainerHighest, Colours.light)
+        color: Colours.palette.m3surfaceContainerHighest
         smoothing: root.Tokens.rounding.medium
         cornerFill: false
 

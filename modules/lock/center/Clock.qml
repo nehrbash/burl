@@ -60,7 +60,7 @@ Item {
         asynchronous: true
 
         sourceComponent: StyledRect {
-            color: Woodland.surface(Colours.tPalette.m3surfaceContainerHigh, Colours.light)
+            color: Colours.tPalette.m3surfaceContainerHigh
             radius: Tokens.rounding.large
 
             implicitWidth: minuteMetrics.tightBoundingRect.width

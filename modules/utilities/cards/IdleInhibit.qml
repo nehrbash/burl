@@ -19,7 +19,7 @@ StyledRect {
     implicitHeight: nonAnimHeight
 
     radius: Tokens.rounding.large
-    color: Woodland.surface(Colours.tPalette.m3surfaceContainer, Colours.light)
+    color: Colours.tPalette.m3surfaceContainer
     clip: true
 
     WoodPanel {
@@ -53,7 +53,7 @@ StyledRect {
 
                 anchors.centerIn: parent
                 text: root.hibernateSetting ? "downloading" : "coffee"
-                color: root.checked ? Woodland.midnight : Woodland.ivory
+                color: root.checked ? Colours.palette.m3onPrimary : Woodland.ivory
                 fontStyle: Tokens.font.icon.large
             }
         }
@@ -118,7 +118,7 @@ StyledRect {
 
                 anchors.centerIn: parent
                 text: qsTr("Active since %1").arg(Qt.formatTime(IdleInhibitor.enabledSince, GlobalConfig.services.useTwelveHourClock ? "hh:mm a" : "hh:mm"))
-                color: Woodland.midnight
+                color: Colours.palette.m3onPrimary
                 font: Tokens.font.body.builders.small.size(Math.round(Tokens.font.body.small.pointSize * 0.9)).build()
             }
         }

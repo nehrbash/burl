@@ -34,7 +34,7 @@ Item {
             Layout.fillWidth: true
             implicitHeight: width
             radius: Tokens.rounding.largeIncreased
-            color: Woodland.surface(Colours.tPalette.m3surfaceContainer, Colours.light)
+            color: Colours.tPalette.m3surfaceContainer
 
             Loader {
                 anchors.centerIn: parent

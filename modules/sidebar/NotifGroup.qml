@@ -61,7 +61,7 @@ StyledRect {
 
     clip: true
     radius: Tokens.rounding.large
-    color: Woodland.surface(Colours.layer(Colours.palette.m3surfaceContainer, 2), Colours.light)
+    color: Colours.layer(Colours.palette.m3surfaceContainer, 2)
 
     Behavior on implicitHeight {
         Anim {}
@@ -122,7 +122,7 @@ StyledRect {
 
             StyledClippingRect {
                 anchors.fill: parent
-                color: root.urgency === NotificationUrgency.Critical ? Colours.palette.m3error : root.urgency === NotificationUrgency.Low ? Woodland.surface(Colours.layer(Colours.palette.m3surfaceContainerHigh, 3), Colours.light) : Colours.palette.m3secondaryContainer
+                color: root.urgency === NotificationUrgency.Critical ? Colours.palette.m3error : root.urgency === NotificationUrgency.Low ? Colours.layer(Colours.palette.m3surfaceContainerHigh, 3) : Colours.palette.m3secondaryContainer
                 radius: Tokens.rounding.full
 
                 Loader {
@@ -143,7 +143,7 @@ StyledRect {
                     implicitWidth: Tokens.sizes.notifs.badge
                     implicitHeight: Tokens.sizes.notifs.badge
 
-                    color: root.urgency === NotificationUrgency.Critical ? Colours.palette.m3error : root.urgency === NotificationUrgency.Low ? Woodland.surface(Colours.palette.m3surfaceContainerHigh, Colours.light) : Colours.palette.m3secondaryContainer
+                    color: root.urgency === NotificationUrgency.Critical ? Colours.palette.m3error : root.urgency === NotificationUrgency.Low ? Colours.palette.m3surfaceContainerHigh : Colours.palette.m3secondaryContainer
                     radius: Tokens.rounding.full
 
                     ColouredIcon {
@@ -193,7 +193,7 @@ StyledRect {
                     implicitWidth: expandBtn.implicitWidth + Tokens.padding.large
                     implicitHeight: groupCount.implicitHeight + Tokens.padding.extraSmall
 
-                    color: root.urgency === NotificationUrgency.Critical ? Colours.palette.m3error : Woodland.surface(Colours.layer(Colours.palette.m3surfaceContainerHigh, 3), Colours.light)
+                    color: root.urgency === NotificationUrgency.Critical ? Colours.palette.m3error : Colours.layer(Colours.palette.m3surfaceContainerHigh, 3)
                     radius: Tokens.rounding.full
 
                     StateLayer {

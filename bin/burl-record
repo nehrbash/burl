@@ -22,6 +22,14 @@ ACTIVE_PATH="$STATE_DIR/recording.mp4"
 NOTIF_ID_FILE="$STATE_DIR/recording.notif"
 CLIPBOARD_FLAG="$STATE_DIR/recording.clip"
 LOG_PATH="$STATE_DIR/recording.log"
+PID_PATH="$STATE_DIR/recording.pid"
+STATUS_PATH="$STATE_DIR/recording.json"
+ACTION=toggle
+child_pid=
+stopping=0
+owned=0
+phase=idle
+
 
 REGION=
 SOUND=0
@@ -48,6 +56,10 @@ while [ $# -gt 0 ]; do
                 *) REGION=$2; shift ;;
             esac
             ;;
+        --run) ACTION=run ;;
+        --start) ACTION=start ;;
+        --stop) ACTION=stop ;;
+        --status) ACTION=status ;;
         --sound) SOUND=1 ;;
         --pause) PAUSE=1 ;;
         --clipboard) CLIP=1 ;;
@@ -65,7 +77,60 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-is_running() { pidof "$RECORDER" >/dev/null 2>&1; }
+owner_pid() {
+    [ -f "$PID_PATH" ] || return 1
+    read -r supervisor_pid <"$PID_PATH"
+    case "$supervisor_pid" in '' | *[!0-9]*) return 1 ;; esac
+    kill -0 "$supervisor_pid" 2>/dev/null || return 1
+    [ -r "/proc/$supervisor_pid/cmdline" ] || return 1
+    tr '\0' '\n' <"/proc/$supervisor_pid/cmdline" | grep -qE '(^|/)\.?burl-record(-real)?$' || return 1
+    tr '\0' '\n' <"/proc/$supervisor_pid/cmdline" | grep -qx -- '--run' || return 1
+    printf '%s' "$supervisor_pid"
+}
+
+publish() {
+    phase=$1
+    printf '{"state":"%s"}\n' "$phase" >"$STATUS_PATH.$$"
+    mv "$STATUS_PATH.$$" "$STATUS_PATH"
+}
+
+release() {
+    if [ "$owned" = 1 ]; then
+        publish idle
+        rm -f "$PID_PATH"
+        owned=0
+        flock -u 9
+        exec 9>&-
+    fi
+}
+
+cancel() {
+    stopping=1
+    [ "$owned" = 0 ] || publish cancelling
+    [ -z "$child_pid" ] || kill -TERM "$child_pid" 2>/dev/null || true
+}
+
+pause() {
+    case "$phase" in
+        recording) kill -USR2 "$child_pid" 2>/dev/null && publish paused ;;
+        paused) kill -USR2 "$child_pid" 2>/dev/null && publish recording ;;
+    esac
+}
+
+cleanup() {
+    cancel
+    [ -z "$child_pid" ] || wait "$child_pid" 2>/dev/null || true
+    release
+}
+
+wait_child() {
+    # Signals interrupt wait before the child has flushed its output.
+    while kill -0 "$child_pid" 2>/dev/null; do
+        wait "$child_pid" || true
+    done
+    wait "$child_pid" 2>/dev/null || true
+    child_pid=
+}
 
 notify() { notify-send -a burl "$1" "$2" >/dev/null 2>&1 || true; }
 
@@ -85,7 +150,11 @@ notify_close() {
 
 start() {
     mkdir -p "$STATE_DIR"
-    [ "$CLIP" = 1 ] && : >"$CLIPBOARD_FLAG" || rm -f "$CLIPBOARD_FLAG"
+    if [ "$CLIP" = 1 ]; then
+        : >"$CLIPBOARD_FLAG"
+    else
+        rm -f "$CLIPBOARD_FLAG"
+    fi
 
     if ! monitors=$(hyprctl monitors -j 2>/dev/null) || [ -z "$monitors" ]; then
         notify "Recording failed" "Could not query Hyprland monitors"
@@ -94,14 +163,15 @@ start() {
 
     if [ -n "$REGION" ]; then
         if [ "$REGION" = "slurp" ]; then
-            # slurp exits non-zero when the selection is cancelled (Escape,
-            # or a click without a drag). Backing out is a normal user
-            # action, not a failure: say so and exit 0 so callers — and the
-            # shell's recorder card — don't report an error.
-            if ! REGION=$(slurp -f "%wx%h+%x+%y"); then
-                notify "Recording cancelled" "Region selection cancelled"
-                exit 0
-            fi
+            publish selecting
+            slurp -f "%wx%h+%x+%y" >"$STATE_DIR/recording.region" &
+            child_pid=$!
+            [ "$stopping" = 0 ] || cancel
+            wait_child
+            [ "$stopping" = 0 ] || return
+            REGION=$(cat "$STATE_DIR/recording.region")
+            rm -f "$STATE_DIR/recording.region"
+
         fi
         if ! region_is_valid "$REGION"; then
             notify "Recording cancelled" "No usable region selected"
@@ -152,48 +222,30 @@ start() {
 
     [ "$SOUND" = 1 ] && args="$args -a default_output"
 
+    [ "$stopping" = 0 ] || return
+    publish starting
     rm -f "$ACTIVE_PATH"
-    # setsid *without* -f execs the recorder into a new session (so it
-    # outlives this script and won't take a SIGHUP when we exit) while
-    # keeping $! pointed at the recorder's real PID.
     # shellcheck disable=SC2086
-    setsid "$RECORDER" $args -o "$ACTIVE_PATH" >"$LOG_PATH" 2>&1 &
-    rec_pid=$!
-
-    # Confirm startup event-driven — no fixed delay. gpu-screen-recorder
-    # emits a periodic "update fps:" line once capture+encode are live, so
-    # we follow the log until it appears. `tail --pid` terminates the
-    # instant the recorder dies, so a failed init reaches EOF before any
-    # match and grep returns non-zero. Process liveness is authoritative:
-    # if that marker's wording ever changes upstream we still accept a
-    # surviving process (the 10s timeout is only a safety cap, not timing).
-    if timeout 10 sh -c 'tail -n +1 -f --pid="$1" "$2" | grep -qm1 "update fps:"' \
-            _ "$rec_pid" "$LOG_PATH" || is_running; then
-        notify-send -a burl -p "Recording started" "Recording..." >"$NOTIF_ID_FILE" 2>/dev/null || true
+    "$RECORDER" $args -o "$ACTIVE_PATH" >"$LOG_PATH" 2>&1 &
+    child_pid=$!
+    if [ "$stopping" = 1 ]; then
+        cancel
     else
-        # Prefer the diagnostic line over the last line: when the recorder
-        # rejects an argument it follows the error with a ~40-line usage
-        # string, which is useless in a notification bubble.
+        publish recording
+        notify-send -a burl -p "Recording started" "Recording..." >"$NOTIF_ID_FILE" 2>/dev/null || true
+    fi
+    wait_child
+    if [ ! -s "$ACTIVE_PATH" ]; then
         err=$(grep -m1 'gsr error:' "$LOG_PATH" 2>/dev/null || true)
         [ -n "$err" ] || err=$(tail -n 1 "$LOG_PATH" 2>/dev/null || true)
-        notify "Recording failed" "gpu-screen-recorder exited: $err"
-        exit 1
+        notify "Recording failed" "$err"
+        return 1
     fi
+    save
 }
 
-stop() {
-    # Grab the PID before signalling so we can wait on it deterministically.
-    set -- $(pidof "$RECORDER")
-    rec_pid=$1
-    pkill -f "$RECORDER" >/dev/null 2>&1 || true
-    # why: pkill's SIGTERM is async; gpu-screen-recorder must flush the mp4
-    # muxer (moov atom) before exit, so we block until it's fully gone
-    # before the mv. `tail --pid` waits on the kernel rather than spin-
-    # polling, and returns at once if the PID is already gone.
-    if [ -n "$rec_pid" ]; then
-        tail --pid="$rec_pid" -f /dev/null
-    fi
-
+save() {
+    publish saving
     [ -f "$ACTIVE_PATH" ] || { echo "burl-record: no recording file" >&2; exit 1; }
     mkdir -p "$SAVE_DIR"
     final="$SAVE_DIR/recording_$(date +%Y%m%d_%H-%M-%S).mp4"
@@ -209,6 +261,8 @@ stop() {
         rm -f "$CLIPBOARD_FLAG"
     fi
 
+    release
+
     chosen=$(notify-send -a burl \
         --action=watch=Watch \
         --action=open=Open \
@@ -217,7 +271,7 @@ stop() {
         "Recording saved in $final" || true)
 
     case "$chosen" in
-        watch) setsid -f app2unit -O "$final" >/dev/null 2>&1 ;;
+        watch) setsid -f xdg-open "$final" >/dev/null 2>&1 ;;
         open)
             dbus-send --session \
                 --dest=org.freedesktop.FileManager1 \
@@ -225,20 +279,47 @@ stop() {
                 /org/freedesktop/FileManager1 \
                 org.freedesktop.FileManager1.ShowItems \
                 "array:string:file://$final" string: 2>/dev/null \
-              || setsid -f app2unit -O "$SAVE_DIR" >/dev/null 2>&1
+              || setsid -f xdg-open "$SAVE_DIR" >/dev/null 2>&1
             ;;
         delete) rm -f "$final"; notify-send -a burl "Recording deleted" "$final" ;;
     esac
 }
 
-pause() {
-    is_running && pkill -USR2 -f "$RECORDER" || true
-}
-
-if [ "$PAUSE" = 1 ]; then
-    pause
-elif is_running; then
-    stop
-else
+mkdir -p "$STATE_DIR"
+if [ "$ACTION" = run ]; then
+    exec 9>"$STATE_DIR/recording.lock"
+    flock -n 9 || exit 0
+    owned=1
+    printf '%s\n' "$$" >"$PID_PATH"
+    trap cleanup EXIT
+    trap cancel TERM INT HUP
+    trap pause USR2
+    publish starting
     start
+elif [ "$ACTION" = status ]; then
+    if [ ! -f "$STATUS_PATH" ]; then
+        exec 9>"$STATE_DIR/recording.lock"
+        if flock -n 9; then
+            [ -f "$STATUS_PATH" ] || publish idle
+            flock -u 9
+        fi
+        exec 9>&-
+    fi
+    if owner_pid >/dev/null; then
+        cat "$STATUS_PATH" 2>/dev/null || printf '{"state":"starting"}\n'
+    else
+        printf '{"state":"idle"}\n'
+    fi
+elif supervisor_pid=$(owner_pid); then
+    if [ "$PAUSE" = 1 ]; then
+        kill -USR2 "$supervisor_pid"
+    elif [ "$ACTION" != start ]; then
+        kill -TERM "$supervisor_pid"
+    fi
+elif [ "$ACTION" != stop ] && [ "$PAUSE" = 0 ]; then
+    set -- --run
+    [ -z "$REGION" ] || set -- "$@" --region "$REGION"
+    [ "$SOUND" = 0 ] || set -- "$@" --sound
+    [ "$CLIP" = 0 ] || set -- "$@" --clipboard
+    setsid "$0" "$@" </dev/null >/dev/null 2>&1 &
 fi

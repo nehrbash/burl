@@ -148,7 +148,7 @@ Scope {
 
                         radius: Tokens.rounding.extraLarge
                         framed: true
-                        fill: Woodland.rimShadow
+                        fill: Colours.palette.m3surfaceContainer
 
                         MouseArea {
                             anchors.fill: parent
@@ -208,7 +208,7 @@ Scope {
                                         StyledText {
                                             Layout.bottomMargin: Tokens.spacing.extraSmall
                                             text: group.modelData.name
-                                            color: Woodland.oliveLight
+                                            color: Colours.palette.m3primary
                                             font: Tokens.font.label.medium
                                         }
 
@@ -230,7 +230,7 @@ Scope {
                                                     Layout.preferredHeight: keyLabel.implicitHeight + Tokens.padding.extraSmall
 
                                                     radius: Tokens.rounding.small
-                                                    color: Qt.alpha(Woodland.barkEdge, 0.55)
+                                                    color: Colours.palette.m3surfaceContainerHighest
 
                                                     StyledText {
                                                         id: keyLabel

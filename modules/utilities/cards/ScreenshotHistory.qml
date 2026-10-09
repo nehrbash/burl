@@ -37,7 +37,7 @@ StyledRect {
     implicitHeight: layout.implicitHeight + layout.anchors.margins * 2
 
     radius: Tokens.rounding.large
-    color: Woodland.surface(Colours.tPalette.m3surfaceContainer, Colours.light)
+    color: Colours.tPalette.m3surfaceContainer
 
     WoodPanel {
         anchors.fill: parent
@@ -149,7 +149,7 @@ StyledRect {
                     anchors.margins: Tokens.spacing.extraSmall
 
                     radius: Tokens.rounding.small
-                    color: Woodland.mix(Woodland.barkShaded, Woodland.barkEdge, 0.4)
+                    color: Colours.palette.m3surfaceContainerHighest
 
                     MouseArea {
                         anchors.fill: parent
@@ -212,7 +212,7 @@ StyledRect {
                             implicitHeight: badge.implicitHeight + Tokens.padding.extraSmall
 
                             radius: Tokens.rounding.full
-                            color: Woodland.rimShadow
+                            color: Colours.palette.m3surfaceContainer
 
                             MaterialIcon {
                                 id: badge
@@ -220,7 +220,7 @@ StyledRect {
                                 anchors.centerIn: parent
                                 text: "bookmark"
                                 fill: 1
-                                color: Woodland.oliveLight
+                                color: Colours.palette.m3primary
                                 fontStyle: Tokens.font.icon.small
                             }
                         }
@@ -237,7 +237,7 @@ StyledRect {
                         anchors.bottom: parent.bottom
                         implicitHeight: stripLayout.implicitHeight + Tokens.padding.extraSmall
 
-                        color: Woodland.rimShadow
+                        color: Colours.palette.m3surfaceContainer
                         opacity: cellHover.hovered || stripHover.hovered ? 1 : 0
                         visible: opacity > 0
 

@@ -22,7 +22,7 @@ ColumnLayout {
         placeholderText: qsTr("Search settings")
         font: Tokens.font.body.large
 
-        bg.color: Woodland.surface(Colours.tPalette.m3surfaceContainerLowest, Colours.light)
+        bg.color: Colours.tPalette.m3surfaceContainerLowest
         bg.border.color: Colours.palette.m3outlineVariant
         searchIcon.fontStyle: Tokens.font.icon.medium
         searchIcon.anchors.leftMargin: Tokens.padding.largeIncreased

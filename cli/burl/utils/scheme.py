@@ -16,8 +16,8 @@ class Scheme:
 
     def __init__(self, json: dict[str, any] | None) -> None:
         if json is None:
-            self._name = "catppuccin"
-            self._flavour = "mocha"
+            self._name = "nocturne"
+            self._flavour = "default"
             self._mode = "dark"
             self._variant = "tonalspot"
             self._colours = read_colours_from_file(self.get_colours_path())
@@ -132,6 +132,27 @@ class Scheme:
             },
         )
 
+    def select(self, name=None, flavour=None, mode=None, variant=None) -> None:
+        candidate = Scheme({"name": name or self.name, "flavour": flavour or self.flavour,
+                            "mode": mode or self.mode, "variant": variant or self.variant,
+                            "colours": self.colours})
+        if candidate.name not in get_scheme_names():
+            raise ValueError(f"Invalid scheme: {candidate.name}")
+        flavours = get_scheme_flavours(candidate.name)
+        if flavour and flavour not in flavours:
+            raise ValueError(f"Invalid flavour for {candidate.name}: {flavour}")
+        candidate._check_flavour()
+        modes = get_scheme_modes(candidate.name, candidate.flavour)
+        if mode and mode not in modes:
+            raise ValueError(f"Scheme {candidate.name} {candidate.flavour} has no {mode} appearance")
+        candidate._check_mode()
+        if candidate.variant not in scheme_variants:
+            raise ValueError(f"Invalid variant: {candidate.variant}")
+        candidate._update_colours()
+        candidate.save()
+        self._name, self._flavour, self._mode, self._variant, self._colours = (
+            candidate.name, candidate.flavour, candidate.mode, candidate.variant, candidate.colours)
+
     def set_random(self) -> None:
         self._name = random.choice(get_scheme_names())
         self._flavour = random.choice(get_scheme_flavours(self.name))
@@ -157,7 +178,7 @@ class Scheme:
             from burl.utils.material import get_colours_for_image
 
             try:
-                self._colours = get_colours_for_image()
+                self._colours = get_colours_for_image(scheme=self)
             except FileNotFoundError:
                 if self.notify:
                     notify(

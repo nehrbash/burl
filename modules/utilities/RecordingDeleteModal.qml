@@ -140,7 +140,7 @@ Loader {
         StyledRect {
             anchors.centerIn: parent
             radius: Tokens.rounding.extraLarge
-            color: Woodland.surface(Colours.palette.m3surfaceContainerHigh, Colours.light)
+            color: Colours.palette.m3surfaceContainerHigh
 
             scale: 0
             Component.onCompleted: scale = Qt.binding(() => root.props.recordingConfirmDelete ? 1 : 0)

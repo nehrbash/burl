@@ -65,7 +65,7 @@ Item {
             anchors.fill: parent
             radius: Tokens.rounding.extraLarge * root.clockScale
             opacity: Config.background.desktopClock.background.opacity
-            color: Woodland.surface(Colours.palette.m3surface, Colours.light)
+            color: Colours.palette.m3surface
 
             layer.enabled: root.blurEnabled
         }

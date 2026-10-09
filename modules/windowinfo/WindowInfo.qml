@@ -39,7 +39,7 @@ Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
 
-                color: Woodland.surface(Colours.tPalette.m3surfaceContainer, Colours.light)
+                color: Colours.tPalette.m3surfaceContainer
                 radius: Tokens.rounding.large
                 clip: true
 
@@ -54,7 +54,7 @@ Item {
                 Layout.fillWidth: true
                 Layout.preferredHeight: buttons.implicitHeight
 
-                color: Woodland.surface(Colours.tPalette.m3surfaceContainer, Colours.light)
+                color: Colours.tPalette.m3surfaceContainer
                 radius: Tokens.rounding.large
 
                 OccultFrame { anchors.fill: parent; radius: parent.radius }

@@ -244,9 +244,9 @@ Item {
                 width: Math.min(136, title.implicitWidth + 18)
                 height: 24
                 radius: height / 2
-                color: Qt.alpha(Woodland.mix(Woodland.barkEdge, Colours.palette.m3surface, 0.65), 0.96)
+                color: Colours.palette.m3surfaceContainer
                 border.width: 1
-                border.color: Qt.alpha(mouse.containsMouse ? Colours.palette.m3primary : Woodland.parchmentEdge, 0.22)
+                border.color: Qt.alpha(mouse.containsMouse ? Colours.palette.m3primary : Colours.palette.m3outline, 0.22)
                 Text {
                     id: title
                     anchors.fill: parent
@@ -257,7 +257,7 @@ Item {
                     elide: Text.ElideRight
                     text: slot.label
                     textFormat: Text.PlainText
-                    color: Woodland.parchment
+                    color: Colours.palette.m3onSurface
                     font.pixelSize: 11
                 }
             }

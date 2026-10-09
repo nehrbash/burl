@@ -181,15 +181,15 @@ Singleton {
     }
 
     function _parseSnapshot(raw: string): void {
-        const unquoted = _unquoteElisp(raw);
-        if (!unquoted)
+        const snapshot = (raw ?? "").trim();
+        if (!snapshot)
             return;
         try {
-            _snapshot = JSON.parse(unquoted);
+            _snapshot = JSON.parse(snapshot);
             _snapshotTakenAt = Date.now();
             snapshotUpdated();
         } catch (e) {
-            console.warn("Tasks: failed to parse snapshot:", e, unquoted.slice(0, 200));
+            console.warn("Tasks: failed to parse snapshot:", e, snapshot.slice(0, 200));
         }
     }
 

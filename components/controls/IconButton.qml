@@ -12,19 +12,6 @@ ButtonBase {
     font: Tokens.font.icon.medium
     padding: type === IconButton.Text ? Tokens.padding.extraSmall / 2 : Tokens.padding.small
 
-    activeColour: type === IconButton.Filled ? Woodland.brass : Woodland.brass
-    inactiveColour: {
-        if (!isToggle && type === IconButton.Filled)
-            return Woodland.brass;
-        return type === IconButton.Filled ? Colours.tPalette.m3surfaceContainer : Woodland.velvet;
-    }
-    activeOnColour: type === IconButton.Filled ? Woodland.midnight : type === IconButton.Tonal ? Woodland.midnight : Woodland.brass
-    inactiveOnColour: {
-        if (!isToggle && type === IconButton.Filled)
-            return Woodland.midnight;
-        return type === IconButton.Tonal ? Woodland.ivory : Colours.palette.m3onSurfaceVariant;
-    }
-
     implicitWidth: implicitHeight
     implicitHeight: {
         // Ensure even size so icon is centered properly

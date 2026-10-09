@@ -1,0 +1,14 @@
+stateDiagram-v2
+    [*] --> Resolve: Primary click or secondary menu
+    Resolve --> Unavailable: Missing source payload or disabled integration
+    Resolve --> Ready: Source identity and configured path produce action
+    Unavailable --> [*]: No command; keep launcher open
+    Ready --> Dispatch: Injected process, application or compositor adapter
+    Dispatch --> Failed: Adapter throws
+    Failed --> [*]: Propagate error; keep launcher open
+    Dispatch --> Submitted: Adapter returns
+    Submitted --> [*]: Close launcher
+    note right of Submitted
+        Detached command submission does not confirm
+        application completion or later process success.
+    end note

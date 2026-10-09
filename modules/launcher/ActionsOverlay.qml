@@ -71,7 +71,7 @@ Item {
         // Parchment sheet in a carved-wood frame (WoodPanel below draws
         // the grain + bark border); base stays palette-derived so light/
         // dark wallpaper schemes still read through.
-        color: Woodland.surface(Colours.layer(Colours.palette.m3surfaceContainer, 1), Colours.light)
+        color: Colours.layer(Colours.palette.m3surfaceContainer, 1)
         radius: Tokens.rounding.large
 
         WoodPanel {

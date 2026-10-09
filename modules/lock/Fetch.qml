@@ -18,7 +18,7 @@ StyledRect {
 
     implicitHeight: layout.implicitHeight + layout.anchors.topMargin + layout.anchors.margins
     radius: Tokens.rounding.medium
-    color: Woodland.surface(Colours.tPalette.m3surfaceContainer, Colours.light)
+    color: Colours.tPalette.m3surfaceContainer
 
     ColumnLayout {
         id: layout

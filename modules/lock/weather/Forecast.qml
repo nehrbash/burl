@@ -74,7 +74,7 @@ StyledRect {
 
                         anchors.centerIn: parent
                         text: Weather.formatTemp(hour.cond.tempC).slice(0, -1) // Remove C/F
-                        color: hour.index === 0 ? Woodland.midnight : Colours.palette.m3onSurface
+                        color: hour.index === 0 ? Colours.palette.m3onPrimary : Colours.palette.m3onSurface
                         font: Tokens.font.title.medium
                     }
                 }

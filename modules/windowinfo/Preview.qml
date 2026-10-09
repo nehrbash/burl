@@ -29,7 +29,7 @@ Item {
 
         implicitWidth: view.implicitWidth
 
-        color: Woodland.surface(Colours.tPalette.m3surfaceContainer, Colours.light)
+        color: Colours.tPalette.m3surfaceContainer
         radius: Tokens.rounding.medium
 
         Loader {

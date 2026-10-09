@@ -18,7 +18,7 @@ StyledRect {
     implicitWidth: centerWidth
     implicitHeight: input.implicitHeight + Tokens.padding.small
 
-    color: Woodland.surface(Colours.tPalette.m3surfaceContainer, Colours.light)
+    color: Colours.tPalette.m3surfaceContainer
     radius: 10
     border.width: 1
     border.color: Woodland.brass

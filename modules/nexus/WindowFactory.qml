@@ -44,7 +44,7 @@ Singleton {
         FloatingWindow {
             id: win
 
-            color: Woodland.surface(Colours.tPalette.m3surface, Colours.light)
+            color: Colours.tPalette.m3surface
             surfaceFormat.opaque: false
 
             onVisibleChanged: {
@@ -64,7 +64,7 @@ Singleton {
             contentItem.Config.screen: screen.name
             contentItem.Tokens.screen: screen.name
 
-            title: qsTr("Nexus — %1").arg(PageRegistry.pages[nexus.nState.currentPageIdx].label)
+            title: qsTr("Nexus — %1").arg(PageRegistry.page(nexus.nState.currentPageId).label)
 
             Nexus {
                 id: nexus

@@ -29,6 +29,14 @@ PageBase {
         }
     ]
 
+    function applyLocation(): void {
+        const location = locationField.text.trim();
+        if (location === GlobalConfig.services.weatherLocation)
+            Weather.reload(true);
+        else
+            GlobalConfig.services.weatherLocation = location;
+    }
+
     title: qsTr("Language & region")
 
     ColumnLayout {
@@ -90,41 +98,43 @@ PageBase {
             text: qsTr("Weather")
         }
 
-        // Placeholder until the map-based location picker lands
         ConnectedRect {
             Layout.fillWidth: true
             first: true
             last: true
-            implicitHeight: comingSoon.implicitHeight + Tokens.padding.extraLarge * 2
+            implicitHeight: locationLayout.implicitHeight + Tokens.padding.largeIncreased * 2
 
             ColumnLayout {
-                id: comingSoon
+                id: locationLayout
 
-                anchors.centerIn: parent
-                width: parent.width - Tokens.padding.largeIncreased * 2
-                spacing: Tokens.padding.extraSmall
+                anchors.fill: parent
+                anchors.margins: Tokens.padding.largeIncreased
+                spacing: Tokens.spacing.medium
 
-                MaterialIcon {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: "map"
-                    color: Colours.palette.m3outlineVariant
-                    fontStyle: Tokens.font.icon.extraLarge
-                }
+                StyledTextField {
+                    id: locationField
 
-                StyledText {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: qsTr("Location picker coming soon")
-                    color: Colours.palette.m3outlineVariant
-                    font: Tokens.font.title.small
+                    Layout.fillWidth: true
+                    text: GlobalConfig.services.weatherLocation
+                    placeholderText: qsTr("City or latitude, longitude")
+                    supportingText: qsTr("Leave empty to detect your location from your IP address")
+                    onAccepted: root.applyLocation()
                 }
 
                 StyledText {
                     Layout.fillWidth: true
-                    horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WordWrap
-                    text: qsTr("Choose your weather location on a map in a future update")
-                    color: Colours.palette.m3outlineVariant
+                    text: Weather.locating ? qsTr("Looking up location…") : Weather.locationError || Weather.city || Weather.loc
+                    visible: text.length > 0
+                    color: Weather.locationError ? Colours.palette.m3error : Colours.palette.m3onSurfaceVariant
                     font: Tokens.font.body.small
+                }
+
+                IconTextButton {
+                    Layout.alignment: Qt.AlignRight
+                    icon: "location_on"
+                    text: Weather.locationError ? qsTr("Retry") : qsTr("Apply")
+                    onClicked: root.applyLocation()
                 }
             }
         }

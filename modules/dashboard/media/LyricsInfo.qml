@@ -18,7 +18,7 @@ Item {
     BlobGroup {
         id: blobGroup
 
-        color: Woodland.mix(Colours.palette.m3surfaceContainerHighest, Colours.light ? Woodland.parchmentEdge : Woodland.barkLit, 0.35)
+        color: Colours.palette.m3surfaceContainerHighest
         smoothing: root.Tokens.rounding.medium
         cornerFill: false
 

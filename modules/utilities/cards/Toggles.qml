@@ -46,7 +46,7 @@ StyledRect {
     implicitHeight: layout.implicitHeight + Tokens.padding.extraLargeIncreased
 
     radius: Tokens.rounding.large
-    color: Woodland.surface(Colours.tPalette.m3surfaceContainer, Colours.light)
+    color: Colours.tPalette.m3surfaceContainer
 
     WoodPanel {
         anchors.fill: parent
@@ -166,7 +166,7 @@ StyledRect {
     }
 
     component Toggle: IconButton {
-        inactiveColour: Woodland.surface(Colours.layer(Colours.palette.m3surfaceContainerHighest, 2), Colours.light)
+        inactiveColour: Colours.layer(Colours.palette.m3surfaceContainerHighest, 2)
         fillWidth: true
         isToggle: true
         isRound: true

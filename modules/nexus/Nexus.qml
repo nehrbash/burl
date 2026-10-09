@@ -17,7 +17,7 @@ Item {
 
         onClose: root.close()
     }
-    property color blobColour: Woodland.surface(Colours.tPalette.m3surfaceContainerLow, Colours.light)
+    property color blobColour: Colours.tPalette.m3surfaceContainerLow
 
     signal close
 

@@ -1,0 +1,16 @@
+stateDiagram-v2
+    [*] --> Selected: stable page ID
+    Selected --> FadingOut: navigation changes ID and invalidates pending request
+    FadingOut --> Incubating: look up metadata and component in PageRegistry
+    Selected --> Incubating: initial load
+    Incubating --> Attached: Ready and request is current
+    Incubating --> Discarded: Ready but selection changed or container closing
+    Incubating --> Failed: Component.Error
+    Attached --> FadingOut: another page selected
+    Discarded --> [*]: destroy stale object
+    Failed --> Selected: select another page
+    note right of Incubating
+        Components stay hidden until attached.
+        Each load has a generation token.
+        Navigation order is not page identity.
+    end note

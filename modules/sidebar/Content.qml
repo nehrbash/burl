@@ -24,7 +24,7 @@ Item {
             Layout.fillHeight: true
 
             radius: Tokens.rounding.large
-            color: Woodland.surface(Colours.tPalette.m3surfaceContainerLow, Colours.light)
+            color: Colours.tPalette.m3surfaceContainerLow
 
             WoodPanel {
                 anchors.fill: parent

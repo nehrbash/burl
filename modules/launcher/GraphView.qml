@@ -6,6 +6,7 @@ import Quickshell
 import Burl
 import Burl.Sim
 import "GraphDrift.js" as GraphDrift
+import "GraphActions.js" as GraphActions
 import qs.components
 import qs.components.images
 import qs.services
@@ -532,37 +533,28 @@ Item {
         }
     }
 
-    // Woodland temper: pull each disc hue toward lit bark so the idle
-    // graph reads as berries/leaves scattered on wood rather than neon
-    // dots. Hues stay wallpaper-derived (m3/palette) — this is a fixed
-    // warm bias, not a repaint; interactive state (selection ring,
-    // borders) stays pure m3 elsewhere.
-    function woodify(c: color): color {
-        return Woodland.mix(c, Woodland.barkLit, 0.22);
-    }
-
     function colorFor(kind: string): color {
         switch (kind) {
-        case "app":         return woodify(Colours.palette.m3primary);
-        case "recent":      return woodify(Colours.palette.m3secondary);
-        case "bookmark":    return woodify(Colours.palette.m3tertiary);
-        case "wallpaper":   return woodify(Colours.palette.m3surfaceContainerHighest);
-        case "webBookmark": return woodify(Colours.palette.sky ?? Colours.palette.m3primaryContainer);
-        case "webFolder":   return woodify(Colours.palette.lavender ?? Colours.palette.m3tertiaryContainer);
-        case "webHistory":  return woodify(Colours.palette.teal ?? Colours.palette.m3secondaryContainer);
-        case "webTab":      return woodify(Colours.palette.green ?? Colours.palette.m3primary);
-        case "spotifyPlaylist": return woodify(Colours.palette.green ?? Colours.palette.m3primaryContainer);
-        case "spotifyTrack":    return woodify(Colours.palette.green ?? Colours.palette.m3primaryContainer);
-        case "client":      return woodify(Colours.palette.peach ?? Colours.palette.m3primaryContainer);
-        case "monitor":     return woodify(Colours.palette.maroon ?? Colours.palette.m3tertiaryContainer);
-        case "workspace":   return woodify(Colours.palette.yellow ?? Colours.palette.m3primaryContainer);
-        case "category":    return woodify(Colours.palette.mauve ?? Colours.palette.m3secondaryContainer);
-        case "project":     return woodify(Colours.palette.flamingo ?? Colours.palette.m3primaryContainer);
-        case "mail":        return woodify(Colours.palette.blue ?? Colours.palette.m3secondaryContainer);
-        case "event":       return woodify(Colours.palette.peach ?? Colours.palette.m3tertiaryContainer);
-        case "clip":        return woodify(Colours.palette.rosewater ?? Colours.palette.m3surfaceVariant);
-        case "emoji":       return woodify(Colours.palette.yellow ?? Colours.palette.m3tertiaryContainer);
-        default:            return woodify(Colours.palette.lavender ?? Colours.palette.m3surfaceTint);
+        case "app":         return Colours.palette.m3primary;
+        case "recent":      return Colours.palette.m3secondary;
+        case "bookmark":    return Colours.palette.m3tertiary;
+        case "wallpaper":   return Colours.palette.m3surfaceContainerHighest;
+        case "webBookmark": return Colours.palette.sky ?? Colours.palette.m3primaryContainer;
+        case "webFolder":   return Colours.palette.lavender ?? Colours.palette.m3tertiaryContainer;
+        case "webHistory":  return Colours.palette.teal ?? Colours.palette.m3secondaryContainer;
+        case "webTab":      return Colours.palette.green ?? Colours.palette.m3primary;
+        case "spotifyPlaylist": return Colours.palette.green ?? Colours.palette.m3primaryContainer;
+        case "spotifyTrack":    return Colours.palette.green ?? Colours.palette.m3primaryContainer;
+        case "client":      return Colours.palette.peach ?? Colours.palette.m3primaryContainer;
+        case "monitor":     return Colours.palette.maroon ?? Colours.palette.m3tertiaryContainer;
+        case "workspace":   return Colours.palette.yellow ?? Colours.palette.m3primaryContainer;
+        case "category":    return Colours.palette.mauve ?? Colours.palette.m3secondaryContainer;
+        case "project":     return Colours.palette.flamingo ?? Colours.palette.m3primaryContainer;
+        case "mail":        return Colours.palette.blue ?? Colours.palette.m3secondaryContainer;
+        case "event":       return Colours.palette.peach ?? Colours.palette.m3tertiaryContainer;
+        case "clip":        return Colours.palette.rosewater ?? Colours.palette.m3surfaceVariant;
+        case "emoji":       return Colours.palette.yellow ?? Colours.palette.m3tertiaryContainer;
+        default:            return Colours.palette.lavender ?? Colours.palette.m3surfaceTint;
         }
     }
 
@@ -615,78 +607,29 @@ Item {
         }
     }
 
-    // Per-kind secondary actions (Embark-style). Returns a
-    // list of { name, desc, icon, activate(search, vis) } so the entries
-    // drop straight into ActionsOverlay's existing delegate/model. Each
-    // activate() closes the launcher and runs an emacsclient/exec action
-    // on the node payload (path / id / fromEmail / etc. added in rebuild()).
-    function kindActions(node: var): var {
-        if (!node) return [];
-        const close = vis => { if (vis) vis.launcher = false; };
-        const emc = (...args) => Quickshell.execDetached(["emacsclient", "-n", ...args]);
-        const emcEval = expr => Quickshell.execDetached(["emacsclient", "-c", "-n", "-e", expr]);
-        const act = (name, icon, desc, fn) =>
-            ({ name, icon, desc: desc ?? "", activate: (s, vis) => { close(vis); fn(); } });
+    function actionContext(): var {
+        return {
+            emacsEnabled: Quickshell.env("BURL_EMACS_INTEGRATION") === "1",
+            agendaFile: CalendarSources.agendaFile,
+            execute: command => Quickshell.execDetached(command),
+            launch: entry => Apps.launch(entry),
+            dispatch: command => Hypr.dispatch(command)
+        };
+    }
 
-        switch (node.kind) {
-        case "recent":
-            return [
-                act("Open other window", "splitscreen_right", node.path,
-                    () => emc("-e", `(find-file-other-window ${JSON.stringify(node.path)})`)),
-                act("Open in Dired", "folder_open", "Containing directory",
-                    () => emcEval(`(dired ${JSON.stringify(node.path.replace(/\/[^/]*$/, "/"))})`)),
-                act("Copy path", "content_copy", node.path,
-                    () => Quickshell.execDetached(["wl-copy", node.path])),
-                act("Git log (magit)", "history", "VC history for file",
-                    () => emcEval(`(progn (find-file ${JSON.stringify(node.path)}) (magit-log-buffer-file))`)),
-            ];
-        case "project":
-            return [
-                act("Magit status", "commit", node.path,
-                    () => emcEval(`(magit-status ${JSON.stringify(node.path)})`)),
-                act("Dired", "folder_open", node.path,
-                    () => emcEval(`(dired ${JSON.stringify(node.path)})`)),
-                act("Compile", "build", "project-compile",
-                    () => emcEval(`(let ((default-directory ${JSON.stringify(node.path)})) (project-compile))`)),
-            ];
-        case "mail":
-            return [
-                act("Reply", "reply", node.from ?? "",
-                    () => emcEval(`(mu4e-view-message-with-message-id ${JSON.stringify(node.id)})`)),
-                act("Open in mu4e", "open_in_new", node.subject ?? "",
-                    () => emcEval(`(mu4e-view-message-with-message-id ${JSON.stringify(node.id)})`)),
-                act("Copy sender", "content_copy", node.fromEmail ?? "",
-                    () => Quickshell.execDetached(["wl-copy", node.fromEmail ?? ""])),
-            ];
-        case "event":
-            return [
-                act("Open agenda", "calendar_month", "org-agenda",
-                    () => emcEval(`(org-agenda nil "a")`)),
-                act("Go to entry", "event", node.title ?? "",
-                    () => emcEval(`(progn (find-file "~/doc/gcal.org") (goto-char (point-min)) (search-forward ${JSON.stringify(node.title ?? "")} nil t) (org-show-entry))`)),
-            ];
-        case "roam":
-            return [
-                act("Open other window", "splitscreen_right", node.label,
-                    () => emcEval(`(org-roam-node-open (org-roam-node-from-id ${JSON.stringify(node.id)}))`)),
-            ];
-        case "app":
-            return [
-                act("New window", "open_in_new", node.label,
-                    () => { if (node.entry) Apps.launch(node.entry); }),
-            ];
-        case "client":
-            return [
-                // hl.dsp.closewindow does NOT exist — it fails with "attempt to
-                // call a nil value", so this action silently did nothing. The
-                // lua binding calls it window.kill (same dispatcher `killwindow`
-                // maps to in Hypr.qml's translation).
-                act("Close window", "close", node.label,
-                    () => Hypr.dispatch(`hl.dsp.window.kill({ window = "address:${node.clientAddress}" })`)),
-            ];
-        default:
-            return [];
-        }
+    function activateSource(kind: string, source: var, visibility: var): bool {
+        const context = actionContext();
+        return GraphActions.execute(GraphActions.primary(kind, source, context), context, visibility);
+    }
+
+    function kindActions(node: var): var {
+        const context = actionContext();
+        return GraphActions.secondary(node, context).map(action => ({
+            name: action.name,
+            icon: action.icon,
+            desc: action.desc,
+            activate: (search, visibility) => GraphActions.execute(action, context, visibility)
+        }));
     }
 
     function rebuild(): void {
@@ -795,16 +738,14 @@ Item {
             out.push({
                 id,
                 kind: "recent",
+                source: r,
                 label: r.name,
                 tooltip: r.path,
-                path: r.path,        // payload for kind-actions / preview
+                path: r.path,
                 color: recentColor,
                 onColor: recentOnColor,
                 glyph: recentGlyph,
-                onClicked: vis => {
-                    vis.launcher = false;
-                    Quickshell.execDetached(["emacsclient", "-n", r.path]);
-                }
+                onClicked: vis => root.activateSource("recent", r, vis)
             });
             idx[id] = out.length - 1;
         }
@@ -819,15 +760,12 @@ Item {
             out.push({
                 id,
                 kind: "bookmark",
+                source: bm,
                 label: bm.name,
                 color: bmColor,
                 onColor: bmOnColor,
                 glyph: bmGlyph,
-                onClicked: vis => {
-                    vis.launcher = false;
-                    Quickshell.execDetached(["emacsclient", "-c", "-n", "-e",
-                        `(bookmark-jump ${JSON.stringify(bm.name)})`]);
-                }
+                onClicked: vis => root.activateSource("bookmark", bm, vis)
             });
             idx[id] = out.length - 1;
         }
@@ -840,16 +778,13 @@ Item {
             out.push({
                 id: n.id,
                 kind: "roam",
+                source: n,
                 label: n.title,
                 tags: n.tags,
                 color: roamColor,
                 onColor: roamOnColor,
                 glyph: roamGlyph,
-                onClicked: vis => {
-                    vis.launcher = false;
-                    Quickshell.execDetached(["emacsclient", "-c", "-n", "-e",
-                        `(org-roam-node-visit (org-roam-node-from-id ${JSON.stringify(n.id)}))`]);
-                }
+                onClicked: vis => root.activateSource("roam", n, vis)
             });
             idx[n.id] = out.length - 1;
         }
@@ -864,17 +799,14 @@ Item {
             out.push({
                 id,
                 kind: "project",
+                source: p,
                 label: p.name,
                 tooltip: p.root,
-                path: p.root,        // payload for kind-actions
+                path: p.root,
                 color: projColor,
                 onColor: projOnColor,
                 glyph: projGlyph,
-                onClicked: vis => {
-                    vis.launcher = false;
-                    Quickshell.execDetached(["emacsclient", "-c", "-n", "-e",
-                        `(project-switch-project ${JSON.stringify(p.root)})`]);
-                }
+                onClicked: vis => root.activateSource("project", p, vis)
             });
             idx[id] = out.length - 1;
         }
@@ -890,23 +822,18 @@ Item {
             out.push({
                 id,
                 kind: "mail",
+                source: msg,
                 label: subject,
                 tooltip: `${msg.from} — ${subject}`,
                 color: mailColor,
                 onColor: mailOnColor,
                 glyph: mailGlyph,
-                onClicked: vis => {
-                    vis.launcher = false;
-                    // mu4e can open a message directly by its Message-ID.
-                    Quickshell.execDetached(["emacsclient", "-c", "-n", "-e",
-                        `(mu4e-view-message-with-message-id ${JSON.stringify(msg.id)})`]);
-                }
+                onClicked: vis => root.activateSource("mail", msg, vis)
             });
             idx[id] = out.length - 1;
         }
 
-        // Upcoming calendar events (~/doc/gcal.org). Keyed by the synthetic
-        // event id so same-day events cluster via dayLinks.
+        // Synthetic event IDs connect events through dayLinks.
         const evColor = colorFor("event");
         const evOnColor = onColorFor("event");
         const evGlyph = glyphFor("event");
@@ -915,17 +842,13 @@ Item {
             out.push({
                 id: ev.id,
                 kind: "event",
+                source: ev,
                 label: ev.title,
                 tooltip: when,
                 color: evColor,
                 onColor: evOnColor,
                 glyph: evGlyph,
-                onClicked: vis => {
-                    vis.launcher = false;
-                    // Jump to the agenda and find the heading by title.
-                    Quickshell.execDetached(["emacsclient", "-c", "-n", "-e",
-                        `(progn (find-file "~/doc/gcal.org") (goto-char (point-min)) (search-forward ${JSON.stringify(ev.title)} nil t) (org-show-entry))`]);
-                }
+                onClicked: vis => root.activateSource("event", ev, vis)
             });
             idx[ev.id] = out.length - 1;
         }
@@ -1232,10 +1155,8 @@ Item {
             for (let i = 0; i < out.length; ++i) {
                 const cur = nodes[i];
                 const nxt = out[i];
-                // ±7% identity-keyed tone jitter toward bark so same-kind
-                // discs don't all sit at one mechanical hue — same jitter
-                // source as the radius jitter above, stable per index.
-                cur.color = Woodland.mix(nxt.color, Woodland.barkLit, Math.abs(_jitter(i)) * 0.07);
+                cur.color = nxt.color;
+                cur.source = nxt.source;
                 cur.onColor = nxt.onColor;
                 cur.glyph = nxt.glyph;
                 cur.onClicked = nxt.onClicked;
@@ -1248,13 +1169,6 @@ Item {
             if (!browsing && labelsChanged) rescore();
             return;
         }
-
-        // sameShape === false counterpart of the tone jitter above — first
-        // build, or the node set actually changed shape, so there is no
-        // `cur` to blend into; jitter `out`'s colours in place before they
-        // become the new `nodes`.
-        for (let i = 0; i < out.length; ++i)
-            out[i].color = Woodland.mix(out[i].color, Woodland.barkLit, Math.abs(_jitter(i)) * 0.07);
 
         const positions = {};
         for (let i = 0; i < nodes.length; ++i)
@@ -2282,7 +2196,7 @@ Item {
                     // discs, icons and edges behind it (labels render under the
                     // node layer). Matches Content.qml's parchment backdrop.
                     style: Text.Outline
-                    styleColor: Woodland.surface(Colours.palette.m3surface, Colours.light)
+                    styleColor: Colours.palette.m3surface
                     x: { return nx - width / 2; }
                     y: { return ny + sr + 8; }
                     opacity: 1
@@ -2407,7 +2321,7 @@ Item {
                     id: disc
                     anchors.fill: parent
                     radius: width / 2
-                    color: nodeItem.node.color
+                    color: root.colorFor(nodeItem.node.kind)
                     border.color: nodeItem.isCurrent
                         ? Colours.palette.m3primary
                         : Colours.palette.m3onSurface
@@ -2426,7 +2340,7 @@ Item {
                           && nodeItem.node.kind !== "wallpaper"
                     anchors.centerIn: parent
                     text: nodeItem.node.glyph
-                    color: nodeItem.node.onColor
+                    color: root.onColorFor(nodeItem.node.kind)
                     // Emoji nodes put the character itself on the disc, so they
                     // must fall through to the system emoji font rather than being
                     // forced into the icon family (which has no glyph for it).

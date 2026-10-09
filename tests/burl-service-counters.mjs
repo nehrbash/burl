@@ -115,21 +115,16 @@ test("sampling resumes with a fresh baseline and ignores late inactive reads", (
     assert.equal(n.root._downloadSpeed, 50);
 });
 
-test("recording duration advances only while running and unpaused", () => {
-    const props = { running: false, paused: false, elapsed: 0 };
-    const tick = qmlFunction("Recorder.qml", "onSecondsChanged", { props });
-    tick();
+test("recording duration advances only during capture", () => {
+    const props = { elapsed: 0 };
+    const root = { state: "idle" };
+    const tick = qmlFunction("Recorder.qml", "onSecondsChanged", { props, root });
+    for (const state of ["idle", "selecting", "starting", "paused", "saving"]) {
+        root.state = state;
+        tick();
+    }
     assert.equal(props.elapsed, 0);
-    props.running = true;
+    root.state = "recording";
     tick();
     assert.equal(props.elapsed, 1);
-    props.paused = true;
-    tick();
-    assert.equal(props.elapsed, 1);
-    props.paused = false;
-    tick();
-    assert.equal(props.elapsed, 2);
-    props.running = false;
-    tick();
-    assert.equal(props.elapsed, 2);
 });

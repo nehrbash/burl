@@ -1,7 +1,6 @@
 import hashlib
 import json
 import os
-import shutil
 import tempfile
 from pathlib import Path
 
@@ -72,7 +71,12 @@ def compute_hash(path: Path | str) -> str:
 
 
 def atomic_dump(path: Path, content: dict[str, any]) -> None:
-    with tempfile.NamedTemporaryFile("w") as f:
-        json.dump(content, f)
-        f.flush()
-        shutil.move(f.name, path)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile("w", dir=path.parent, delete=False) as stream:
+            temporary = Path(stream.name)
+            json.dump(content, stream)
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)

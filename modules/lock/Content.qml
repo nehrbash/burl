@@ -18,7 +18,7 @@ Item {
         StyledText {
             Layout.alignment: Qt.AlignHCenter
             text: Time.hourStr + ":" + Time.minuteStr
-            color: Woodland.ivory
+            color: Woodland.parchment
             font.family: "serif"
             font.pixelSize: Math.min(96, root.height * 0.13)
             font.letterSpacing: 6
@@ -85,7 +85,7 @@ Item {
             Layout.fillWidth: true
             implicitHeight: Math.min(280, root.height * 0.32)
             radius: 12
-            color: Woodland.surface(Colours.palette.m3surfaceContainer, Colours.light)
+            color: Colours.palette.m3surfaceContainer
             WoodPanel { anchors.fill: parent }
             NotifDock { lock: root.lock }
         }

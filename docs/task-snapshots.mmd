@@ -1,0 +1,12 @@
+stateDiagram-v2
+    [*] --> Watching: FileView watches state file
+    Watching --> Parsing: file loaded or changed
+    Parsing --> Published: JSON.parse succeeds
+    Parsing --> Watching: invalid or empty JSON retains previous state
+    Published --> Watching: update snapshot and countdown timestamp
+    Watching --> Bootstrap: file missing and integration enabled
+    Bootstrap --> Watching: emacsclient asks Emacs to write state
+    note right of Parsing
+        The file contains raw JSON.
+        Lisp string decoding applies only to emacsclient report output.
+    end note

@@ -78,13 +78,11 @@ StyledRect {
     // adjacent cards never grow the same crust and it never reshuffles.
     readonly property int mossSeed: Math.floor(root._grainHash / 60491) % 9973
 
-    // Warm the m3 card surface toward aged parchment (light) / lit bark (dark)
-    // so cards read as layered wood while still following the wallpaper palette.
     color: {
         if (root.folio)
             return Qt.alpha(Colours.palette.m3scrim, Colours.light ? 0.035 : 0.13);
-        const warm = Woodland.mix(root.opaque ? Colours.palette.m3surfaceContainer : Colours.tPalette.m3surfaceContainer, Colours.light ? Woodland.parchmentEdge : Woodland.barkLit, 0.4);
-        return root.backingAlpha >= 0 ? Qt.alpha(warm, root.backingAlpha) : warm;
+        const surface = root.opaque ? Colours.palette.m3surfaceContainer : Colours.tPalette.m3surfaceContainer;
+        return root.backingAlpha >= 0 ? Qt.alpha(surface, root.backingAlpha) : surface;
     }
     radius: Tokens.rounding.large
     border.width: 1

@@ -15,7 +15,7 @@ StyledClippingRect {
 
     implicitHeight: layout.implicitHeight + layout.anchors.margins * 2
     radius: Tokens.rounding.extraLarge
-    color: Woodland.surface(Colours.tPalette.m3surfaceContainer, Colours.light)
+    color: Colours.tPalette.m3surfaceContainer
 
     FadeImage {
         anchors.fill: parent
@@ -33,7 +33,7 @@ StyledClippingRect {
 
         StyledRect {
             anchors.fill: parent
-            color: Woodland.surface(Colours.palette.m3surface, Colours.light)
+            color: Colours.palette.m3surface
             opacity: 0.7
         }
 

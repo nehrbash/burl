@@ -11,6 +11,10 @@ Singleton {
 
     property string city
     property string loc
+    property bool locating: false
+    property string locationError
+    property int locationRequest: 0
+    property string requestedLocation
     property var cc
     property list<var> forecast
     property list<var> hourlyForecast
@@ -32,32 +36,65 @@ Singleton {
         return GlobalConfig.services.useFahrenheit ? `${temp !== undefined ? Math.round(toFahrenheit(temp)) : "--"}°F` : `${temp !== undefined ? Math.round(temp) : "--"}°C`;
     }
 
-    function reload(): void {
-        const configLocation = GlobalConfig.services.weatherLocation;
+    function validCoordinates(value: string): bool {
+        const parts = value.split(",").map(s => s.trim());
+        return parts.length === 2 && parts.every(s => /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(s))
+            && Math.abs(Number(parts[0])) <= 90 && Math.abs(Number(parts[1])) <= 180;
+    }
 
+    function locationFailed(request: int, message: string): void {
+        if (request !== locationRequest)
+            return;
+        locating = false;
+        locationError = message;
+    }
+
+    function reload(force: bool): void {
+        const configLocation = GlobalConfig.services.weatherLocation.trim();
+        const changed = configLocation !== requestedLocation;
+        if (!force && !changed && (locating || (!configLocation && loc && timer.elapsed() <= 900)))
+            return;
+
+        const request = ++locationRequest;
+        requestedLocation = configLocation;
+        locating = true;
+        locationError = "";
+        if (changed) {
+            loc = "";
+            city = "";
+            cc = null;
+            forecast = [];
+            hourlyForecast = [];
+        }
         if (configLocation) {
-            if (configLocation.indexOf(",") !== -1 && !isNaN(parseFloat(configLocation.split(",")[0]))) {
+            if (/^[+-]?[\d.]+\s*,/.test(configLocation)) {
+                if (!validCoordinates(configLocation)) {
+                    locationFailed(request, qsTr("Enter latitude from −90 to 90 and longitude from −180 to 180."));
+                    return;
+                }
                 loc = configLocation;
-                fetchCityFromCoords(configLocation);
+                locating = false;
+                fetchCityFromCoords(configLocation, request);
             } else {
-                fetchCoordsFromCity(configLocation);
+                fetchCoordsFromCity(configLocation, request);
             }
-        } else if (!loc || timer.elapsed() > 900) {
+        } else {
             Requests.get("https://ipinfo.io/json", text => {
+                if (request !== root.locationRequest)
+                    return;
                 const response = root._json(text);
-                if (response?.loc) {
+                if (response?.loc && root.validCoordinates(response.loc)) {
                     loc = response.loc;
                     city = response.city ?? "";
+                    locating = false;
                     timer.restart();
+                } else {
+                    root.locationFailed(request, qsTr("Could not detect your location. Enter a city or coordinates."));
                 }
-            });
+            }, () => root.locationFailed(request, qsTr("Location detection failed. Check your connection and retry.")));
         }
     }
 
-    // Requests.get only checks the network-level error code, so a captive
-    // portal page, a rate-limit body or a truncated response all arrive here
-    // as "success". An uncaught throw in one of these callbacks stops weather
-    // updating for the rest of the session with no feedback.
     function _json(text: string): var {
         try {
             return JSON.parse(text);
@@ -115,7 +152,7 @@ Singleton {
         return mapping[cityName] || cityName;
     }
 
-    function fetchCityFromCoords(coords: string): void {
+    function fetchCityFromCoords(coords: string, request: int): void {
         if (cachedCities.has(coords)) {
             city = cachedCities.get(coords);
             return;
@@ -125,8 +162,12 @@ Singleton {
         const lang = Qt.locale().name.split("_")[0] || "en";
 
         const fallbackToBigDataCloud = () => {
+            if (request !== root.locationRequest)
+                return;
             const fallbackUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=${lang}`;
             Requests.get(fallbackUrl, text => {
+                if (request !== root.locationRequest)
+                    return;
                 const geo = root._json(text);
                 const geoCity = geo?.city || geo?.locality;
                 if (geoCity) {
@@ -140,6 +181,8 @@ Singleton {
 
         const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=geocodejson&accept-language=${lang}`;
         Requests.get(nominatimUrl, text => {
+            if (request !== root.locationRequest)
+                return;
             const geo = root._json(text)?.features?.[0]?.properties?.geocoding;
             if (geo) {
                 const geoCity = geo.type === "city" ? geo.name : geo.city;
@@ -153,21 +196,23 @@ Singleton {
         }, fallbackToBigDataCloud);
     }
 
-    function fetchCoordsFromCity(cityName: string): void {
+    function fetchCoordsFromCity(cityName: string, request: int): void {
         const lang = Qt.locale().name.split("_")[0] || "en";
         const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1&language=${lang}&format=json`;
 
         Requests.get(url, text => {
+            if (request !== root.locationRequest)
+                return;
             const json = root._json(text);
-            if (json?.results && json.results.length > 0) {
-                const result = json.results[0];
+            const result = json?.results?.[0];
+            if (result && root.validCoordinates(result.latitude + "," + result.longitude)) {
                 loc = result.latitude + "," + result.longitude;
                 city = fixCityName(result.name);
+                locating = false;
             } else {
-                loc = "";
-                reload();
+                root.locationFailed(request, qsTr("Location not found. Try another city or latitude, longitude."));
             }
-        });
+        }, () => root.locationFailed(request, qsTr("Location lookup failed. Check your connection and retry.")));
     }
 
     function fetchWeatherData(): void {
@@ -175,7 +220,10 @@ Singleton {
         if (url === "")
             return;
 
+        const weatherLocation = loc;
         Requests.get(url, text => {
+            if (weatherLocation !== root.loc)
+                return;
             const json = root._json(text);
             if (!json?.current || !json.daily)
                 return;
@@ -283,7 +331,7 @@ Singleton {
 
     Connections {
         function onWeatherLocationChanged(): void {
-            root.reload();
+            root.reload(true);
         }
 
         target: GlobalConfig.services

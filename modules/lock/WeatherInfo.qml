@@ -17,7 +17,7 @@ StyledRect {
         return base + brief.anchors.topMargin;
     }
     radius: Tokens.rounding.extraExtraLarge
-    color: Woodland.surface(Colours.tPalette.m3surfaceContainer, Colours.light)
+    color: Colours.tPalette.m3surfaceContainer
 
     Timer {
         running: true

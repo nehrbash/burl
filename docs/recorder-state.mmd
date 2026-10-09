@@ -1,0 +1,23 @@
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Selecting: start region / supervisor owns slurp
+    Idle --> Starting: start monitor
+    Selecting --> Starting: valid selection
+    Selecting --> Idle: Escape
+    Selecting --> Cancelling: stop terminates owned slurp
+    Cancelling --> Idle: selection reaped
+    Cancelling --> Saving: recorder reaped
+    Starting --> Recording: recorder started
+    Starting --> Idle: startup fails or stop requested
+    Recording --> Paused: pause signals owned recorder
+    Paused --> Recording: resume
+    Recording --> Cancelling: stop
+    Recording --> Saving: recorder exits
+    Paused --> Cancelling: stop
+    Paused --> Saving: recorder exits
+    Saving --> Idle: wait for recorder, move capture, release lock
+    note right of Selecting
+        No timeout changes user-paced selection to Idle.
+        One supervisor owns children and publishes state.
+        QML watches state; it does not infer it from process names.
+    end note

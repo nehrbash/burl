@@ -24,13 +24,12 @@ StyledRect {
             return Woodland.brass;
         if (root.modelData.type === Toast.Error)
             return Colours.palette.m3errorContainer;
-        return Woodland.surface(Colours.palette.m3surface, Colours.light);
+        return Colours.palette.m3surface;
     }
 
     border.width: 1
     border.color: {
-        // Default toasts get a carved bark edge instead of a grey hairline
-        let colour = Woodland.barkShaded;
+        let colour = Colours.palette.m3outline;
         if (root.modelData.type === Toast.Success)
             colour = Colours.palette.m3success;
         if (root.modelData.type === Toast.Warning)
@@ -70,7 +69,7 @@ StyledRect {
                     return Woodland.velvet;
                 if (root.modelData.type === Toast.Error)
                     return Colours.palette.m3error;
-                return Woodland.surface(Colours.palette.m3surfaceContainerHigh, Colours.light);
+                return Colours.palette.m3surfaceContainerHigh;
             }
 
             implicitWidth: implicitHeight
@@ -107,7 +106,7 @@ StyledRect {
                     if (root.modelData.type === Toast.Success)
                         return Colours.palette.m3onSuccessContainer;
                     if (root.modelData.type === Toast.Warning)
-                        return Woodland.midnight;
+                        return Colours.palette.m3onPrimary;
                     if (root.modelData.type === Toast.Error)
                         return Colours.palette.m3onErrorContainer;
                     return Colours.palette.m3onSurface;
@@ -124,7 +123,7 @@ StyledRect {
                     if (root.modelData.type === Toast.Success)
                         return Colours.palette.m3onSuccessContainer;
                     if (root.modelData.type === Toast.Warning)
-                        return Woodland.midnight;
+                        return Colours.palette.m3onPrimary;
                     if (root.modelData.type === Toast.Error)
                         return Colours.palette.m3onErrorContainer;
                     return Colours.palette.m3onSurface;

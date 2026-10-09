@@ -13,15 +13,20 @@ in the consuming Home/System configuration.
 live under the XDG configuration, state and cache directories. The shell's
 settings UI writes `~/.config/burl/shell.json`; keep that file writable.
 
+Wallpaper & style → Colours selects a palette for panels, text and controls.
+Nocturne pairs neutral dark surfaces with brass accents; other schemes include
+light appearances where supported. Painted artwork keeps its original colours.
+
 ## Development
 
 The root contains the QML shell and `plugin/`; `cli/` contains the Python
 appearance tool. `bin/` contains runtime helpers and `scripts/` contains
 rendering and validation tools. Guix recipes live in Cellar.
 
-Run `make check` for JavaScript regressions. `make check-lifecycle` exercises
+Run `make check` for behavioral regressions. `make check-lifecycle` exercises
 native QML components in a running Wayland session with the Burl plugin on
 `QML_IMPORT_PATH`. The probes use separate instances of Quickshell.
+See [state models](docs/README.org) for lifecycle diagrams and focused native checks.
 
 The optional Org/task integration requires a compatible Emacs configuration;
 it is not required to use the desktop shell. Guix actions are configurable

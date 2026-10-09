@@ -7,7 +7,7 @@ StyledRect {
     property bool first
     property bool last
 
-    color: Woodland.surface(Colours.tPalette.m3surfaceContainer, Colours.light)
+    color: Colours.tPalette.m3surfaceContainer
     topLeftRadius: first ? Tokens.rounding.extraLarge : Tokens.rounding.extraSmall
     topRightRadius: first ? Tokens.rounding.extraLarge : Tokens.rounding.extraSmall
     bottomLeftRadius: last ? Tokens.rounding.extraLarge : Tokens.rounding.extraSmall

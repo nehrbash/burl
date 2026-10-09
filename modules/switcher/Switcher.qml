@@ -203,7 +203,7 @@ Scope {
 
                         radius: Tokens.rounding.extraLarge
                         framed: true
-                        fill: Woodland.rimShadow
+                        fill: Colours.palette.m3surfaceContainer
 
                         MouseArea {
                             anchors.fill: parent

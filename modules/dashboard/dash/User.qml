@@ -16,7 +16,7 @@ Item {
     required property ScreenState screenState
     required property FileDialog facePicker
 
-    property color pfpFallbackColour: Woodland.mix(Colours.layer(Colours.palette.m3surfaceContainerHighest, 2), Colours.light ? Woodland.parchmentEdge : Woodland.barkLit, 0.35)
+    property color pfpFallbackColour: Colours.layer(Colours.palette.m3surfaceContainerHighest, 2)
 
     anchors.fill: parent
     anchors.margins: Tokens.padding.large

@@ -1,6 +1,7 @@
 .PHONY: check check-lifecycle
 check:
 	node --test tests/burl-*.mjs
+	python3 tests/theme-schemes.py
 check-lifecycle:
 	./scripts/qs-launcher-cycle.sh
 	./scripts/qs-atmosphere-cycle.sh

@@ -514,9 +514,9 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: height / 2
-            color: Qt.alpha(Woodland.barkEdge, descend.containsMouse ? 0.85 : 0.55)
+            color: descend.containsMouse ? Colours.palette.m3surfaceContainerHighest : Colours.palette.m3surfaceContainer
             border.width: 1
-            border.color: Qt.alpha(descend.containsMouse ? Colours.palette.m3primary : Woodland.parchmentEdge, 0.3)
+            border.color: Qt.alpha(descend.containsMouse ? Colours.palette.m3primary : Colours.palette.m3outline, 0.3)
             Behavior on color { ColorAnimation { duration: 180 } }
         }
 
@@ -525,7 +525,7 @@ Item {
             anchors.leftMargin: 12
             anchors.verticalCenter: parent.verticalCenter
             text: "keyboard_double_arrow_down"
-            color: descend.containsMouse ? Colours.palette.m3primary : Woodland.parchment
+            color: descend.containsMouse ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
             fontStyle: Tokens.font.icon.small
         }
 
@@ -559,9 +559,9 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: height / 2
-            color: Qt.alpha(Woodland.barkEdge, closeSky.containsMouse ? 0.85 : 0.55)
+            color: closeSky.containsMouse ? Colours.palette.m3surfaceContainerHighest : Colours.palette.m3surfaceContainer
             border.width: 1
-            border.color: Qt.alpha(closeSky.containsMouse ? Colours.palette.m3primary : Woodland.parchmentEdge, 0.3)
+            border.color: Qt.alpha(closeSky.containsMouse ? Colours.palette.m3primary : Colours.palette.m3outline, 0.3)
         }
         Text {
             id: closeLabel
@@ -657,9 +657,9 @@ Item {
                     anchors.fill: parent
                     radius: height/2
                     color: twigMouse.containsMouse
-                        ? Woodland.mix(Woodland.barkEdge, Colours.palette.m3primary, 0.18)
-                        : Qt.darker(Woodland.barkEdge, 1.55)
-                    border.color: twigMouse.containsMouse ? Colours.palette.m3primary : Woodland.barkLit
+                        ? Colours.palette.m3surfaceContainerHighest
+                        : Colours.palette.m3surfaceContainer
+                    border.color: twigMouse.containsMouse ? Colours.palette.m3primary : Colours.palette.m3outline
                     opacity: 0.96
                 }
                 Text {
@@ -675,7 +675,7 @@ Item {
                     width: parent.width-55
                     text: twig.node?.label ?? ""
                     elide: Text.ElideRight
-                    color: Woodland.parchment
+                    color: Colours.palette.m3onSurface
                     font.pixelSize: 12
                 }
                 MouseArea {
@@ -692,7 +692,7 @@ Item {
             anchors.bottom: parent.bottom
             text: quickGrid.count + " connections   ·   " + (quickGrid.page+1) + "/" + quickGrid.pages
                 + "   ·   Alt+[ ] browse   ·   Alt+← back"
-            color: Woodland.creamSecondary
+            color: Woodland.parchment
             font.pixelSize: 11
         }
         MouseArea {

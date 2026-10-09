@@ -1,0 +1,21 @@
+#+title: Burl state models
+
+These Mermaid diagrams describe state ownership and failure paths. Update the
+relevant diagram when changing a lifecycle, and exercise its failure transitions.
+
+- [[file:theme-state.mmd][Colour schemes]]: resolve a complete candidate before one atomic save;
+  shell bindings follow the saved palette, application updates are best effort.
+- [[file:settings-pages.mmd][Settings pages]]: one registry owns stable IDs, labels and components;
+  only the latest asynchronous request may attach a visible page.
+- [[file:weather-state.mmd][Weather lookup]]: configuration selects the location source;
+  failed lookup waits for retry, superseded responses cannot replace selection.
+- [[file:launcher-actions.mmd][Launcher actions]]: source payloads stay separate from graph IDs;
+  action resolution and execution are independent of layout.
+- [[file:network-processes.mmd][Network commands]]: each transient process is released after completion.
+- [[file:task-snapshots.mmd][Task snapshots]]: parse the file as JSON; malformed input keeps the last snapshot.
+- [[file:recorder-state.mmd][Recording]]: the pending selector and capture belong to one recording attempt.
+
+Run =make check= for behavioral regressions and
+=python3 tests/theme-switching.py [BURL_PACKAGE]= for native settings-to-palette
+validation with isolated state. The native check uses the installed plugin unless
+a package path is supplied. =make check-lifecycle= covers graph and scene lifecycle.

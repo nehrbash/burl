@@ -1,0 +1,20 @@
+stateDiagram-v2
+    [*] --> Loading
+    Loading --> Ready: Read saved palette or Nocturne defaults
+    Ready --> Resolving: Select scheme + flavour + optional mode
+    Resolving --> Ready: Reject invalid selection / show error
+    Resolving --> Generating: Resolve supported appearance
+    Generating --> Ready: Wallpaper missing / show error, retain saved palette
+    Generating --> Saving: Complete palette
+    Saving --> Ready: Write fails / retain saved palette
+    Saving --> Applying: Atomic replace of scheme.json
+    Applying --> Ready: File watcher updates palette bindings
+    Applying --> Ready: Refresh catalog and available appearances
+    note right of Resolving
+        One candidate, one write.
+        No intermediate scheme or flavour is saved.
+    end note
+    note right of Ready
+        Panels and controls bind to palette roles.
+        Painted artwork retains its source colours.
+    end note

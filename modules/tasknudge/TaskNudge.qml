@@ -178,7 +178,7 @@ Scope {
                         implicitWidth: Math.min(720, parent.width - 80)
                         implicitHeight: card.implicitHeight + Tokens.padding.large * 2
                         radius: Tokens.rounding.large
-                        color: Woodland.surface(Colours.palette.m3surfaceContainer, Colours.light)
+                        color: Colours.palette.m3surfaceContainer
 
                         OccultFrame { anchors.fill: parent; radius: parent.radius }
 

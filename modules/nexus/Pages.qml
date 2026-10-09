@@ -11,28 +11,45 @@ Item {
     property int lastPageIdx
     property int animOff
     property Item currentItem
+    property int requestGeneration: 0
+    property bool disposing: false
 
-    function loadPage(idx: int): void {
-        if (currentItem)
+    function loadPage(id: string): void {
+        const generation = ++requestGeneration;
+        if (currentItem) {
             currentItem.destroy();
+            currentItem = null;
+        }
 
-        const comp = PageCompRegistry.pageComps[idx] ?? PageCompRegistry.placeholderComp;
+        const comp = PageRegistry.page(id).component;
         const incubator = comp.incubateObject(container, {
-            nState
+            nState,
+            visible: false
         });
 
-        const attach = () => {
-            incubator.object.anchors.fill = container;
-            currentItem = incubator.object;
+        const finish = status => {
+            if (status === Component.Ready) {
+                if (root.disposing || generation !== root.requestGeneration) {
+                    incubator.object.destroy();
+                    return;
+                }
+                incubator.object.anchors.fill = container;
+                incubator.object.visible = true;
+                root.currentItem = incubator.object;
+            } else if (status === Component.Error) {
+                console.warn("Nexus: failed to load page", id);
+            }
         };
 
-        if (incubator.status === Component.Ready)
-            attach();
+        if (incubator.status === Component.Loading)
+            incubator.onStatusChanged = finish;
         else
-            incubator.onStatusChanged = status => {
-                if (status === Component.Ready)
-                    attach();
-            };
+            finish(incubator.status);
+    }
+
+    Component.onDestruction: {
+        disposing = true;
+        requestGeneration++;
     }
 
     Item {
@@ -41,15 +58,16 @@ Item {
         objectName: "PageContainer"
         anchors.fill: parent
         layer.enabled: opacity < 1
-        Component.onCompleted: root.loadPage(root.nState.currentPageIdx)
+        Component.onCompleted: root.loadPage(root.nState.currentPageId)
     }
 
     Connections {
-        function onCurrentPageIdxChanged(): void {
-            switchAnim.complete();
-            root.animOff = root.Tokens.padding.extraLarge * (root.nState.currentPageIdx > root.lastPageIdx ? 1 : -1);
+        function onCurrentPageIdChanged(): void {
+            root.requestGeneration++;
+            switchAnim.stop();
+            root.animOff = root.Tokens.padding.extraLarge * (PageRegistry.indexOf(root.nState.currentPageId) > root.lastPageIdx ? 1 : -1);
             switchAnim.start();
-            root.lastPageIdx = root.nState.currentPageIdx;
+            root.lastPageIdx = PageRegistry.indexOf(root.nState.currentPageId);
         }
 
         target: root.nState
@@ -65,7 +83,7 @@ Item {
             type: Anim.DefaultEffects
         }
         ScriptAction {
-            script: root.loadPage(root.nState.currentPageIdx)
+            script: root.loadPage(root.nState.currentPageId)
         }
         PropertyAction {
             target: container.anchors

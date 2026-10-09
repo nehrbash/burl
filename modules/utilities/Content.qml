@@ -127,7 +127,7 @@ Item {
                 implicitHeight: cardLayout.implicitHeight + Tokens.padding.large * 2
 
                 radius: Tokens.rounding.extraLarge
-                color: Woodland.surface(Colours.palette.m3surfaceContainerHigh, Colours.light)
+                color: Colours.palette.m3surfaceContainerHigh
                 scale: 0
 
                 Component.onCompleted: {
@@ -198,7 +198,7 @@ Item {
                         Layout.preferredHeight: Math.round(width * 9 / 16)
 
                         radius: Tokens.rounding.small
-                        color: Woodland.mix(Woodland.barkShaded, Woodland.barkEdge, 0.4)
+                        color: Colours.palette.m3surfaceContainerHighest
 
                         CachingImage {
                             anchors.fill: parent

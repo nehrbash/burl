@@ -262,7 +262,7 @@ PageBase {
             sourceComponent: StyledRect {
                 implicitHeight: Tokens.sizes.nexus.minPopupHeight
                 radius: Tokens.rounding.small
-                color: Woodland.surface(Colours.tPalette.m3surfaceContainerHigh, Colours.light)
+                color: Colours.tPalette.m3surfaceContainerHigh
 
                 StyledFlickable {
                     id: logFlick

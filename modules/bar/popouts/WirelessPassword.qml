@@ -19,7 +19,7 @@ ColumnLayout {
 
     // Dialog sheet warmed toward bark/parchment; buttons and focus borders
     // stay m3 so the wallpaper palette drives interaction
-    readonly property color woodContainer: Woodland.surface(Colours.tPalette.m3surfaceContainer, Colours.light)
+    readonly property color woodContainer: Colours.tPalette.m3surfaceContainer
 
     readonly property bool shouldBeVisible: root.popouts.currentName === "wirelesspassword"
 

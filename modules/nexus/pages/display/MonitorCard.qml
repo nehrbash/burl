@@ -422,7 +422,7 @@ SectionContainer {
                     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
                     background: StyledRect {
-                        color: Woodland.surface(Colours.palette.m3surfaceContainerHighest, Colours.light)
+                        color: Colours.palette.m3surfaceContainerHighest
                         radius: Tokens.rounding.small
                     }
 

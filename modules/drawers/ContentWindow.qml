@@ -46,7 +46,7 @@ StyledWindow {
     // every panel, the screen border and the bar strip read as wood. Alpha is
     // preserved — the shadow layer's opacity and the Hyprland blur/ignore_alpha
     // rules (Colours.reloadHyprRules) are keyed to it.
-    property color surfaceColour: Woodland.surface(Colours.tPalette.m3surface, Colours.light)
+    property color surfaceColour: Colours.tPalette.m3surface
 
     readonly property int dragMaskPadding: {
         if (focusGrab.active || panels.popouts.isDetached)

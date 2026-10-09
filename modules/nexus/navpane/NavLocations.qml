@@ -39,7 +39,7 @@ VerticalFadeFlickable {
                 required property var modelData
                 required property int index
 
-                readonly property bool isCurrentPage: index === root.nState.currentPageIdx
+                readonly property bool isCurrentPage: modelData.id === root.nState.currentPageId
                 readonly property bool isCategoryStart: index === 0 || PageRegistry.pages[index - 1].category !== modelData.category
                 readonly property bool isCategoryEnd: index === list.model.length - 1 || PageRegistry.pages[index + 1].category !== modelData.category
 
@@ -71,7 +71,7 @@ VerticalFadeFlickable {
                     bottomLeftRadius: parent.bottomLeftRadius
                     bottomRightRadius: parent.bottomRightRadius
 
-                    onClicked: root.nState.currentPageIdx = item.index
+                    onClicked: root.nState.currentPageId = item.modelData.id
                 }
 
                 RowLayout {
@@ -95,7 +95,7 @@ VerticalFadeFlickable {
                             anchors.verticalCenterOffset: 1
 
                             text: item.modelData.icon
-                            color: item.isCurrentPage ? Woodland.midnight : Woodland.brass
+                            color: item.isCurrentPage ? Colours.palette.m3onPrimary : Woodland.brass
                             fontStyle: Tokens.font.icon.builders.medium.weight(Font.Medium).build()
                             grade: 25
                             fill: item.modelData.noFill ? 0 : 1

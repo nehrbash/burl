@@ -13,8 +13,8 @@ Singleton {
     id: root
 
     property bool showPreview
-    property string scheme
-    property string flavour
+    property string scheme: "nocturne"
+    property string flavour: "default"
     readonly property bool light: showPreview ? previewLight : currentLight
     property bool currentLight
     property bool previewLight
@@ -88,8 +88,12 @@ Singleton {
         }
     }
 
+    function reloadScheme(): void {
+        schemeFile.reload();
+    }
+
     function setMode(mode: string): void {
-        Quickshell.execDetached(["burl", "scheme", "set", "--notify", "-m", mode]);
+        Schemes.setMode(mode);
     }
 
     // Always `eval hl.layer_rule(...)`, never `hyprctl keyword` — hyprland's
@@ -122,6 +126,7 @@ Singleton {
     }
 
     FileView {
+        id: schemeFile
         path: `${Paths.state}/scheme.json`
         watchChanges: true
         onFileChanged: reload()
@@ -236,43 +241,43 @@ Singleton {
     }
 
     component M3Palette: QtObject {
-        property color m3primary_paletteKeyColor: "#a8627b"
-        property color m3secondary_paletteKeyColor: "#8e6f78"
-        property color m3tertiary_paletteKeyColor: "#986e4c"
-        property color m3neutral_paletteKeyColor: "#807477"
-        property color m3neutral_variant_paletteKeyColor: "#837377"
-        property color m3background: "#191114"
-        property color m3onBackground: "#efdfe2"
-        property color m3surface: "#191114"
-        property color m3surfaceDim: "#191114"
-        property color m3surfaceBright: "#403739"
-        property color m3surfaceContainerLowest: "#130c0e"
-        property color m3surfaceContainerLow: "#22191c"
-        property color m3surfaceContainer: "#261d20"
-        property color m3surfaceContainerHigh: "#31282a"
-        property color m3surfaceContainerHighest: "#3c3235"
-        property color m3onSurface: "#efdfe2"
-        property color m3surfaceVariant: "#514347"
-        property color m3onSurfaceVariant: "#d5c2c6"
-        property color m3inverseSurface: "#efdfe2"
-        property color m3inverseOnSurface: "#372e30"
-        property color m3outline: "#9e8c91"
-        property color m3outlineVariant: "#514347"
+        property color m3primary_paletteKeyColor: "#5a77ab"
+        property color m3secondary_paletteKeyColor: "#6d778e"
+        property color m3tertiary_paletteKeyColor: "#966699"
+        property color m3neutral_paletteKeyColor: "#76777b"
+        property color m3neutral_variant_paletteKeyColor: "#747780"
+        property color m3background: "#111319"
+        property color m3onBackground: "#efe3ca"
+        property color m3surface: "#111319"
+        property color m3surfaceDim: "#111319"
+        property color m3surfaceBright: "#38393d"
+        property color m3surfaceContainerLowest: "#0c0e13"
+        property color m3surfaceContainerLow: "#161920"
+        property color m3surfaceContainer: "#1b1e26"
+        property color m3surfaceContainerHigh: "#252933"
+        property color m3surfaceContainerHighest: "#303540"
+        property color m3onSurface: "#efe3ca"
+        property color m3surfaceVariant: "#43474f"
+        property color m3onSurfaceVariant: "#c8c3b9"
+        property color m3inverseSurface: "#e3e2e7"
+        property color m3inverseOnSurface: "#2f3034"
+        property color m3outline: "#96928b"
+        property color m3outlineVariant: "#484a51"
         property color m3shadow: "#000000"
         property color m3scrim: "#000000"
-        property color m3surfaceTint: "#ffb0ca"
-        property color m3primary: "#ffb0ca"
-        property color m3onPrimary: "#541d34"
-        property color m3primaryContainer: "#6f334a"
-        property color m3onPrimaryContainer: "#ffd9e3"
-        property color m3inversePrimary: "#8b4a62"
-        property color m3secondary: "#e2bdc7"
-        property color m3onSecondary: "#422932"
-        property color m3secondaryContainer: "#5a3f48"
-        property color m3onSecondaryContainer: "#ffd9e3"
-        property color m3tertiary: "#f0bc95"
-        property color m3onTertiary: "#48290c"
-        property color m3tertiaryContainer: "#b58763"
+        property color m3surfaceTint: "#c7ae7b"
+        property color m3primary: "#c7ae7b"
+        property color m3onPrimary: "#251e10"
+        property color m3primaryContainer: "#514329"
+        property color m3onPrimaryContainer: "#f3dfb4"
+        property color m3inversePrimary: "#415e91"
+        property color m3secondary: "#aebdcb"
+        property color m3onSecondary: "#19232e"
+        property color m3secondaryContainer: "#3d475b"
+        property color m3onSecondaryContainer: "#abb5ce"
+        property color m3tertiary: "#baa4d0"
+        property color m3onTertiary: "#2c203a"
+        property color m3tertiaryContainer: "#b280b4"
         property color m3onTertiaryContainer: "#000000"
         property color m3error: "#ffb4ab"
         property color m3onError: "#690005"
@@ -282,33 +287,33 @@ Singleton {
         property color m3onSuccess: "#213528"
         property color m3successContainer: "#374B3E"
         property color m3onSuccessContainer: "#D1E9D6"
-        property color m3primaryFixed: "#ffd9e3"
-        property color m3primaryFixedDim: "#ffb0ca"
-        property color m3onPrimaryFixed: "#39071f"
-        property color m3onPrimaryFixedVariant: "#6f334a"
-        property color m3secondaryFixed: "#ffd9e3"
-        property color m3secondaryFixedDim: "#e2bdc7"
-        property color m3onSecondaryFixed: "#2b151d"
-        property color m3onSecondaryFixedVariant: "#5a3f48"
-        property color m3tertiaryFixed: "#ffdcc3"
-        property color m3tertiaryFixedDim: "#f0bc95"
-        property color m3onTertiaryFixed: "#2f1500"
-        property color m3onTertiaryFixedVariant: "#623f21"
+        property color m3primaryFixed: "#d7e3ff"
+        property color m3primaryFixedDim: "#aac7ff"
+        property color m3onPrimaryFixed: "#001b3e"
+        property color m3onPrimaryFixedVariant: "#284777"
+        property color m3secondaryFixed: "#d8e2fc"
+        property color m3secondaryFixedDim: "#bcc7df"
+        property color m3onSecondaryFixed: "#111c2e"
+        property color m3onSecondaryFixedVariant: "#3d475b"
+        property color m3tertiaryFixed: "#ffd6fd"
+        property color m3tertiaryFixedDim: "#ecb4ed"
+        property color m3onTertiaryFixed: "#310938"
+        property color m3onTertiaryFixedVariant: "#623766"
         property color term0: "#353434"
-        property color term1: "#ff4c8a"
-        property color term2: "#ffbbb7"
-        property color term3: "#ffdedf"
-        property color term4: "#b3a2d5"
-        property color term5: "#e98fb0"
-        property color term6: "#ffba93"
-        property color term7: "#eed1d2"
-        property color term8: "#b39e9e"
-        property color term9: "#ff80a3"
-        property color term10: "#ffd3d0"
-        property color term11: "#fff1f0"
-        property color term12: "#dcbc93"
-        property color term13: "#f9a8c2"
-        property color term14: "#ffd1c0"
+        property color term1: "#8881ff"
+        property color term2: "#44def5"
+        property color term3: "#ffdcf2"
+        property color term4: "#8badd4"
+        property color term5: "#9ea5ef"
+        property color term6: "#95d0fb"
+        property color term7: "#e8d3de"
+        property color term8: "#ac9fa9"
+        property color term9: "#a39eff"
+        property color term10: "#89ecff"
+        property color term11: "#c9fff3"
+        property color term12: "#aec3da"
+        property color term13: "#b7baf8"
+        property color term14: "#b7e0ff"
         property color term15: "#ffffff"
     }
 }

@@ -113,7 +113,7 @@ Column {
 
         // Warmed toward bark/parchment so the track reads as carved wood;
         // the active indicator stays m3primary
-        color: Woodland.surface(Colours.tPalette.m3surfaceContainer, Colours.light)
+        color: Colours.tPalette.m3surfaceContainer
         radius: Tokens.rounding.full
 
         StyledRect {

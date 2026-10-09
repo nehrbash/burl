@@ -20,7 +20,7 @@ StyledRect {
     implicitHeight: layout.implicitHeight + layout.anchors.margins * 2
 
     radius: Tokens.rounding.large
-    color: Woodland.surface(Colours.tPalette.m3surfaceContainer, Colours.light)
+    color: Colours.tPalette.m3surfaceContainer
 
     WoodPanel {
         anchors.fill: parent
@@ -60,7 +60,7 @@ StyledRect {
                     anchors.centerIn: parent
                     anchors.verticalCenterOffset: 1
                     text: "screen_record"
-                    color: Recorder.running ? Woodland.midnight : Woodland.ivory
+                    color: Recorder.running ? Colours.palette.m3onPrimary : Woodland.ivory
                     fontStyle: Tokens.font.icon.large
                 }
             }
@@ -78,7 +78,17 @@ StyledRect {
 
                 StyledText {
                     Layout.fillWidth: true
-                    text: Recorder.paused ? qsTr("Paused") : Recorder.running ? qsTr("Running...") : qsTr("Ready")
+                    text: {
+                        switch (Recorder.state) {
+                        case "selecting": return qsTr("Select a region…");
+                        case "starting": return qsTr("Starting…");
+                        case "recording": return qsTr("Recording…");
+                        case "paused": return qsTr("Paused");
+                        case "cancelling": return qsTr("Stopping…");
+                        case "saving": return qsTr("Saving…");
+                        default: return qsTr("Ready");
+                        }
+                    }
                     color: Colours.palette.m3onSurfaceVariant
                     font: Tokens.font.body.small
                     elide: Text.ElideRight
@@ -204,7 +214,7 @@ StyledRect {
 
                     anchors.centerIn: parent
                     animate: true
-                    text: Recorder.paused ? "PAUSED" : "REC"
+                    text: Recorder.paused ? "PAUSED" : Recorder.capturing ? "REC" : "WAIT"
                     color: Recorder.paused ? Colours.palette.m3onTertiary : Colours.palette.m3onError
                     font: Tokens.font.mono.small
                 }
@@ -214,7 +224,7 @@ StyledRect {
                 }
 
                 SequentialAnimation on opacity {
-                    running: !Recorder.paused
+                    running: Recorder.state === "recording"
                     alwaysRunToEnd: true
                     loops: Animation.Infinite
 
@@ -264,6 +274,7 @@ StyledRect {
                     icon: Recorder.paused ? "play_arrow" : "pause"
                     isToggle: true
                     checked: Recorder.paused
+                    enabled: Recorder.capturing
                     type: IconButton.Tonal
                     font: Tokens.font.icon.medium
                     onClicked: {

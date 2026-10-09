@@ -90,8 +90,7 @@ ColumnLayout {
                     const matches = time.match(/^recording_(\d{4})(\d{2})(\d{2})_(\d{2})-(\d{2})-(\d{2})/);
                     if (!matches)
                         return time;
-                    const date = new Date(...matches.slice(1));
-                    date.setMonth(date.getMonth() - 1); // Woe (months start from 0)
+                    const date = new Date(+matches[1], +matches[2] - 1, +matches[3], +matches[4], +matches[5], +matches[6]);
                     return qsTr("Recording at %1").arg(Qt.formatDateTime(date, Qt.locale()));
                 }
                 color: Colours.palette.m3onSurfaceVariant

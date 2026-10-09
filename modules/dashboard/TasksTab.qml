@@ -609,7 +609,7 @@ Item {
 
                                 radius: Tokens.rounding.full
                                 opacity: rowRect.dimOpacity
-                                color: Woodland.surface(Colours.palette.m3secondaryContainer, Colours.light)
+                                color: Colours.palette.m3secondaryContainer
                                 implicitHeight: tagText.implicitHeight + Tokens.padding.small
                                 implicitWidth: tagText.implicitWidth + Tokens.padding.medium
 

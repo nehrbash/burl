@@ -33,10 +33,14 @@ StyledRect {
     readonly property alias stateLayer: stateLayer
     readonly property alias radiusAnim: radiusAnim
 
-    property color activeColour
-    property color inactiveColour
-    property color activeOnColour
-    property color inactiveOnColour
+    property color activeColour: Colours.palette.m3primary
+    property color inactiveColour: !isToggle && type === ButtonBase.Filled
+        ? Colours.palette.m3primary : Colours.tPalette.m3surfaceContainer
+    property color activeOnColour: type === ButtonBase.Text
+        ? Colours.palette.m3primary : Colours.palette.m3onPrimary
+    property color inactiveOnColour: !isToggle && type === ButtonBase.Filled
+        ? Colours.palette.m3onPrimary : type === ButtonBase.Text
+        ? Colours.palette.m3primary : Colours.palette.m3onSurface
     property color disabledColour: Qt.alpha(Colours.palette.m3onSurface, 0.1)
     property color disabledOnColour: Qt.alpha(Colours.palette.m3onSurface, 0.38)
 

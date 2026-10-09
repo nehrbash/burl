@@ -21,7 +21,7 @@ StyledRect {
 
     radius: Tokens.rounding.medium
     color: {
-        const c = root.modelData?.urgency === "critical" ? Colours.palette.m3secondaryContainer : Woodland.surface(Colours.layer(Colours.palette.m3surfaceContainerHigh, 2), Colours.light);
+        const c = root.modelData?.urgency === "critical" ? Colours.palette.m3secondaryContainer : Colours.layer(Colours.palette.m3surfaceContainerHigh, 2);
         return expanded ? c : Qt.alpha(c, 0);
     }
 

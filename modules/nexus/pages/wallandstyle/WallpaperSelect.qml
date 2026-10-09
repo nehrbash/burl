@@ -203,7 +203,7 @@ PageBase {
             visible: active
 
             sourceComponent: StyledRect {
-                color: Woodland.surface(Colours.tPalette.m3surfaceContainer, Colours.light)
+                color: Colours.tPalette.m3surfaceContainer
                 radius: Tokens.rounding.extraLarge
                 implicitHeight: noVideosLayout.implicitHeight + Tokens.padding.extraExtraLarge * 2
 
@@ -294,7 +294,7 @@ PageBase {
             visible: active
 
             sourceComponent: StyledRect {
-                color: Woodland.surface(Colours.tPalette.m3surfaceContainer, Colours.light)
+                color: Colours.tPalette.m3surfaceContainer
                 radius: Tokens.rounding.extraLarge
                 implicitHeight: noWallsLayout.implicitHeight + Tokens.padding.extraExtraLarge * 2
 

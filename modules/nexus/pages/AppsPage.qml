@@ -44,16 +44,19 @@ PageBase {
         }
 
         DefaultRow {
-            last: true
             icon: "play_circle"
             label: qsTr("Media playback")
             status: GlobalConfig.general.apps.playback.join(" ")
             onSelected: app => GlobalConfig.general.apps.playback = app.command
         }
 
-        // File manager is declared in generalconfig.hpp, not picked here: the
-        // picker pins it into the untracked shell.json, which then shadows the
-        // compiled default.
+        DefaultRow {
+            last: true
+            icon: "folder"
+            label: qsTr("File manager")
+            status: GlobalConfig.general.apps.explorer.join(" ")
+            onSelected: app => GlobalConfig.general.apps.explorer = app.command
+        }
 
         SectionHeader {
             text: qsTr("Library")
