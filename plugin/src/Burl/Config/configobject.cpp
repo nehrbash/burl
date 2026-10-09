@@ -62,6 +62,10 @@ void ConfigObject::loadFromJson(const QJsonObject& obj) {
         m_loadedKeys.insert(key);
         qCDebug(lcConfig) << "  Loaded" << key << "=" << jsonVal.toVariant();
     }
+    // Flush while RootConfig still suppresses autosave during a reload.
+    if (m_batchTimer)
+        m_batchTimer->stop();
+    emitBatchedChanges();
 }
 
 QJsonObject ConfigObject::toJsonObject() const {

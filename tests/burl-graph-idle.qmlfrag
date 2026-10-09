@@ -6,6 +6,10 @@ property var samples: []
 property int fixedIndex: -1
 property var movingPoint: null
 property var fixedPoint: null
+property var lastSnapshot: []
+property int stableSamples: 0
+property int phase: 0
+property double phaseStart: 0
 function find(item, predicate) {
     if (predicate(item)) return item;
     for (const child of item.children ?? []) {
@@ -33,9 +37,18 @@ Timer {
     }
 }
 Timer {
-    interval: 7500; running: true
+    interval: 100; running: true; repeat: true
     onTriggered: {
-        host.graph = host.find(subject, item => item.driftStrength !== undefined);
+        const now = Date.now();
+        if (host.phase === 0) {
+            if (!host.graph) host.graph = host.find(subject, item => item.driftStrength !== undefined);
+            if (!host.graph || host.graph.currentNode < 0 || host.graph.preparing) return;
+            const snapshot = Array.from(host.graph.snap);
+            const stable = snapshot.length > 0 && snapshot.length === host.lastSnapshot.length
+                && snapshot.every((value, index) => value === host.lastSnapshot[index]);
+            host.stableSamples = stable ? host.stableSamples + 1 : 0;
+            host.lastSnapshot = snapshot;
+            if (host.stableSamples < 6) return;
         host.check(host.graph && !host.graph.paused && host.graph.driftStrength > 0.9, 'settled graph keeps ambient motion');
         host.before = Array.from(host.graph.snap);
         host.fixedIndex = host.graph.currentNode;
@@ -43,11 +56,10 @@ Timer {
         host.movingPoint = host.graph.mapToItem(subject, host.graph._w2sX(host.graph._nx(i)), host.graph._w2sY(host.graph._ny(i)));
         if (host.fixedIndex >= 0)
             host.fixedPoint = host.graph.mapToItem(subject, host.graph._w2sX(host.graph._nx(host.fixedIndex)), host.graph._w2sY(host.graph._ny(host.fixedIndex)));
-    }
-}
-Timer {
-    interval: 10000; running: true
-    onTriggered: {
+
+            host.phase = 1;
+            host.phaseStart = now;
+        } else if (host.phase === 1 && now - host.phaseStart >= 2500) {
         const graph = host.graph;
         const i = host.fixedIndex === 0 ? 1 : 0;
         const moved = graph.mapToItem(subject, graph._w2sX(graph._nx(i)), graph._w2sY(graph._ny(i)));
@@ -60,16 +72,22 @@ Timer {
         const frames = host.samples.slice().sort((a,b)=>a-b);
         console.log('BURL-IDLE-PERF', 'frames', frames.length, 'mean', frames.reduce((a,b)=>a+b,0)/frames.length, 'p95', frames[Math.floor(frames.length*0.95)], 'max', frames[frames.length-1]);
         host.cycleState.openWorldRoom('dashboard');
+
+            host.phase = 2;
+            host.phaseStart = now;
+        } else if (host.phase === 2 && now - host.phaseStart >= 1700) {
+            host.check(host.graph.paused, 'tree view pauses graph');
+            host.beforePhase = host.graph.driftSeconds;
+            host.phase = 3;
+            host.phaseStart = now;
+        } else if (host.phase === 3 && now - host.phaseStart >= 500) {
+            host.check(host.beforePhase === host.graph.driftSeconds, 'hidden graph performs no ambient work');
+            host.phase = 4;
+            stop();
+        }
     }
 }
 Timer {
-    interval: 11700; running: true
-    onTriggered: {
-        host.check(host.graph.paused, 'tree view pauses graph');
-        host.beforePhase = host.graph.driftSeconds;
-    }
-}
-Timer {
-    interval: 12200; running: true
-    onTriggered: host.check(host.beforePhase === host.graph.driftSeconds, 'hidden graph performs no ambient work')
+    interval: 40000; running: true
+    onTriggered: host.check(host.phase === 4, 'idle lifecycle finishes within its deadline')
 }

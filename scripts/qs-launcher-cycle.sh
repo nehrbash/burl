@@ -24,7 +24,7 @@ BURL_NO_AMBIENT=0 "$REPO/scripts/qs-shot.sh" \
     modules/launcher/Wrapper.qml "$WORK/search.png"
 
 BURL_NO_AMBIENT=0 "$REPO/scripts/qs-shot.sh" \
-    --root "$ROOT" --size 1600x1000 --settle 12600 \
+    --root "$ROOT" --size 1600x1000 --settle 41000 \
     --decl "$REPO/tests/burl-graph-idle.qmlfrag" \
     --set 'visibilities: host.cycleState' --set 'panels: ({})' \
     modules/launcher/Content.qml "$WORK/idle.png"

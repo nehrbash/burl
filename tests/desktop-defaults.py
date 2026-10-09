@@ -35,7 +35,8 @@ Item {
 ''')
     env.update(XDG_CONFIG_HOME=directory, BURL_DEFAULTS_FILE=str(defaults),
                BURL_EMACS_STATE_DB="", BURL_ORG_ROAM_DB="")
-    subprocess.run(["bash", "scripts/qs-smoke.sh", "--root", directory, "Fixture.qml"],
+    subprocess.run(["bash", "scripts/qs-shot.sh", "--root", directory, "--size", "10x10",
+                    "--settle", "1200", "Fixture.qml", str(root / "result.png")],
                    cwd=Path(__file__).resolve().parent.parent, env=env,
                    check=True, timeout=30)
     assert before == settings.read_bytes(), "loading defaults changed user settings"
