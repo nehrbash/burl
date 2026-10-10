@@ -108,30 +108,12 @@ Item {
         }
     }
 
-    Repeater {
-        model: 8
-
-        delegate: Rectangle {
-            required property int index
-
-            readonly property real angle: (index*45+root.phase*7)*Math.PI/180
-            x: root.width/2+Math.cos(angle)*root.width*0.33-width/2
-            y: root.height/2+Math.sin(angle)*root.height*0.33-height/2
-            width: index%2 ? 1 : 2
-            height: index%2 ? 2 : 3
-            rotation: index*45
-            radius: 1
-            color: root.ivory
-            opacity: 0.3+root.energy*0.3
-        }
-    }
-
     MaterialIcon {
         anchors.centerIn: parent
         text: root.glyph
-        color: root.prominent ? Woodland.mix(root.accent, Woodland.parchment, 0.35) : root.ivory
+        renderType: Text.QtRendering
+        color: root.ivory
         fontStyle: root.prominent ? Tokens.font.icon.size(Math.max(17, root.width * 0.285)).build() : Tokens.font.icon.small
-        scale: 1+root.pulse*0.12+root.breath*0.025
     }
 
     Rectangle {
