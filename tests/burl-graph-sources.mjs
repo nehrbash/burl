@@ -97,6 +97,14 @@ test('all source callbacks queue work and warmup preserves the sim pause binding
     assert.doesNotMatch(connections, /rebuildTimer\.restart|edgeLayer\.refresh/);
     assert.match(connections, /onRoamLinksChanged\(\) \{ root\.requestEdges\(\); \}/);
     assert.match(source, /onTriggered: root\.flushSources\(\)/);
-    assert.match(source, /paused: root\.paused && !root\.preparing/);
+    const paused = source.match(/        paused: (.+)/)[1];
+    for (const preparing of [false, true]) {
+        const root = { paused: false, preparing, transitioning: true };
+        assert.equal(runInNewContext(paused, { root }), true);
+        root.transitioning = false;
+        assert.equal(runInNewContext(paused, { root }), false);
+        root.paused = true;
+        assert.equal(runInNewContext(paused, { root }), !preparing);
+    }
     assert.doesNotMatch(source, /sim\.paused\s*=/);
 });

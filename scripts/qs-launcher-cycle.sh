@@ -59,3 +59,15 @@ BURL_NO_AMBIENT=0 "$REPO/scripts/qs-shot.sh" \
     --decl "$REPO/tests/burl-graph-drag.qmlfrag" \
     --set 'visibilities: host.cycleState' \
     modules/launcher/GraphView.qml "$WORK/drag.png"
+
+BURL_NO_AMBIENT=0 "$REPO/scripts/qs-shot.sh" \
+    --root "$ROOT" --size 1600x1000 --settle 26000 \
+    --log "$WORK/rapid.log" \
+    --decl "$REPO/tests/burl-launcher-rapid.qmlfrag" \
+    --set 'screen: Quickshell.screens[0]' \
+    --set 'visibilities: host.cycleState' --set 'panels: ({})' \
+    modules/launcher/Wrapper.qml "$WORK/rapid.png"
+if ! grep -q RAPID-PASS "$WORK/rapid.log" || grep -q RAPID-FAIL "$WORK/rapid.log"; then
+    cat "$WORK/rapid.log"
+    exit 1
+fi

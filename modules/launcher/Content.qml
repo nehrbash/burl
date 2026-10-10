@@ -490,7 +490,8 @@ Item {
         scopeSegments: root.scope ?? []
         // Camera motion and graph settling share the GUI thread.
         paused: !root.surfaceOpen || root.arrivalP < 0.999
-        transitioning: root.surfaceOpen && root.panP > 0.001 && root.panP < 0.999
+        transitioning: root.revealP > 0 && (!root.surfaceOpen || root.revealP < 0.999
+            || (root.visibilities.launcher ? root.panP < 0.999 : root.panP > 0.001))
     }
 
     MouseArea {

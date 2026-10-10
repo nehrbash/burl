@@ -418,7 +418,7 @@ Item {
 
         width: root.width
         height: root.height
-        paused: root.paused && !root.preparing
+        paused: root.transitioning || (root.paused && !root.preparing)
         // Stronger repulsion + longer springs spread the cluster out as
         // it settles (these are alpha-scaled, so they shape the layout
         // during motion); collidePadding is the hard minimum gap that
@@ -1226,7 +1226,7 @@ Item {
     Timer {
         interval: 16
         repeat: true
-        running: root.preparing
+        running: root.preparing && !root.transitioning
         onTriggered: {
             const deadline = Date.now() + 4;
             let steps = 0;
@@ -2159,6 +2159,7 @@ Item {
         Item {
             anchors.fill: parent
             Instantiator {
+                asynchronous: true
                 model: root.nodes.length
 
                 delegate: Text {
@@ -2213,6 +2214,7 @@ Item {
         // The under-node label lives in the separate label layer above; app-
         // icon / wallpaper-thumbnail Repeaters below stack on top of the disc.
         Instantiator {
+            asynchronous: true
             model: root.nodes.length
 
             delegate: Item {
@@ -2427,6 +2429,7 @@ Item {
         // Positions follow the published simulation snapshot (sim.x(i)
         // isn't a notifying property — it's a method).
         Instantiator {
+            asynchronous: true
             model: root.appIndices
 
             delegate: Item {
@@ -2484,6 +2487,7 @@ Item {
 
         // Wallpaper thumbnails — Image clipped to a circle.
         Instantiator {
+            asynchronous: true
             model: root.wallpaperIndices
 
             delegate: Item {
@@ -2572,6 +2576,7 @@ Item {
         // Spotify cover art (playlists + recently-played track albums).
         // Qt fetches the HTTPS image and caches per-source.
         Instantiator {
+            asynchronous: true
             model: root.spotifyImageIndices
 
             delegate: Item {

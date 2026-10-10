@@ -1,0 +1,92 @@
+property var cycleState: Qt.createQmlObject('import Quickshell; import qs.components; ScreenState { modelData: Quickshell.screens[0] }', host)
+property int rapidPhase: 0
+property int previousWarmup: -1
+property bool previousTransition: false
+property var previousNodes: null
+property bool observedPausedWarmup: false
+property bool observedResumedWarmup: false
+property string searchQuery: ""
+property bool rapidDone: false
+
+function find(item, predicate) {
+    if (predicate(item)) return item;
+    for (const child of item.children ?? []) {
+        const found = find(child, predicate);
+        if (found) return found;
+    }
+    return null;
+}
+function fail(reason) {
+    console.error('RAPID-FAIL', reason);
+    Qt.quit();
+}
+function attachedNodes(graph) {
+    const nodes = [];
+    function scan(item) {
+        if (item.node !== undefined && item.index !== undefined) nodes.push(item);
+        for (const child of item.children ?? []) scan(child);
+    }
+    scan(graph);
+    return nodes;
+}
+Timer {
+    interval: 1; running: true
+    onTriggered: host.cycleState.openWorldRoom('dashboard')
+}
+Timer {
+    interval: 16; repeat: true; running: !host.rapidDone
+    onTriggered: {
+        const scene = host.find(subject, item => typeof item.ascend === 'function');
+        const graph = host.find(subject, item => item.warmupRemaining !== undefined);
+        if (!scene || !graph) return;
+        if (graph.transitioning && host.previousTransition && graph.nodes === host.previousNodes) {
+            if (graph.warmupRemaining < host.previousWarmup) {
+                host.fail('warmup advanced during camera transition');
+                return;
+            }
+            if (graph.preparing) host.observedPausedWarmup = true;
+        }
+        if (!graph.transitioning && host.previousWarmup > 0 && graph.warmupRemaining < host.previousWarmup)
+            host.observedResumedWarmup = true;
+        host.previousWarmup = graph.warmupRemaining;
+        host.previousTransition = graph.transitioning;
+        host.previousNodes = graph.nodes;
+
+        if (host.rapidPhase === 0 && scene.revealP > 0) {
+            scene.ascend();
+            host.rapidPhase = 1;
+        } else if (host.rapidPhase === 1 && scene.atSky && !graph.transitioning && graph.layoutReady && !graph.preparing) {
+            const attached = host.attachedNodes(graph);
+            if (graph.nodes.length < 2 || attached.length !== graph.nodes.length) return;
+            const indices = new Set(attached.map(item => item.index));
+            if (indices.size !== graph.nodes.length || attached.some(item => item.node !== graph.nodes[item.index])) {
+                host.fail('asynchronous delegates have duplicate indices or stale payloads');
+                return;
+            }
+            const search = host.find(subject, item => typeof item.syncOpen === 'function');
+            if (!search || !search.activeFocus) return;
+            const candidate = graph.nodes.find(node => node.kind === 'app' && /^[A-Za-z]/.test(node.label));
+            if (!candidate) { host.fail('no application available for search'); return; }
+            host.searchQuery = candidate.label;
+            search.text = host.searchQuery;
+            host.rapidPhase = 2;
+        } else if (host.rapidPhase === 2 && graph.query === host.searchQuery && graph.matchIndices.length > 0 && graph.currentIsMatch()) {
+            const before = graph.currentNode;
+            const other = (before + 1) % graph.nodes.length;
+            graph.selectNode(other);
+            if (graph.currentNode !== other) { host.fail('node navigation failed'); return; }
+            graph.navigateBack();
+            if (graph.currentNode !== before) { host.fail('navigation did not restore selection'); return; }
+            if (!host.observedPausedWarmup || !host.observedResumedWarmup) {
+                host.fail('cold warmup pause/resume was not exercised');
+                return;
+            }
+            console.log('RAPID-PASS', 'warmup paused/resumed; all nodes attached; search and navigation usable');
+            host.rapidDone = true;
+        }
+    }
+}
+Timer {
+    interval: 25000; running: true
+    onTriggered: if (!host.rapidDone) host.fail('timed out in phase ' + host.rapidPhase)
+}

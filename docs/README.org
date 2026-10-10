@@ -9,6 +9,8 @@ relevant diagram when changing a lifecycle, and exercise its failure transitions
   only the latest asynchronous request may attach a visible page.
 - [[file:weather-state.mmd][Weather lookup]]: configuration selects the location source;
   failed lookup waits for retry, superseded responses cannot replace selection.
+- [[file:launcher-scene.mmd][Tree and sky]]: camera motion pauses graph preparation;
+  node visuals are created asynchronously and retained between normal openings.
 - [[file:launcher-actions.mmd][Launcher actions]]: source payloads stay separate from graph IDs;
   action resolution and execution are independent of layout.
 - [[file:network-processes.mmd][Network commands]]: each transient process is released after completion.
