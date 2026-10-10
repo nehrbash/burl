@@ -4,7 +4,10 @@ function executableName(command) {
 
 function legacyEntry(command, entries) {
     if (!command.length) return null;
-    const matches = entries.filter(entry => executableName(entry.command) === executableName(command)
+    const executable = command[0];
+    const matchByName = !executable.includes("/") || executable.startsWith("/gnu/store/");
+    const matches = entries.filter(entry => (entry.command[0] === executable
+        || (matchByName && executableName(entry.command) === executableName(command)))
         && JSON.stringify(entry.command.slice(1)) === JSON.stringify(command.slice(1)));
     return matches.length === 1 ? matches[0] : null;
 }

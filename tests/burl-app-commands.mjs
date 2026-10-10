@@ -63,3 +63,21 @@ test('file launches refresh legacy store executables while preserving custom arg
     assert.deepEqual(array(commands.fileCommand('', ['/gnu/store/old-player/bin/player', '--fullscreen'], [player], '/tmp/movie')),
         ['/gnu/store/new-player/bin/player', '--fullscreen', '/tmp/movie']);
 });
+
+test('explicit custom executable paths are never replaced by a basename match', () => {
+    for (const executable of ['/home/me/bin/alacritty', './bin/alacritty', '../alacritty']) {
+        const command = [executable];
+        assert.equal(commands.legacyEntry(command, [terminal]), null);
+        assert.deepEqual(array(commands.resolve('', command, [terminal], 'foot').command), command);
+        assert.deepEqual(array(commands.fileCommand('', command, [terminal], '/tmp/file with spaces')),
+            [executable, '/tmp/file with spaces']);
+    }
+});
+
+test('explicit custom paths may match their exact desktop command', () => {
+    const custom = {id: 'custom-terminal', command: ['/home/me/bin/alacritty']};
+    assert.equal(commands.legacyEntry(custom.command, [terminal, custom]).id, custom.id);
+    assert.deepEqual(array(commands.fileCommand('', custom.command, [terminal, custom], '/tmp/file')),
+        ['gtk-launch', custom.id, '/tmp/file']);
+    assert.equal(commands.legacyEntry(['alacritty'], [terminal]).id, terminal.id);
+});

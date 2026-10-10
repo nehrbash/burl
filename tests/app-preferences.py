@@ -14,7 +14,7 @@ for key in ("QML_IMPORT_PATH", "QT_PLUGIN_PATH"):
     env[key] = re.search(r'export ' + key + r'="([^"$]+)', wrapper).group(1)
 path_prefix = re.search(r'export PATH="([^"$]+)', wrapper)
 if path_prefix:
-    env["PATH"] = path_prefix.group(1) + env["PATH"]
+    env["PATH"] = path_prefix.group(1).rstrip(os.pathsep) + os.pathsep + env["PATH"]
 env["QML2_IMPORT_PATH"] = env["QML_IMPORT_PATH"]
 
 with tempfile.TemporaryDirectory(prefix="burl-app-preferences-") as directory:
@@ -47,12 +47,15 @@ import Burl.Config
 import qs.services
 Item {
     Timer {
-        interval: 300; running: true
+        interval: 20; repeat: true; running: true
         onTriggered: {
+            const entries = AppPreferences.entries;
+            const terminal = entries.find(entry => entry.id === "Alacritty");
+            const player = entries.find(entry => entry.id === "test-player");
+            if (!terminal || !player) return;
+            running = false;
             AppPreferences.migrate();
             if (GlobalConfig.general.apps.terminalDesktop !== "Alacritty") throw new Error("Legacy terminal not migrated");
-            const player = DesktopEntries.applications.values.find(entry => entry.id === "test-player");
-            if (!player) throw new Error("Player fixture missing");
             AppPreferences.select("playback", player);
             AppPreferences.open("playback", FILE);
             AppPreferences.launchTerminal(["child", "argument with spaces"], "");
@@ -65,8 +68,9 @@ Item {
                     "--settle", "2500", "--log", str(root / "probe.log"),
                     "Fixture.qml", str(root / "probe.png")], cwd=source, env=env, check=True, timeout=35)
     log = (root / "probe.log").read_text()
-    assert "APP-PREFERENCES-PASS" in log, log
-    assert json.loads((root / "player.json").read_text()) == ["--before", file.as_uri(), "--after"]
+    assert "APP-PREFERENCES-PASS" in log, "App preferences did not finish before probe deadline:\n" + log
+    player_args = json.loads((root / "player.json").read_text())
+    assert player_args == ["--before", str(file), "--after"], player_args
     assert json.loads((root / "alacritty.json").read_text()) == ["-e", "child", "argument with spaces"]
     saved = json.loads(settings.read_text())["general"]["apps"]
     assert saved["terminalDesktop"] == "Alacritty"

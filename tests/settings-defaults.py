@@ -67,6 +67,10 @@ Item {
             explorerRow.selected(entry);
             if (GlobalConfig.general.apps.explorerDesktop !== "burl-test-file-manager" || GlobalConfig.general.apps.explorer.length !== 0)
                 throw new Error("Desktop identity not preserved");
+            explorerRow.selected(null);
+            if (GlobalConfig.general.apps.explorerDesktop !== "" || GlobalConfig.general.apps.explorer.length !== 0)
+                throw new Error("Desktop default did not clear the override");
+            explorerRow.selected(entry);
             console.log("SETTINGS-PASS");
         }
     }
