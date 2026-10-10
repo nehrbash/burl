@@ -11,6 +11,7 @@ import qs.services
 import qs.modules.dashboard as Dashboard
 import qs.modules.launcher
 import qs.modules.launcher.services
+import "SearchQuery.js" as SearchQuery
 
 Item {
     id: root
@@ -277,40 +278,10 @@ Item {
             : t.trim();
     }
 
-    // Tab-complete a partial scope keyword. Matches `>partial` at the end
-    // of the search text against the known keyword list, extends to the
-    // longest common prefix, and appends a trailing space on a unique hit.
-    // Returns true if the text was changed (consume the Tab event).
     function tryTabComplete(): bool {
-        const t = search.text;
-        const lastPfx = t.lastIndexOf(prefix);
-        if (lastPfx < 0) return false;
-        const afterPfx = t.slice(lastPfx + prefix.length);
-        // Already has a space → keyword is complete, we're in the query portion.
-        if (afterPfx.includes(" ")) return false;
-        const partial = afterPfx.toLowerCase();
-        if (partial.length === 0) return false;
-        const keywords = ["apps","roam","recents","bookmarks","wallpaper",
-                          "web","webbm","webfolder","webhist","tabs",
-                          "spotify","playlists","tracks","clients","monitors",
-                          "workspaces","category","projects","mail","cal","clip","emoji"];
-        const hits = keywords.filter(k => k.startsWith(partial));
-        if (hits.length === 0) return false;
-        // Exact match → just append the trailing space.
-        if (hits.length === 1 && hits[0] === partial) {
-            search.text = t + " ";
-            search.cursorPosition = search.text.length;
-            return true;
-        }
-        let lcp = hits[0];
-        for (let i = 1; i < hits.length; i++) {
-            let j = 0;
-            while (j < lcp.length && j < hits[i].length && lcp[j] === hits[i][j]) j++;
-            lcp = lcp.slice(0, j);
-        }
-        if (lcp.length <= partial.length) return false;
-        const suffix = hits.length === 1 ? " " : "";
-        search.text = t.slice(0, lastPfx + prefix.length) + lcp + suffix;
+        const completed = SearchQuery.complete(search.text, prefix);
+        if (completed === null) return false;
+        search.text = completed;
         search.cursorPosition = search.text.length;
         return true;
     }
@@ -321,22 +292,9 @@ Item {
         visibilities.launcher = false;
         Quickshell.execDetached(["xdg-open", url]);
     }
-    // Scope grammar: `>kind <q> [>kind <q> …]` builds a union of per-kind
-    // subsearches. Each `>kind ` opens a segment that runs until the next
-    // `>kind ` or end of text — the chars between are that segment's
-    // typed query.
-    //
-    // Examples:
-    //   >wallpaper           → wallpapers (no query)
-    //   >apps p              → apps matching 'p'
-    //   >wallpaper >apps     → wallpapers ∪ apps
-    //   >apps p >recent meet → apps matching 'p' ∪ recents matching 'meet'
-    readonly property var scope: parseScopeSegments(search.text)
+    readonly property var scope: SearchQuery.parse(search.text, prefix)
 
-    // Inverse of the scope→kind map below: kind id → the scope
-    // keyword the user would type. Used to "pivot" onto an elevated
-    // non-match node (Enter promotes the node's source into the
-    // active scope set instead of firing its onClicked action).
+    // Enter on a pointer-selected context node adds its type to the filter.
     readonly property var kindToScopeKw: ({
         app: "apps",
         roam: "roam",
@@ -360,81 +318,6 @@ Item {
         emoji: "emoji",
     })
 
-    function parseScopeSegments(t: string): var {
-        // `web` covers all three webish kinds in one shot: leaves,
-        // folders, and history. Individual sub-scopes (`webbm`,
-        // `webhist`, `webfolder`) target a single kind for power users.
-        const map = ({
-            apps: "app",
-            roam: "roam",
-            recents: "recent",
-            bookmarks: "bookmark",
-            wallpaper: "wallpaper",
-            web: ["webBookmark", "webFolder", "webHistory", "webTab"],
-            webbm: "webBookmark",
-            webfolder: "webFolder",
-            webhist: "webHistory",
-            tabs: "webTab",
-            spotify: ["spotifyPlaylist", "spotifyTrack"],
-            playlists: "spotifyPlaylist",
-            tracks: "spotifyTrack",
-            clients: "client",
-            monitors: "monitor",
-            workspaces: "workspace",
-            category: "category",
-            projects: "project",
-            mail: "mail",
-            cal: "event",
-            clip: "clip",
-            emoji: "emoji",
-        });
-        function matchAt(pos) {
-            for (const key in map) {
-                const base = `${prefix}${key}`;
-                if (!t.startsWith(base, pos)) continue;
-                // A scope keyword is delimited by a following space OR the
-                // end of input — so a trailing `>apps` (still being typed,
-                // no space yet) opens its scope immediately instead of
-                // being folded into the previous segment's query text.
-                const after = pos + base.length;
-                const ch = t[after];
-                if (ch === undefined) return { kind: map[key], next: after };
-                if (ch === " ") return { kind: map[key], next: after + 1 };
-            }
-            return null;
-        }
-        if (!matchAt(0)) return null;
-        const segs = [];
-        let pos = 0;
-        while (pos < t.length) {
-            const m = matchAt(pos);
-            if (!m) {
-                // Trailing chars that aren't a scope marker — fold them into
-                // the previous segment's query (e.g. user typed text after).
-                if (segs.length > 0)
-                    segs[segs.length - 1].q = (segs[segs.length - 1].q + " " + t.slice(pos)).trim();
-                break;
-            }
-            // Scan forward to the next scope marker (or end).
-            let end = t.length;
-            for (let scan = m.next; scan < t.length; ++scan) {
-                if (matchAt(scan)) { end = scan; break; }
-            }
-            const q = t.slice(m.next, end).trim();
-            // A scope key can map to a string (one kind) or an array
-            // (the kinds it bundles — e.g. `web` -> webBookmark|Folder|
-            // History). Fan-out arrays into one segment per kind so the
-            // GraphView's per-segment matcher treats each independently.
-            if (Array.isArray(m.kind)) {
-                for (const k of m.kind) segs.push({ kind: k, q });
-            } else {
-                segs.push({ kind: m.kind, q });
-            }
-            pos = end;
-        }
-        return segs.length > 0 ? segs : null;
-    }
-
     // Actions / calc overlay shows for `>` alone or `>action…` — but not
     // when in a scoped graph filter (those route through the graph itself).
     readonly property bool inActions: search.text.startsWith(prefix) && !scope
@@ -448,6 +331,7 @@ Item {
     // or when the selection goes away.
     property bool kindMenuOpen: false
     function openKindMenu(): void {
+        graph.flushSearch();
         const node = graph.topMatch();
         if (!node) return;
         const acts = graph.kindActions(node);
@@ -564,8 +448,8 @@ Item {
         property int page: 0
         readonly property int curIdx: graph.currentNode
         readonly property var neighbors: {
-            const linked = graph.nodeAdjacency[curIdx] ?? [];
-            const nearby = graph.navSlots.filter(i => i >= 0 && !linked.includes(i));
+            const linked = (graph.nodeAdjacency[curIdx] ?? []).filter(i => graph.isNavigationCandidate(i));
+            const nearby = graph.navSlots.filter(i => graph.isNavigationCandidate(i) && !linked.includes(i));
             return linked.concat(nearby);
         }
         readonly property int count: neighbors.length
@@ -574,7 +458,15 @@ Item {
         readonly property string letters: "arstgmne"
         onCurIdxChanged: page = 0
         onPagesChanged: page = Math.min(page, pages-1)
-        function nodeIndexForKey(k: int): int { return choices[k] ?? -1; }
+        function nodeIndexForKey(k: int): int {
+            graph.flushSearch();
+            const index = choices[k] ?? -1;
+            return graph.isNavigationCandidate(index) ? index : -1;
+        }
+        function select(index: int): void {
+            graph.flushSearch();
+            if (graph.isNavigationCandidate(index)) graph.selectNode(index);
+        }
 
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: searchWrapper.top
@@ -669,7 +561,7 @@ Item {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: graph.selectNode(twig.modelData)
+                    onClicked: quickGrid.select(twig.modelData)
                 }
             }
         }
@@ -807,7 +699,7 @@ Item {
                 visible: search.text.length === 0
                 // Elided and kept short: at full length the hint text ran
                 // past the pill and clipped mid-word.
-                text: qsTr("Search apps, recents, roam, bookmarks, clipboard, emoji…    > actions    ? web search")
+                text: qsTr("Search…   >app|roam filters   > actions   ? web search")
                 color: Woodland.inkSecondary
                 font.pointSize: Tokens.font.body.small.pointSize
                 elide: Text.ElideRight
@@ -823,12 +715,9 @@ Item {
                     if (root.kindMenuOpen) root.closeKindMenu();
                     return;
                 }
+                graph.flushSearch();
                 const node = graph.topMatch();
                 if (!node) return;
-                // Pressed Enter on an elevated (filtered-out) neighbour:
-                // promote its source into the active scope instead of
-                // firing the node's onClicked. The node was already
-                // selected via arrow-keys; this turns it into a match.
                 if (root.scope && !graph.currentIsMatch()) {
                     const kw = root.kindToScopeKw[graph.currentPickKind()];
                     if (kw) {
@@ -955,7 +844,7 @@ Item {
                                    Qt.Key_G, Qt.Key_M, Qt.Key_N, Qt.Key_E];
                     const ni = quickGrid.nodeIndexForKey(qkeys.indexOf(ev.key));
                     if (ni >= 0 && ni < graph.nodes.length) {
-                        graph.selectNode(ni);
+                        quickGrid.select(ni);
                         ev.accepted = true;
                         return;
                     }

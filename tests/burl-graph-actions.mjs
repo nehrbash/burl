@@ -107,3 +107,51 @@ test('same-shape refresh updates action payload and primary callback without rep
     node.onClicked(h.visibility);
     assert.equal(h.commands[1][4], '(mu4e-view-message-with-message-id "mail-id")');
 });
+
+test('same-shape metadata refresh rescores search without rebuilding nodes', () => {
+    const graph = readFileSync(new URL('../modules/launcher/GraphView.qml', import.meta.url), 'utf8');
+    const begin = graph.indexOf('        const sameShape =');
+    const end = graph.indexOf('        const positions = {};', begin);
+    const node = { id: 'app:firefox', label: 'Firefox', searchMetadata: ['Browser'] };
+    let rescored = 0;
+    const context = { nodes: [node], out: [{ ...node, searchMetadata: ['Web Browser'] }],
+        browsing: false, rescore() { ++rescored; } };
+    const refresh = () => runInNewContext(`(function() {${graph.slice(begin, end)}})()`, context);
+    refresh();
+    assert.equal(context.nodes[0], node);
+    assert.deepEqual(node.searchMetadata, ['Web Browser']);
+    assert.equal(rescored, 1);
+    context.out = [{ ...node, searchMetadata: ['Web Browser'] }];
+    refresh();
+    assert.equal(rescored, 1);
+    context.out = [{ ...node, searchMetadata: undefined }];
+    refresh();
+    assert.equal(rescored, 2);
+    assert.equal(node.searchMetadata, undefined);
+    context.browsing = true;
+    context.searchActive = true;
+    context.out = [{ ...node, searchMetadata: ['Internet'] }];
+    refresh();
+    assert.equal(rescored, 3);
+    context.searchActive = false;
+    context.out = [{ ...node, searchMetadata: ['Web'] }];
+    refresh();
+    assert.equal(rescored, 3);
+});
+
+test('structural refresh restores only selections and history still in the search results', () => {
+    const graph = readFileSync(new URL('../modules/launcher/GraphView.qml', import.meta.url), 'utf8');
+    const begin = graph.indexOf('        if (wasBrowsing && idx[selectionId]');
+    const end = graph.indexOf('        edgeLayer.refresh();', begin);
+    assert.ok(begin >= 0 && end > begin);
+    const state = { wasBrowsing: true, idx: { selected: 0, kept: 1, excluded: 2 },
+        selectionId: 'selected', historyIds: ['kept', 'excluded', 'removed'], navigationHistory: [],
+        isNavigationCandidate: i => i === 1, selectNode(i) { state.selected = i; } };
+    const restore = () => runInNewContext(`(function() {${graph.slice(begin, end)}})()`, state);
+    restore();
+    assert.equal(state.selected, undefined);
+    state.selectionId = 'kept';
+    restore();
+    assert.equal(state.selected, 1);
+    assert.deepEqual(Array.from(state.navigationHistory), [1]);
+});

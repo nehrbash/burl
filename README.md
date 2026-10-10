@@ -23,6 +23,19 @@ Wallpaper & style → Colours selects a palette for panels, text and controls.
 Nocturne pairs neutral dark surfaces with brass accents; other schemes include
 light appearances where supported. Painted artwork keeps its original colours.
 
+## Launcher search
+
+Type filters can follow the query: `steam >app` is equivalent to `>app steam`.
+Use `>app|roam steam` to search both types, or `>app steam >roam notes` for
+independent queries. Text before the first filter applies to every branch.
+Singular and plural type names work; Tab completes filter names.
+
+Exact names rank first, followed by prefixes, whole-word starts, substrings,
+and fuzzy matches. Every query word must match; app descriptions and keywords
+can contribute lower-ranked results. Long words tolerate one typing error.
+Arrows navigate spatially within matching nodes; Tab and Shift+Tab cycle by
+rank. Clearing the search restores unrestricted graph browsing.
+
 ## Hyprland integration
 
 Cellar installs the Lua modules under `~/.config/hypr/burl/`. In a custom

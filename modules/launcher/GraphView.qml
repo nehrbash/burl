@@ -8,6 +8,7 @@ import Burl.Config
 import Burl.Sim
 import "GraphDrift.js" as GraphDrift
 import "GraphActions.js" as GraphActions
+import "SearchRanking.js" as SearchRanking
 import qs.components
 import qs.components.images
 import qs.services
@@ -53,18 +54,14 @@ Item {
 
     onEmojiScopedChanged: {
         if (emojiScoped)
-            Emoji.search(root.emojiQuery);
+            Emoji.search(root.emojiQueries);
         requestRebuild();
     }
 
-    // The text typed inside the `>emoji` segment, not the whole field.
-    readonly property string emojiQuery: {
-        const seg = (scopeSegments ?? []).find(s => s.kind === "emoji");
-        return seg?.q ?? "";
-    }
+    readonly property var emojiQueries: (scopeSegments ?? []).filter(s => s.kind === "emoji").map(s => s.q ?? "")
 
-    onEmojiQueryChanged: if (emojiScoped)
-        Emoji.search(root.emojiQuery)
+    onEmojiQueriesChanged: if (emojiScoped)
+        Emoji.search(root.emojiQueries)
     // External pause signal — used by Content.qml to halt the sim while
     // the user is in the actions overlay so the search bar stays
     // responsive (we share a single JS event loop with input).
@@ -246,8 +243,6 @@ Item {
     readonly property var topMatchIndices: matchIndices.slice(0, 12)
     // Per-node match score, parallel to nodes[]. Used by node and edge styling.
     property var nodeScores: []
-    // The selected preview node — can be a match OR a non-match
-    // elevated neighbour the user arrow-navigated to. -1 = none.
     property int currentNode: -1
     property var navSlots: [-1, -1, -1, -1]
     readonly property var _navSlotDirs: [[0, -1], [1, 0], [0, 1], [-1, 0]]   // N, E, S, W
@@ -260,10 +255,10 @@ Item {
     onPivotKindChanged: rescore()
     // Per-node BFS depth from the nearest match (0 = match, 1..3 =
     // elevated background, Infinity = unrelated). Drives label
-    // visibility, opacity tiering, and arrow-nav neighbour priority.
+    // visibility and opacity tiering.
     property var depthToMatch: []
     // How far out from a match we treat nodes as "related" (elevated
-    // appearance + arrow-nav priority). Beyond this they dim like
+    // appearance). Beyond this they dim like
     // unrelated background.
     readonly property int elevationDepth: 3
     // Position within matchIndices selected via arrow keys.
@@ -652,6 +647,7 @@ Item {
                 id,
                 kind: "app",
                 label: entry?.name ?? `App ${i}`,
+                searchMetadata: [e.genericName ?? "", e.keywords ?? "", e.comment ?? ""],
                 iconName: entry?.icon ?? "",
                 entry: entry,        // payload for kind-actions (new window)
                 color: colorFor("app"),
@@ -1150,7 +1146,7 @@ Item {
         const sameShape = nodes.length === out.length
             && nodes.every((n, i) => n.id === out[i]?.id);
         if (sameShape) {
-            let labelsChanged = false;
+            let searchChanged = false;
             // Refresh callbacks / colour references in place but keep
             // the same object identity for indexById and Repeater
             // models — bindings are stable.
@@ -1162,13 +1158,18 @@ Item {
                 cur.onColor = nxt.onColor;
                 cur.glyph = nxt.glyph;
                 cur.onClicked = nxt.onClicked;
-                labelsChanged = labelsChanged || cur.label !== nxt.label;
+                const oldMetadata = cur.searchMetadata ?? [];
+                const newMetadata = nxt.searchMetadata ?? [];
+                searchChanged = searchChanged || cur.label !== nxt.label
+                    || oldMetadata.length !== newMetadata.length
+                    || oldMetadata.some((value, j) => value !== newMetadata[j]);
+                cur.searchMetadata = nxt.searchMetadata;
                 cur.label = nxt.label;
                 cur.tooltip = nxt.tooltip;
                 cur.imagePath = nxt.imagePath;
                 cur.iconName = nxt.iconName;
             }
-            if (!browsing && labelsChanged) rescore();
+            if (searchChanged && (!browsing || searchActive)) rescore();
             return;
         }
 
@@ -1181,9 +1182,9 @@ Item {
         nodeScores = new Array(nodes.length).fill(0);
         relayout();
         rescore();
-        if (wasBrowsing && idx[selectionId] !== undefined) {
+        if (wasBrowsing && idx[selectionId] !== undefined && isNavigationCandidate(idx[selectionId])) {
             selectNode(idx[selectionId]);
-            navigationHistory = historyIds.filter(id => idx[id] !== undefined).map(id => idx[id]);
+            navigationHistory = historyIds.filter(id => idx[id] !== undefined && isNavigationCandidate(idx[id])).map(id => idx[id]);
         }
         edgeLayer.refresh();
     }
@@ -1424,142 +1425,42 @@ Item {
         snap = _curSnap;
     }
 
-    // Fuzzy subsequence scorer (fzf-style). Returns 0 when q isn't a
-    // subsequence of label; otherwise a positive weight that rewards
-    // consecutive runs, word-boundary hits, an early first match and
-    // tight coverage, with big bonuses for a clean prefix / exact hit.
-    // Magnitude isn't normalised — callers rank by relative score and
-    // map it to node size + distance from centre.
-    function scoreFor(label: string, q: string): real {
-        if (!q) return 0;
-        const L = label.toLowerCase();
-        const n = L.length;
-        const m = q.length;
-        if (m === 0 || n === 0) return 0;
-
-        // Typo tolerance: allow a few query chars to go unmatched (a
-        // trailing slip like "awsz", a transposition) rather than zeroing
-        // the whole match. Budget grows with query length; 1- and 2-char
-        // queries stay strict (too short to guess intent).
-        const maxMisses = Math.floor(m / 3);
-
-        let score = 0;
-        let li = 0;              // search cursor in L
-        let prev = -2;           // index of previous matched char
-        let run = 0;             // current consecutive-run length
-        let misses = 0;
-        for (let qi = 0; qi < m; ++qi) {
-            const c = q[qi];
-            let found = -1;
-            for (let k = li; k < n; ++k)
-                if (L[k] === c) { found = k; break; }
-            if (found < 0) {
-                // Unmatched query char — skip it (cursor stays put so the
-                // rest can still match) and dock the score. Too many and
-                // it isn't really a match.
-                if (++misses > maxMisses) return 0;
-                run = 0;
-                score -= 1.5;
-                continue;
-            }
-
-            let pts = 1.0;
-            if (found === prev + 1) { run += 1; pts += run * 0.7; }  // consecutive
-            else run = 0;
-
-            const pc = found > 0 ? L[found - 1] : "";
-            if (found === 0 || pc === " " || pc === "-" || pc === "_"
-                || pc === "/" || pc === ".")
-                pts += 0.9;                                          // word boundary
-
-            if (prev >= 0)
-                pts -= Math.min(0.9, (found - prev - 1) * 0.05);     // gap penalty
-            else
-                pts += Math.max(0, 1 - found / n) * 0.6;             // early first hit
-
-            score += pts;
-            prev = found;
-            li = found + 1;
-        }
-
-        const matched = m - misses;
-        if (matched <= 0) return 0;
-        score += (matched / n) * 0.8;                     // coverage
-        if (misses === 0 && L.startsWith(q)) score += 1.5; // clean prefix
-        if (misses === 0 && L === q) score += 2.5;         // exact
-        // Keep a tolerated-typo match positive so it still ranks (well
-        // below clean matches).
-        return Math.max(0.05, score);
-    }
-
     // Update each node's TARGET position + size based on the query —
     // actual motion is done in the C++ sim, so nodes glide into place
     // rather than snap.
     function rescore(): void {
-        if (nodes.length === 0) return;
-        const q = (query ?? "").trim().toLowerCase();
-        const cx = width / 2;
-        const cy = height / 2;
-        let maxScore = 0;
-        const matches = [];
-        // Scope queries with left-cascade semantics: a segment's query
-        // applies to its own kind AND every kind that became active
-        // before it. Equivalently, kind K is filtered by every segment
-        // from K's first appearance onward. So in
-        //   >apps A >roam s
-        // "A" filters apps only; "s" filters both apps and roam (it was
-        // typed after both scopes opened). A node must satisfy ALL of
-        // its applicable queries — progressive AND-narrowing.
-        const segs = scopeSegments ?? [];
-        const firstIdx = ({});          // kind -> first segment index
-        for (let si = 0; si < segs.length; ++si)
-            if (firstIdx[segs[si].kind] === undefined) firstIdx[segs[si].kind] = si;
-        // pivotKind is active (clicked an off-scope node) but has no
-        // cascade filters of its own.
-        if (pivotKind && firstIdx[pivotKind] === undefined)
-            firstIdx[pivotKind] = segs.length;
-        const hasScope = Object.keys(firstIdx).length > 0;
-        // Applicable, trimmed + lowercased queries for a kind — or null
-        // if the kind isn't in any active scope. Empty array = active
-        // with no filter (match every node of that kind).
-        function scopeQueriesFor(kind) {
-            const fi = firstIdx[kind];
-            if (fi === undefined) return null;
-            const qs = [];
-            for (let si = fi; si < segs.length; ++si) {
-                const sq = (segs[si].q ?? "").trim().toLowerCase();
-                if (sq) qs.push(sq);
-            }
-            return qs;
+        if (nodes.length === 0) {
+            nodeScores = [];
+            matchIndices = [];
+            depthToMatch = [];
+            currentMatchIndex = 0;
+            currentNode = -1;
+            hoverIndex = -1;
+            navigationHistory = [];
+            browsing = false;
+            _assignNavSlots();
+            return;
         }
-
+        const q = (query ?? "").trim().toLowerCase();
+        const matches = [];
+        const segs = scopeSegments ?? [];
+        const hasScope = segs.length > 0 || !!pivotKind;
         const scores = new Array(nodes.length).fill(0);
         for (let i = 0; i < nodes.length; ++i) {
             const n = nodes[i];
-            let s;
+            let s = 0;
             if (hasScope) {
-                const qs = scopeQueriesFor(n.kind);
-                if (qs === null) {
-                    s = 0;            // kind isn't in any active scope
-                } else if (qs.length === 0) {
-                    s = 1;            // active, no filter → match all
-                } else {
-                    // AND: every applicable query must hit. Sum the
-                    // per-query scores so tighter / multi-term matches
-                    // rank ahead of single-term ones.
-                    let total = 0;
-                    for (const sq of qs) {
-                        const ss = scoreFor(n.label, sq);
-                        if (ss <= 0) { total = 0; break; }
-                        total += ss;
-                    }
-                    s = total;
+                for (const segment of segs) {
+                    if (segment.kind !== n.kind) continue;
+                    const term = (segment.q ?? "").trim();
+                    s = Math.max(s, term ? SearchRanking.score(n.label, term, n.searchMetadata) : 1);
                 }
+                if (pivotKind === n.kind && !segs.some(segment => segment.kind === n.kind))
+                    s = 1;
             } else {
-                s = scoreFor(n.label, q);
+                s = SearchRanking.score(n.label, q, n.searchMetadata);
             }
             scores[i] = s;
-            if (s > maxScore) maxScore = s;
             if (s > 0) matches.push(i);
         }
         matches.sort((a, b) => scores[b] - scores[a]);
@@ -1569,14 +1470,10 @@ Item {
         browsing = false;
         navigationHistory = [];
         currentNode = matches.length > 0 ? matches[0] : -1;
-        // New match set → reset arrow-nav neighbour history.
-        _navVisited = currentNode >= 0 ? [currentNode] : [];
 
         // BFS the edge graph outward from the match set, tagging each
         // reachable node with its depth (capped at elevationDepth).
-        // Drives both the per-node label/opacity tiering AND the
-        // arrow-nav neighbour priority (cycleMatch hops to a depth-1
-        // edge neighbour before falling through to score order).
+        // Related nodes stay visible without entering keyboard search results.
         const depths = new Array(nodes.length).fill(Infinity);
         const queue = [];
         for (const m of matches) {
@@ -1746,10 +1643,6 @@ Item {
 
 
     function topMatch(): var {
-        // Prefer currentNode — it tracks arrow-key nav and may point
-        // at an elevated neighbour that isn't in matchIndices. Caller
-        // can use currentIsMatch() to distinguish "real match" vs
-        // "elevated pivot pick".
         if (currentNode >= 0 && currentNode < nodes.length)
             return nodes[currentNode];
         if (matchIndices.length === 0) return null;
@@ -1767,68 +1660,31 @@ Item {
         return "";
     }
 
-    // Arrow-key nav: prefer an edge-connected neighbour of the
-    // current pick over linear next-by-score. Neighbours can be
-    // matches OR elevated background nodes (depth ≤ elevationDepth)
-    // — so e.g. with a >monitors filter you can arrow through the
-    // monitor's workspaces and the client windows on them, even
-    // though those aren't in matchIndices.
-    property var _navVisited: []
+    readonly property bool searchActive: (query ?? "").trim() !== "" || scopeSegments.length > 0
+
+    function flushSearch(): void {
+        if (!filterTimer.running) return;
+        filterTimer.stop();
+        _applyFilter();
+    }
+
+    function isNavigationCandidate(index: int): bool {
+        return index >= 0 && index < nodes.length
+            && (!searchActive || (nodeScores[index] ?? 0) > 0);
+    }
+
     function cycleMatch(delta: int): void {
-        if (matchIndices.length === 0) return;
-        if (currentNode < 0) {
-            currentNode = matchIndices[0];
-            currentMatchIndex = 0;
-            retargetMatches();
-            sim.reheat(0.4);
-            fitCamera();
-            edgeLayer.refresh();
-            return;
-        }
-        const cur = currentNode;
-
-        // Edge neighbours that are either matches or elevated.
-        const matchSet = new Set(matchIndices);
-        const inGraph = (i) => matchSet.has(i)
-            || (depthToMatch?.[i] ?? Infinity) <= elevationDepth;
-        // Read precomputed adjacency instead of rescanning edgePairs.
-        const nbrs = (nodeAdjacency[cur] ?? []).filter(inGraph);
-
-        const visited = new Set(_navVisited);
-        let pick = nbrs.find(i => !visited.has(i));
-
-        if (pick === undefined && nbrs.length > 0) {
-            // All neighbours visited — drop history except current so
-            // the next press cycles back through them.
-            _navVisited = [cur];
-        }
-
-        if (pick !== undefined) {
-            currentNode = pick;
-            const mp = matchIndices.indexOf(pick);
-            if (mp >= 0) currentMatchIndex = mp;
-            const vis = _navVisited.slice();
-            vis.push(cur);
-            while (vis.length > 12) vis.shift();
-            _navVisited = vis;
-        } else {
-            // No edge-reachable neighbour — fall back to linear cycle
-            // through the match set by best score.
-            const n = matchIndices.length;
-            const here = matchIndices.indexOf(cur);
-            const base = here >= 0 ? here : currentMatchIndex;
-            currentMatchIndex = ((base + delta) % n + n) % n;
-            currentNode = matchIndices[currentMatchIndex];
-            _navVisited = [currentNode];
-        }
-
-        retargetMatches();
-        sim.reheat(0.4);
-        fitCamera();
-        edgeLayer.refresh();
+        flushSearch();
+        if (!matchIndices.length) return;
+        const here = matchIndices.indexOf(currentNode);
+        const next = here < 0 ? (delta < 0 ? matchIndices.length - 1 : 0)
+            : (here + delta + matchIndices.length) % matchIndices.length;
+        selectNode(matchIndices[next]);
     }
 
     function cycleLinkedNeighbor(delta: int): void {
+        flushSearch();
+        if (searchActive) { cycleMatch(delta); return; }
         if (delta < 0) { navigateBack(); return; }
         if (currentNode < 0) { selectNode(matchIndices[0] ?? 0); return; }
         const neighbors = nodeAdjacency[currentNode] ?? [];
@@ -1863,11 +1719,12 @@ Item {
     }
 
     function navigateBack(): void {
-        if (!navigationHistory.length) return;
+        flushSearch();
         const history = navigationHistory.slice();
-        const previous = history.pop();
+        let previous = -1;
+        while (history.length && !isNavigationCandidate(previous)) previous = history.pop();
         navigationHistory = history;
-        if (previous >= nodes.length) return;
+        if (!isNavigationCandidate(previous)) return;
         currentNode = previous;
         _assignNavSlots();
         _centerOnNode(previous);
@@ -1879,7 +1736,7 @@ Item {
         const cy = currentNode >= 0 ? _ny(currentNode) : _s2wY(height/2);
         let best = -1, bestCost = Infinity;
         for (let i = 0; i < nodes.length; ++i) {
-            if (i === currentNode) continue;
+            if (i === currentNode || !isNavigationCandidate(i)) continue;
             const dx = _nx(i)-cx, dy = _ny(i)-cy;
             const distance = Math.hypot(dx, dy);
             if (distance < 1) continue;
@@ -1892,6 +1749,11 @@ Item {
     }
 
     function navDirection(dirX: real, dirY: real): void {
+        flushSearch();
+        if (searchActive && !isNavigationCandidate(currentNode)) {
+            selectNode(matchIndices[0] ?? -1);
+            return;
+        }
         selectNode(directionalNode(dirX, dirY));
     }
 

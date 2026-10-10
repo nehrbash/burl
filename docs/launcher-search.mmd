@@ -1,0 +1,21 @@
+stateDiagram-v2
+    [*] --> Browsing
+    Browsing --> Pending: Text or type filter changes
+    Results --> Pending: Edit query
+    Empty --> Pending: Edit query
+    Pending --> Results: Parse types and queries / score matches
+    Pending --> Empty: No matches / clear selection
+    Pending --> Browsing: Clear query
+    Pending --> Results: Navigation or activation flushes pending input
+    Results --> Results: Arrows choose a spatial match
+    Results --> Results: Tab / Shift+Tab cycle ranked matches
+    Results --> Results: Shortcut grid chooses a matching neighbor
+    Results --> Launch: Enter activates selection
+    Empty --> Empty: Navigation / Enter do nothing
+    Browsing --> Browsing: Arrows explore all nodes / Tab explores links
+    note right of Results
+        steam >app equals >app steam.
+        >app|roam steam includes either type.
+        >app steam >roam notes uses independent queries.
+        Dimmed context nodes are outside keyboard results.
+    end note

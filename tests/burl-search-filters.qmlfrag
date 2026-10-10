@@ -1,0 +1,80 @@
+property var cycleState: Qt.createQmlObject('import Quickshell; import qs.components; ScreenState { modelData: Quickshell.screens[0] }', host)
+property var graph: null
+property var search: null
+property string appQuery: ""
+property string appId: ""
+property int stage: 0
+property int attempts: 0
+function find(item, predicate) {
+    if (predicate(item)) return item;
+    for (const child of item.children ?? []) {
+        const result = find(child, predicate);
+        if (result) return result;
+    }
+    return null;
+}
+function check(ok, label) {
+    if (!ok) { console.error('FILTERS-FAIL', label); Qt.quit(); throw new Error(label); }
+}
+function onlyKinds(kinds) {
+    check(graph.matchIndices.length > 0, 'nonempty results');
+    check(graph.matchIndices.every(i => kinds.includes(graph.nodes[i].kind)), 'results respect types');
+    for (const direction of [[1,0], [0,1], [-1,0], [0,-1]]) {
+        graph.navDirection(direction[0], direction[1]);
+        check(graph.currentIsMatch() && kinds.includes(graph.currentPickKind()), 'arrows respect types');
+    }
+    for (let i = 0; i < 12; ++i) {
+        graph.cycleLinkedNeighbor(1);
+        check(graph.currentIsMatch() && kinds.includes(graph.currentPickKind()), 'Tab respects types');
+    }
+    check(graph.navSlots.every(i => i < 0 || graph.isNavigationCandidate(i)), 'compass respects results');
+}
+Timer { interval: 100; running: true; onTriggered: host.cycleState.openWorldRoom('launcher') }
+Timer {
+    interval: 250; running: true; repeat: true
+    onTriggered: {
+        if (++host.attempts > 60) host.check(false, 'native search fixture deadline');
+        if (!host.graph) host.graph = host.find(subject, item => item.objectName === 'skyGraph');
+        if (!host.search) host.search = host.find(subject, item => typeof item.syncOpen === 'function');
+        const graph = host.graph, search = host.search;
+        if (!graph || !search || graph.preparing || graph.nodes.length === 0) return;
+        if (host.stage === 0) {
+            const apps = graph.nodes.filter(node => node.kind === 'app');
+            if (!apps.length) return;
+            const app = apps.find(node => node.label.toLowerCase() === 'steam') ?? apps[0];
+            host.appQuery = app.label;
+            host.appId = app.id;
+            search.text = host.appQuery + ' >app';
+        } else if (host.stage === 1) {
+            graph.flushSearch();
+            host.onlyKinds(['app']);
+            host.check(graph.matchIndices.some(i => graph.nodes[i].id === host.appId), 'suffix query finds app');
+            host.check(graph.nodes[graph.matchIndices[0]].label.toLowerCase() === host.appQuery.toLowerCase(), 'exact app ranked first');
+            search.text = '>app|roam';
+        } else if (host.stage === 2) {
+            graph.flushSearch();
+            host.onlyKinds(['app', 'roam']);
+            host.check(graph.matchIndices.some(i => graph.nodes[i].kind === 'app'), 'union includes apps');
+            if (graph.nodes.some(node => node.kind === 'roam'))
+                host.check(graph.matchIndices.some(i => graph.nodes[i].kind === 'roam'), 'union includes roam');
+            search.text = '>app zzzqqqxxxyyynotfound';
+        } else if (host.stage === 3) {
+            graph.flushSearch();
+            host.check(graph.matchIndices.length === 0 && graph.currentNode === -1, 'zero results clear selection');
+            graph.navDirection(1, 0);
+            graph.cycleLinkedNeighbor(1);
+            host.check(graph.currentNode === -1, 'zero results cannot select background');
+            search.text = '>app';
+        } else if (host.stage === 4) {
+            graph.flushSearch();
+            host.onlyKinds(['app']);
+            search.text = '';
+        } else {
+            graph.flushSearch();
+            host.check(!graph.searchActive, 'clearing filter restores free browsing');
+            console.log('FILTERS-PASS');
+            stop();
+        }
+        host.stage++;
+    }
+}

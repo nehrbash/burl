@@ -17,7 +17,7 @@ Singleton {
     property var entries: []
     property bool loaded
 
-    property string query
+    property var queries: []
     property var matches: []
 
     readonly property int maxMatches: 40
@@ -27,19 +27,19 @@ Singleton {
             table.reload();
     }
 
-    function search(q: string): void {
-        root.query = q;
+    function search(q: var): void {
+        root.queries = Array.isArray(q) ? q : [q];
         root.ensureLoaded();
         root.rescore();
     }
 
     function rescore(): void {
-        const q = (root.query ?? "").trim().toLowerCase();
+        const queries = root.queries.map(q => (q ?? "").trim().toLowerCase());
         if (!root.loaded) {
             root.matches = [];
             return;
         }
-        if (!q) {
+        if (!queries.length || queries.includes("")) {
             root.matches = root.entries.slice(0, root.maxMatches);
             return;
         }
@@ -49,10 +49,17 @@ Singleton {
         const prefix = [];
         const rest = [];
         for (const e of root.entries) {
-            const i = e.keywords.indexOf(q);
-            if (i < 0)
-                continue;
-            if (i === 0 || e.keywords[i - 1] === " ")
+            let matched = false;
+            let boundary = false;
+            for (const query of queries) {
+                const positions = query.split(/\s+/).map(word => e.keywords.indexOf(word));
+                if (positions.some(index => index < 0)) continue;
+                matched = true;
+                if (positions.every(index => index === 0 || e.keywords[index - 1] === " "))
+                    boundary = true;
+            }
+            if (!matched) continue;
+            if (boundary)
                 prefix.push(e);
             else
                 rest.push(e);

@@ -87,3 +87,14 @@ if ! grep -q RAPID-PASS "$WORK/rapid.log" || grep -q RAPID-FAIL "$WORK/rapid.log
     cat "$WORK/rapid.log"
     exit 1
 fi
+
+BURL_NO_AMBIENT=0 "$REPO/scripts/qs-shot.sh" \
+    --root "$ROOT" --size 1600x1000 --settle 17000 \
+    --log "$WORK/filters.log" \
+    --decl "$REPO/tests/burl-search-filters.qmlfrag" \
+    --set 'visibilities: host.cycleState' --set 'panels: ({})' \
+    modules/launcher/Content.qml "$WORK/filters.png"
+if ! grep -q FILTERS-PASS "$WORK/filters.log" || grep -q FILTERS-FAIL "$WORK/filters.log"; then
+    cat "$WORK/filters.log"
+    exit 1
+fi

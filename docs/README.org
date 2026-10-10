@@ -15,6 +15,7 @@ relevant diagram when changing a lifecycle, and exercise its failure transitions
   node visuals are created asynchronously and retained between normal openings.
 - [[file:tree-sky-navigation.mmd][Tree and sky navigation]]: bounded edge targets change rooms;
   hover reveals the return arrow, while clicking starts the camera transition.
+- [[file:launcher-search.mmd][Launcher search]]: type filters bound keyboard candidates; ranking and spatial navigation share the same matches.
 - [[file:launcher-actions.mmd][Launcher actions]]: source payloads stay separate from graph IDs;
   action resolution and execution are independent of layout.
 - [[file:network-processes.mmd][Network commands]]: each transient process is released after completion.
