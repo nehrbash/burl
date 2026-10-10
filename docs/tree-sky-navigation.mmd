@@ -1,0 +1,28 @@
+stateDiagram-v2
+    [*] --> Closed
+    Closed --> Opening: Open tree or launcher
+    Opening --> Tree: Tree arrival completes
+    Opening --> Sky: Launcher arrival completes
+    Tree --> Ascending: Top strip click / Ctrl+Up / search
+    Ascending --> Sky: Camera arrives
+    Sky --> Descending: Bottom-center click / Ctrl+Down
+    Descending --> Tree: Camera arrives
+    Tree --> Closed: Close / bare ground click / Escape
+    Sky --> Closed: Close / Escape
+    Ascending --> Closed: Escape
+    Descending --> Closed: Escape
+    Opening --> Closed: Escape
+    note right of Tree
+        Top target: at most 56 px and 10% height.
+        Tree nodes and root actions take priority.
+    end note
+    note right of Sky
+        Return target: at most 240 by 64 px,
+        centered below search at the bottom edge.
+        Hover reveals the arrow; click descends.
+        Close remains in the upper-right corner.
+    end note
+    note left of Ascending
+        Pointer navigation is disabled during travel.
+        Set the incoming room flag before clearing the outgoing flag.
+    end note

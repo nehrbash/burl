@@ -1,5 +1,10 @@
 property var cycleState: Qt.createQmlObject('import Quickshell; import qs.components; ScreenState { modelData: Quickshell.screens[0] }', host)
 property var registry: Qt.createQmlObject('import QtQuick; import qs.services; QtObject { property var state: ShellState }', host).state
+property int controlPhase: 0
+property var reportedChecks: ({})
+property bool checkedAscent: false
+property bool checkedDescent: false
+property bool checkedReturnAscent: false
 Item {
     id: sidebarStub
     property bool shouldBeVisible: true
@@ -17,48 +22,92 @@ function find(item, name) {
     return null;
 }
 function check(ok, message) {
-    if (!ok) { console.error('SKY-CONTROLS-FAIL', message); Qt.quit(); }
-    else console.log('SKY-CONTROLS-PASS', message);
+    if (!ok) {
+        host.controlPhase = -1;
+        console.error('SKY-CONTROLS-FAIL', message);
+        Qt.quit();
+    } else if (!host.reportedChecks[message]) {
+        host.reportedChecks[message] = true;
+        console.log('SKY-CONTROLS-PASS', message);
+    }
+    return ok;
+}
+function bounds(item) {
+    const point = item.mapToItem(subject, 0, 0);
+    return { x: point.x, y: point.y, right: point.x + item.width, bottom: point.y + item.height };
 }
 Timer {
     interval: 100; running: true
     onTriggered: {
         host.registry.componentsFor(host.cycleState.modelData).bar = sidebarStub;
         host.cycleState.openWorldRoom('launcher');
+        host.controlPhase = 1;
     }
 }
 Timer {
-    interval: 4000; running: true
+    interval: 50; repeat: true
+    running: host.controlPhase > 0 && host.controlPhase < 4
     onTriggered: {
-        host.check(host.checkedAscent, 'ascent was exercised');
         const down = host.find(subject, 'skyDescend');
+        const up = host.find(subject, 'treeAscend');
         const close = host.find(subject, 'skyClose');
-        host.check(down && close && down.enabled && close.enabled, 'sky exposes descent and close');
-        host.check(down.mapToItem(host, 0, 0).x >= sidebarStub.trunkX + sidebarStub.trunkWidth, 'descent clears sidebar roots');
-        host.check(close.x >= down.x + down.width && close.x + close.width <= host.width, 'close is separate and on screen');
-        close.clicked(null);
-        host.check(!host.cycleState.launcher && !host.cycleState.dashboard, 'close exits both rooms');
-        host.cycleState.openWorldRoom('launcher');
-    }
-}
-Timer {
-    interval: 5500; running: true
-    onTriggered: {
-        host.find(subject, 'skyDescend').clicked(null);
-        host.check(host.cycleState.dashboard && !host.cycleState.launcher, 'descent opens world tree');
-    }
-}
-
-property bool checkedAscent: false
-FrameAnimation {
-    running: !host.checkedAscent
-    onTriggered: {
-        if (subject.panP > 0.2 && subject.panP < 0.8) {
-            const graph = host.find(subject, "skyGraph");
-            host.check(graph.y < -subject.height * 0.2
-                && Math.abs(graph.y + subject.height * 1.12 * (1-subject.panP)) < 0.1,
-                "nodes enter with the sky camera");
-            host.checkedAscent = true;
+        const search = host.find(subject, 'skySearch');
+        if (!host.check(down && up && close && search, 'navigation controls and search exist')) return;
+        if (subject.panP > 0.1 && subject.panP < 0.9) {
+            host.check(!down.enabled && !up.enabled && !close.enabled, 'camera travel disables navigation');
+            if (host.controlPhase === 1) {
+                const graph = host.find(subject, 'skyGraph');
+                host.check(graph && Math.abs(graph.y + subject.height * 1.12 * (1 - subject.panP)) < 0.1,
+                    'nodes enter with the sky camera');
+                host.checkedAscent = true;
+            } else if (host.controlPhase === 2) {
+                host.checkedDescent = true;
+            } else if (host.controlPhase === 3) {
+                host.checkedReturnAscent = true;
+            }
+        }
+        if (host.controlPhase === 1 && subject.panP > 0.999 && subject.atSky) {
+            const d = host.bounds(down), u = host.bounds(up), c = host.bounds(close), s = host.bounds(search);
+            host.check(host.checkedAscent, 'initial ascent was exercised');
+            host.check(down.enabled && close.enabled && !up.enabled, 'sky enables only its navigation');
+            host.check(down.width <= 240 && down.width <= subject.width * 0.4 + 0.1,
+                'return target has bounded width');
+            host.check(down.height <= 64 && down.height <= subject.height * 0.08 + 0.1,
+                'return target has bounded height');
+            host.check(Math.abs(d.x + down.width / 2 - subject.width / 2) < 0.1
+                && Math.abs(d.bottom - subject.height) < 0.1, 'return target is bottom centered');
+            host.check(d.y >= s.bottom - 0.1, 'return target stays below search');
+            host.check(d.x >= sidebarStub.trunkX + sidebarStub.trunkWidth, 'return target clears sidebar roots');
+            host.check(up.height <= 56 && up.height <= subject.height * 0.1 + 0.1
+                && Math.abs(u.y) < 0.1 && Math.abs(u.x) < 0.1
+                && Math.abs(up.width - subject.width) < 0.1, 'ascent uses only a narrow top strip');
+            host.check(c.x > subject.width / 2 && c.right <= subject.width + 0.1
+                && c.y >= 0 && c.bottom < subject.height / 2, 'close stays in the upper right');
+            if (host.controlPhase < 0) return;
+            host.controlPhase = 2;
+            down.clicked(null);
+            host.check(host.cycleState.dashboard && !host.cycleState.launcher, 'return click opens world tree');
+        } else if (host.controlPhase === 2 && subject.panP < 0.001 && subject.atTree) {
+            host.check(host.checkedDescent, 'descent camera travel was exercised');
+            host.check(up.enabled && !down.enabled && !close.enabled, 'tree enables only ascent');
+            if (host.controlPhase < 0) return;
+            host.controlPhase = 3;
+            up.clicked(null);
+            host.check(host.cycleState.launcher && !host.cycleState.dashboard, 'ascent click opens sky');
+        } else if (host.controlPhase === 3 && subject.panP > 0.999 && subject.atSky) {
+            host.check(host.checkedReturnAscent, 'clicked ascent camera travel was exercised');
+            host.check(down.enabled && close.enabled && !up.enabled, 'return ascent restores exclusive sky controls');
+            close.clicked(null);
+            host.check(!host.cycleState.launcher && !host.cycleState.dashboard, 'close exits both rooms');
+            host.check(!down.enabled && !up.enabled && !close.enabled, 'closed surface disables every navigation target');
+            if (host.controlPhase !== -1) {
+                host.controlPhase = 4;
+                console.log('SKY-CONTROLS-COMPLETE');
+            }
         }
     }
+}
+Timer {
+    interval: 16000; running: true
+    onTriggered: host.check(host.controlPhase === 4, 'navigation cycle completed before deadline')
 }

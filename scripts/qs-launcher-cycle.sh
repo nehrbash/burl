@@ -49,10 +49,15 @@ BURL_NO_AMBIENT=0 "$REPO/scripts/qs-shot.sh" \
     modules/launcher/GraphView.qml "$WORK/resize.png"
 
 BURL_NO_AMBIENT=0 "$REPO/scripts/qs-shot.sh" \
-    --root "$ROOT" --size 1280x720 --settle 6000 \
+    --root "$ROOT" --size 1280x720 --settle 17000 \
+    --log "$WORK/sky-controls.log" \
     --decl "$REPO/tests/burl-sky-controls.qmlfrag" \
     --set 'visibilities: host.cycleState' --set 'panels: ({})' \
     modules/launcher/Content.qml "$WORK/sky-controls.png"
+if ! grep -q SKY-CONTROLS-COMPLETE "$WORK/sky-controls.log" || grep -q SKY-CONTROLS-FAIL "$WORK/sky-controls.log"; then
+    cat "$WORK/sky-controls.log"
+    exit 1
+fi
 
 BURL_NO_AMBIENT=0 "$REPO/scripts/qs-shot.sh" \
     --root "$ROOT" --size 1600x1000 --settle 9400 \

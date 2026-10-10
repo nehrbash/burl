@@ -17,9 +17,6 @@ Item {
 
     required property ScreenState visibilities
     required property var panels
-    readonly property var sidebar: ShellState.componentsFor(visibilities.modelData)?.bar
-    readonly property real sidebarClearance: sidebar?.shouldBeVisible
-        ? Math.max(0, sidebar.mapToItem(root, sidebar.trunkX + sidebar.trunkWidth, 0).x) : 0
 
     anchors.fill: parent
 
@@ -498,61 +495,49 @@ Item {
         id: descend
         objectName: "skyDescend"
 
-        anchors.left: parent.left
+        anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        anchors.margins: Tokens.spacing.large
-        anchors.leftMargin: root.sidebarClearance + Tokens.spacing.large
-        width: descendLabel.implicitWidth + 58
-        height: 44
+        width: Math.min(240, parent.width * 0.4)
+        height: Math.min(64, parent.height * 0.08)
         z: root.chromeZ
         enabled: root.atSky
-        visible: root.arrivalP > 0.01
-        opacity: root.arrivalP * root.revealP
+        visible: enabled
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: root.descend()
 
         Rectangle {
             anchors.fill: parent
-            radius: height / 2
-            color: descend.containsMouse ? Colours.palette.m3surfaceContainerHighest : Colours.palette.m3surfaceContainer
-            border.width: 1
-            border.color: Qt.alpha(descend.containsMouse ? Colours.palette.m3primary : Colours.palette.m3outline, 0.3)
-            Behavior on color { ColorAnimation { duration: 180 } }
+            opacity: descend.containsMouse ? 1 : 0
+            gradient: Gradient {
+                GradientStop { position: 0; color: "transparent" }
+                GradientStop { position: 1; color: Qt.alpha(Woodland.parchment, 0.10) }
+            }
+            Behavior on opacity { Anim { type: Anim.FastEffects } }
         }
 
         MaterialIcon {
-            anchors.left: parent.left
-            anchors.leftMargin: 12
-            anchors.verticalCenter: parent.verticalCenter
+            anchors.centerIn: parent
             text: "keyboard_double_arrow_down"
-            color: descend.containsMouse ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
+            color: Woodland.parchment
+            opacity: descend.containsMouse ? 0.85 : 0
             fontStyle: Tokens.font.icon.small
-        }
-
-        Text {
-            id: descendLabel
-            anchors.left: parent.left
-            anchors.leftMargin: 40
-            anchors.verticalCenter: parent.verticalCenter
-            text: "World tree  ·  Ctrl+↓"
-            color: Woodland.creamSecondary
-            font.pixelSize: 12
+            Behavior on opacity { Anim { type: Anim.FastEffects } }
         }
     }
 
     MouseArea {
         id: closeSky
         objectName: "skyClose"
-        anchors.left: descend.right
-        anchors.leftMargin: Tokens.spacing.small
-        anchors.bottom: descend.bottom
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.margins: Tokens.spacing.large
         width: closeLabel.implicitWidth + 30
-        height: descend.height
+        height: 44
         z: root.chromeZ
         enabled: root.atSky
         visible: descend.visible
-        opacity: descend.opacity
+        opacity: root.arrivalP * root.revealP
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: root.dismiss()
@@ -724,6 +709,7 @@ Item {
 
     StyledRect {
         id: searchWrapper
+        objectName: "skySearch"
 
         z: root.chromeZ
         opacity: root.arrivalP * root.revealP
@@ -1079,35 +1065,18 @@ Item {
         }
     }
 
-    // Down at the tree, a click on bare scenery moves the camera — but WHERE
-    // depends on where you clicked, because the two things you might want are
-    // opposites: the sky above the canopy takes you up to the graph, the ground
-    // below the roots closes the surface.
-    //
-    // The bands deliberately do not meet. The middle of the frame is the tree,
-    // and a click on bare room there should do nothing rather than guess.
-    //
-    // Both hit targets sit UNDER the tree host (z 3) so orbs and root limbs get
-    // their own clicks first; the glow and the chevrons sit OVER it (z 4) or the
-    // tree's own room paints across them. Without the affordances the only way
-    // up was an undiscoverable Ctrl+Up, since the chrome that would hint at it
-    // is invisible down here.
-    // PARKED at an end of the pan, not merely pointing somewhere near it. Both
-    // bands and their affordances key off this rather than a `panP < 0.5`
-    // half-plane: during the opening shot's 340ms hold panP is ALREADY 0, so a
-    // pointer that happened to be sitting in a band lit it for a third of a
-    // second and then lost it to the climb — a flash, immediately before the
-    // pan. Nothing under the camera is interactive while the camera is moving.
+    // Keep navigation inactive during the opening dwell and camera movement.
     readonly property bool atTree: root.surfaceOpen && root.panP < 0.02 && !dwell.running
     readonly property bool atSky: root.surfaceOpen && root.panP > 0.98
 
     MouseArea {
         id: ascendBand
+        objectName: "treeAscend"
 
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        height: Math.round(parent.height * 0.42)
+        height: Math.min(56, parent.height * 0.1)
         z: 2
         enabled: root.atTree
         visible: enabled
@@ -1167,7 +1136,7 @@ Item {
         MaterialIcon {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: parent.top
-            anchors.topMargin: Tokens.spacing.large
+            anchors.topMargin: Math.max(0, (ascendBand.height - height) / 2)
 
             text: "keyboard_double_arrow_up"
             color: Woodland.parchment
