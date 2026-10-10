@@ -17,6 +17,36 @@ Wallpaper & style → Colours selects a palette for panels, text and controls.
 Nocturne pairs neutral dark surfaces with brass accents; other schemes include
 light appearances where supported. Painted artwork keeps its original colours.
 
+## Hyprland integration
+
+Cellar installs the Lua modules under `~/.config/hypr/burl/`. In a custom
+Hyprland Lua configuration, load the theme after loading optional plugins:
+
+```lua
+local config = os.getenv("XDG_CONFIG_HOME") or os.getenv("HOME") .. "/.config"
+local burl = dofile(config .. "/hypr/burl/init.lua")
+local theme = burl.theme()
+theme.apply()
+burl.layer_rules()
+```
+
+`theme.apply(overrides)` accepts a nested `hl.config` table to override colour
+roles. `theme.rgb(role)` and `theme.rgba(role, alpha)` supply colours for custom
+rules and title-bar buttons. Missing palette entries use Nocturne defaults.
+Personal layouts, bindings, application rules and plugin loading remain in
+the consuming configuration. Cellar's default configuration imports Burl directly.
+
+Theme changes atomically write `hypr/scheme/current.conf` and reload the active
+Hyprland instance, preserving disabled outputs. Offline changes take effect at the next compositor start;
+reload failures are logged and the saved palette remains available for retry.
+Disable this integration with `theme.enableHypr: false` in `burl/cli.json`.
+
+The same directory provides `lib.lua` (bindings, submaps and rules),
+`actions.lua` (Burl IPC and desktop actions), and configurable workspace
+autostart and scratchpad helpers. Import the helpers you use with `dofile`;
+construct them during config loading so their state follows the compositor's
+configuration lifecycle. They do not choose your keybindings or applications.
+
 ## Development
 
 The root contains the QML shell and `plugin/`; `cli/` contains the Python

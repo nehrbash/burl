@@ -10,6 +10,15 @@ stateDiagram-v2
     Saving --> Applying: Atomic replace of scheme.json
     Applying --> Ready: File watcher updates palette bindings
     Applying --> Ready: Refresh catalog and available appearances
+    Applying --> WritingHyprland: Hyprland integration enabled
+    WritingHyprland --> IntegrationFailed: Write fails / retain old compositor palette
+    WritingHyprland --> Offline: Atomic replace of current.conf / no active compositor
+    WritingHyprland --> Reloading: Atomic replace of current.conf / snapshot disabled outputs
+    Offline --> CompositorApplied: Next startup imports Burl theme
+    Reloading --> CompositorApplied: Lua config imports Burl theme / restore disabled outputs
+    Reloading --> IntegrationFailed: Missing hyprctl, timeout or reload failure
+    IntegrationFailed --> WritingHyprland: Retry applying scheme
+    CompositorApplied --> Ready
     note right of Resolving
         One candidate, one write.
         No intermediate scheme or flavour is saved.

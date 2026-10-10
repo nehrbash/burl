@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -111,11 +112,16 @@ def gen_sequences(colours: dict[str, str]) -> str:
 
 def write_file(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile("w", dir=path.parent, delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(content)
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
-    with tempfile.NamedTemporaryFile("w") as f:
-        f.write(content)
-        f.flush()
-        shutil.move(f.name, path)
 
 @log_exception
 def apply_terms(sequences: str) -> None:
@@ -139,9 +145,51 @@ def apply_terms(sequences: str) -> None:
                 pass
 
 
+def hyprctl(arguments: list[str], action: str) -> str:
+    try:
+        result = subprocess.run(["hyprctl", *arguments], check=True,
+                                capture_output=True, text=True, timeout=5)
+        return result.stdout
+    except subprocess.CalledProcessError as error:
+        detail = (error.stderr or error.stdout or f"exit status {error.returncode}").strip()
+        raise RuntimeError(f"Hyprland {action} failed: {detail}") from error
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise RuntimeError(f"Hyprland {action} failed: {error}") from error
+
+
+def lua_string(value: str) -> str:
+    # Decimal byte escapes avoid JSON's Lua-incompatible Unicode escapes.
+    return '"' + "".join(f"\\{byte:03d}" for byte in value.encode("utf-8")) + '"'
+
+
 @log_exception
 def apply_hypr(conf: str) -> None:
     write_file(config_dir / "hypr/scheme/current.conf", conf)
+    if not os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"):
+        return
+    monitors = json.loads(hyprctl(["-j", "monitors", "all"], "monitor query"))
+    if not isinstance(monitors, list):
+        raise ValueError("Hyprland monitor query did not return a list")
+    disabled = []
+    for monitor in monitors:
+        if monitor.get("disabled") is True:
+            name = monitor.get("name")
+            if not isinstance(name, str) or not name:
+                raise ValueError("Hyprland disabled monitor has no output name")
+            disabled.append(name)
+    errors = []
+    try:
+        hyprctl(["reload"], "reload")
+    except RuntimeError as error:
+        errors.append(str(error))
+    for name in disabled:
+        try:
+            hyprctl(["eval", f"hl.monitor({{ output = {lua_string(name)}, disabled = true }})"],
+                    f"restore disabled output {name!r}")
+        except RuntimeError as error:
+            errors.append(str(error))
+    if errors:
+        raise RuntimeError("; ".join(errors))
 
 
 @log_exception
