@@ -27,8 +27,8 @@ Item {
             opacity: 0.45 + index % 3 * 0.15
             Image {
                 anchors.fill: parent
-                sourceClipRect: Qt.rect((shard.index % 4) * 443.5, Math.floor(shard.index / 4) * 443.5, 443.5, 443.5)
-                source: Quickshell.shellPath("assets/images/nocturne/astral-glass.png")
+                sourceClipRect: Qt.rect((shard.index % 2) * 627 + 64, Math.floor((shard.index % 4) / 2) * 627 + 64, 499, 499)
+                source: Quickshell.shellPath("assets/images/nocturne/astral-glass-" + (shard.index < 4 ? "celestial" : "jewels") + ".png")
                 asynchronous: true
                 mipmap: true
             }
