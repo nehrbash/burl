@@ -15,6 +15,8 @@ relevant diagram when changing a lifecycle, and exercise its failure transitions
   node visuals are created asynchronously and retained between normal openings.
 - [[file:tree-sky-navigation.mmd][Tree and sky navigation]]: bounded edge targets change rooms;
   hover reveals the return arrow, while clicking starts the camera transition.
+- [[file:launcher-commands.mmd][Named commands]]: persisted command definitions, argument validation and dispatch.
+- [[file:file-search.mmd][File search]]: minimum query, bounded worker, cancellation and stale-result rejection.
 - [[file:launcher-search.mmd][Launcher search]]: type filters bound keyboard candidates; ranking and spatial navigation share the same matches.
 - [[file:launcher-actions.mmd][Launcher actions]]: source payloads stay separate from graph IDs;
   action resolution and execution are independent of layout.
@@ -26,3 +28,8 @@ Run =make check= for behavioral regressions and
 =python3 tests/theme-switching.py [BURL_PACKAGE]= for native settings-to-palette
 validation with isolated state. The native check uses the installed plugin unless
 a package path is supplied. =make check-lifecycle= covers graph and scene lifecycle.
+
+=python3 tests/launcher-commands.py BURL_PACKAGE= validates the command editor
+and saved settings in an isolated configuration. =python3 tests/launcher-command-runtime.py BURL_PACKAGE=
+checks execution with a harmless argument recorder. =scripts/qs-file-search-cycle.sh=
+checks file queries, regex errors and cancellation in a native launcher.

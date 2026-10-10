@@ -1,0 +1,79 @@
+property var cycleState: Qt.createQmlObject('import Quickshell; import qs.components; ScreenState { modelData: Quickshell.screens[0] }', host)
+property var graph: null
+property var search: null
+property int stage: 0
+property int attempts: 0
+property int cancelledAt: 0
+function find(item, predicate) {
+    if (predicate(item)) return item;
+    for (const child of item.children ?? []) {
+        const result = find(child, predicate);
+        if (result) return result;
+    }
+    return null;
+}
+function check(ok, label) {
+    if (!ok) { console.error('FILES-FAIL', label); Qt.quit(); throw new Error(label); }
+}
+Timer { interval: 100; running: true; onTriggered: host.cycleState.openWorldRoom('launcher') }
+Timer {
+    interval: 250; running: true; repeat: true
+    onTriggered: {
+        if (++host.attempts > 85) host.check(false, 'file search deadline stage=' + host.stage + ' entries=' + JSON.stringify(host.graph?.fileSearchService.entries) + ' error=' + host.graph?.fileSearchStatus + ' nodes=' + host.graph?.nodes.filter(n => n.kind === 'file').length);
+        if (!host.graph) host.graph = host.find(subject, item => item.objectName === 'skyGraph');
+        if (!host.search) host.search = host.find(subject, item => typeof item.syncOpen === 'function');
+        const graph = host.graph, search = host.search;
+        if (!graph || !search || graph.preparing || !graph.nodes.length) return;
+        const files = graph.fileSearchService;
+        if (files.loading && host.stage !== 8) return;
+        const nodes = graph.nodes.filter(node => node.kind === 'file');
+        if (host.stage === 0) {
+            search.text = '>file';
+        } else if (host.stage === 1) {
+            host.check(!files.currentJob && !files.entries.length && !nodes.length, 'bare scope stays idle');
+            search.text = '>file ab';
+        } else if (host.stage === 2) {
+            host.check(!files.currentJob && !files.entries.length && !nodes.length, 'short query stays idle');
+            search.text = 'report >file';
+        } else if (host.stage === 3) {
+            host.check(!files.error, 'literal search succeeds: ' + files.error);
+            if (nodes.length !== 2) return;
+            graph.flushSearch();
+            host.check(graph.matchIndices.length === 2, 'literal results enter match set');
+            graph.navDirection(1, 0);
+            host.check(graph.currentPickKind() === 'file', 'navigation stays in files');
+            search.text = '>file re:.*\\.org$';
+        } else if (host.stage === 4) {
+            host.check(!files.error, 'regex search succeeds: ' + files.error);
+            if (nodes.length !== 1) return;
+            graph.flushSearch();
+            host.check(nodes[0].label === 'Alpha report.org' && graph.matchIndices.length === 1, 'regex matches are not fuzzy-filtered');
+            search.text = '>file re:[bad';
+        } else if (host.stage === 5) {
+            host.check(files.error.length > 0 && !files.entries.length, 'invalid regex reports error');
+            files.executable = '/missing-burl-file-search-fixture';
+            search.text = '>file report';
+        } else if (host.stage === 6) {
+            host.check(files.error.length > 0 && !files.entries.length, 'failed process reports error');
+            files.executable = 'burl-file-search';
+            search.text = '>file report';
+        } else if (host.stage === 7) {
+            host.check(!files.error && files.entries.length === 2, 'recovers after failed start');
+            files.executable = Quickshell.env("BURL_FILE_SEARCH_SLOW_FIXTURE");
+            search.text = '>file delayed';
+        } else if (host.stage === 8) {
+            if (!files.currentJob) return;
+            search.text = '>file ab';
+            host.cancelledAt = host.attempts;
+        } else if (host.stage === 9) {
+            if (host.attempts - host.cancelledAt < 6) return;
+            host.check(!files.loading && !files.currentJob && !files.entries.length && !nodes.length, 'cancelled worker cannot publish stale results');
+            search.text = '>app';
+        } else {
+            host.check(!files.active && !files.loading && !files.currentJob && !files.entries.length && !nodes.length, 'leaving file scope cancels and clears');
+            console.log('FILES-PASS');
+            stop();
+        }
+        host.stage++;
+    }
+}

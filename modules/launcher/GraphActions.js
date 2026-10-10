@@ -17,6 +17,8 @@ function primary(kind, source, context) {
     const quote = JSON.stringify;
     let expression = "";
     switch (kind) {
+    case "file":
+        return source.path ? { name: "Open", icon: "open_in_new", desc: source.path, command: ["xdg-open", source.path] } : null;
     case "recent":
         if (source.path && context.emacsEnabled)
             return { name: "Open", icon: "open_in_new", desc: source.path, command: ["emacsclient", "-n", source.path] };
@@ -49,6 +51,14 @@ function secondary(node, context) {
     const copy = (name, value) => value ? { name, icon: "content_copy", desc: value, command: ["wl-copy", value] } : null;
     let actions = [];
     switch (node.kind) {
+    case "file":
+        if (!source.path) break;
+        actions = [
+            { name: "Open folder", icon: "folder_open", desc: "Containing directory", command: ["xdg-open", source.path.replace(/\/[^/]*$/, "/")] },
+            copy("Copy path", source.path),
+            context.emacsEnabled ? { name: "Open in Emacs", icon: "edit", desc: source.path, command: ["emacsclient", "-n", source.path] } : null
+        ];
+        break;
     case "recent":
         if (!source.path) break;
         actions = [

@@ -155,3 +155,15 @@ test('structural refresh restores only selections and history still in the searc
     assert.equal(state.selected, 1);
     assert.deepEqual(Array.from(state.navigationHistory), [1]);
 });
+
+test('file actions open default handlers with literal paths and optional Emacs', () => {
+    const path = '/home/test/space "quote" $(literal).org';
+    const h = harness({ emacsEnabled: false });
+    actions.execute(actions.primary('file', {path}, h.context), h.context, h.visibility);
+    assert.deepEqual(h.commands[0], ['xdg-open', path]);
+    const secondary = actions.secondary({kind: 'file', source: {path}}, h.context);
+    assert.equal(secondary.length, 2);
+    assert.deepEqual(Array.from(secondary[0].command), ['xdg-open', '/home/test/']);
+    assert.deepEqual(Array.from(secondary[1].command), ['wl-copy', path]);
+    assert.equal(actions.primary('file', {}, h.context), null);
+});

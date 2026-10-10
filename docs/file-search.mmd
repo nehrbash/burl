@@ -1,0 +1,20 @@
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Waiting: File scope with at least 3 query characters
+    Waiting --> Waiting: Query changes / restart debounce
+    Waiting --> Searching: 220 ms without edits / start worker
+    Searching --> Results: Current generation returns valid matches
+    Searching --> Error: Invalid regex, failed worker or timeout
+    Searching --> Waiting: Query changes / kill old worker and clear nodes
+    Results --> Waiting: Query changes / clear nodes
+    Error --> Waiting: Correct query / retry
+    Waiting --> Idle: Scope removed or query too short
+    Searching --> Idle: Scope removed / kill worker
+    Results --> Idle: Scope removed / remove nodes
+    Error --> Idle: Scope removed
+    note right of Searching
+        Independent worker per launcher surface.
+        Home files; no hidden entries or symlink traversal.
+        At most 60 results, 250000 entries or 3 seconds.
+        Only the current generation may publish results.
+    end note

@@ -36,6 +36,18 @@ Item {
     // kind matches it (max if multiple); kinds with no segment are out.
     property var scopeSegments: []
 
+    readonly property var fileQueries: (scopeSegments ?? []).filter(s => s.kind === "file").map(s => s.q ?? "")
+    readonly property string fileSearchStatus: fileSearch.status
+    readonly property var fileSearchService: fileSearch
+
+    FileSearch {
+        id: fileSearch
+        objectName: "launcherFileSearch"
+        active: root.visibilities.launcher && root.fileQueries.length > 0
+        queries: root.fileQueries
+        onEntriesChanged: root.requestRebuild()
+    }
+
     // Clipboard entries are only materialised as nodes under an explicit
     // `>clip` scope. Two hundred unlinked text nodes in the idle sky would
     // swamp the structure the graph exists to show, and cost the sim a
@@ -533,6 +545,7 @@ Item {
     function colorFor(kind: string): color {
         switch (kind) {
         case "app":         return Colours.palette.m3primary;
+        case "file":
         case "recent":      return Colours.palette.m3secondary;
         case "bookmark":    return Colours.palette.m3tertiary;
         case "wallpaper":   return Colours.palette.m3surfaceContainerHighest;
@@ -557,6 +570,7 @@ Item {
 
     function glyphFor(kind: string): string {
         switch (kind) {
+        case "file":
         case "recent":      return "description";
         case "bookmark":    return "bookmark";
         case "wallpaper":   return "image";
@@ -582,6 +596,7 @@ Item {
     function onColorFor(kind: string): color {
         switch (kind) {
         case "app":         return Colours.palette.m3onPrimary;
+        case "file":
         case "recent":      return Colours.palette.m3onSecondary;
         case "bookmark":    return Colours.palette.m3onTertiary;
         case "wallpaper":   return Colours.palette.m3onSurface;
@@ -1089,6 +1104,22 @@ Item {
         if (spotifyImageIndices.length !== spImgIdx.length || spotifyImageIndices.some((value, i) => value !== spImgIdx[i]))
             spotifyImageIndices = spImgIdx;
 
+        for (const file of (fileSearch.active ? fileSearch.entries : [])) {
+            const id = `file:${file.path}`;
+            out.push({
+                id,
+                kind: "file",
+                source: file,
+                label: file.label,
+                tooltip: file.path,
+                color: colorFor("file"),
+                onColor: onColorFor("file"),
+                glyph: glyphFor("file"),
+                onClicked: vis => root.activateSource("file", file, vis)
+            });
+            idx[id] = out.length - 1;
+        }
+
         const emojiColor = colorFor("emoji");
         const emojiOnColor = onColorFor("emoji");
         for (const e of (root.emojiScoped ? Emoji.matches : [])) {
@@ -1154,6 +1185,8 @@ Item {
                 const cur = nodes[i];
                 const nxt = out[i];
                 cur.color = nxt.color;
+                if (cur.kind === "file")
+                    searchChanged = searchChanged || JSON.stringify(cur.source.queries) !== JSON.stringify(nxt.source.queries);
                 cur.source = nxt.source;
                 cur.onColor = nxt.onColor;
                 cur.glyph = nxt.glyph;
@@ -1453,7 +1486,11 @@ Item {
                 for (const segment of segs) {
                     if (segment.kind !== n.kind) continue;
                     const term = (segment.q ?? "").trim();
-                    s = Math.max(s, term ? SearchRanking.score(n.label, term, n.searchMetadata) : 1);
+                    const score = n.kind === "file"
+                        ? (n.source.queries.includes(term)
+                            ? (term.startsWith("re:") ? 1 : Math.max(1, SearchRanking.score(n.label, term, [n.source.path]))) : 0)
+                        : (term ? SearchRanking.score(n.label, term, n.searchMetadata) : 1);
+                    s = Math.max(s, score);
                 }
                 if (pivotKind === n.kind && !segs.some(segment => segment.kind === n.kind))
                     s = 1;

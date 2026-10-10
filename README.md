@@ -30,11 +30,29 @@ Use `>app|roam steam` to search both types, or `>app steam >roam notes` for
 independent queries. Text before the first filter applies to every branch.
 Singular and plural type names work; Tab completes filter names.
 
+Use `report >file` to find files, or `>file|roam report` to include notes.
+File search starts after three nonspace characters and a short typing pause.
+It searches under your home directory, skipping hidden files, symlinks and common
+build/cache directories. Results are capped at 60; the status reports incomplete
+scans. Set `BURL_FILE_SEARCH_ROOT` to restrict the search to another directory.
+Leaving the file filter cancels work and removes file nodes.
+`>file re:.*\.(org|md)$` searches paths with a regular expression. Wrap patterns
+containing filter-like text in slashes: `>file re:/draft >app notes/`.
+Escape a literal slash as `\/` inside that form; use `re:^/home/` for a bare
+absolute-path pattern. A following filter starts another search branch.
+
 Exact names rank first, followed by prefixes, whole-word starts, substrings,
 and fuzzy matches. Every query word must match; app descriptions and keywords
 can contribute lower-ranked results. Long words tolerate one typing error.
 Arrows navigate spatially within matching nodes; Tab and Shift+Tab cycle by
 rank. Clearing the search restores unrestricted graph browsing.
+
+In Settings → Panels → Launcher → Commands, add or edit a command's name,
+keyword, description, executable and default arguments. Enable “Allow extra
+arguments” to append arguments typed after its exact keyword, such as
+`>editor "file with spaces" --flag`. Quotes group arguments; variables, pipes
+and command substitutions stay literal. Changes persist in `shell.json`.
+Commands marked dangerous follow the existing “Enable dangerous actions” setting.
 
 ## Hyprland integration
 

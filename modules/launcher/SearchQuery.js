@@ -1,5 +1,5 @@
 const scopes = {
-    apps: ['app'], roam: ['roam'], recents: ['recent'], bookmarks: ['bookmark'],
+    apps: ['app'], files: ['file'], roam: ['roam'], recents: ['recent'], bookmarks: ['bookmark'],
     wallpaper: ['wallpaper'], web: ['webBookmark', 'webFolder', 'webHistory', 'webTab'],
     webbm: ['webBookmark'], webfolder: ['webFolder'], webhist: ['webHistory'], tabs: ['webTab'],
     spotify: ['spotifyPlaylist', 'spotifyTrack'], playlists: ['spotifyPlaylist'], tracks: ['spotifyTrack'],
@@ -7,7 +7,7 @@ const scopes = {
     projects: ['project'], mail: ['mail'], cal: ['event'], clip: ['clip'], emoji: ['emoji']
 };
 const aliases = {
-    app: 'apps', recent: 'recents', bookmark: 'bookmarks', wallpapers: 'wallpaper',
+    app: 'apps', file: 'files', recent: 'recents', bookmark: 'bookmarks', wallpapers: 'wallpaper',
     tab: 'tabs', playlist: 'playlists', track: 'tracks', client: 'clients', monitor: 'monitors',
     workspace: 'workspaces', categories: 'category', project: 'projects', calendar: 'cal',
     event: 'cal', clipboard: 'clip'
@@ -36,12 +36,30 @@ function markerAt(text, pos, prefix) {
     return {start: pos, end, kinds};
 }
 
+function regexEndAt(text, pos) {
+    if (!text.startsWith('re:/', pos) || (pos > 0 && !/\s/.test(text[pos - 1])))
+        return pos;
+    let escaped = false;
+    let inClass = false;
+    for (let end = pos + 4; end < text.length; end++) {
+        const ch = text[end];
+        if (escaped) { escaped = false; continue; }
+        if (ch === '\\') { escaped = true; continue; }
+        if (ch === '[') inClass = true;
+        else if (ch === ']') inClass = false;
+        else if (ch === '/' && !inClass) return end + 1;
+    }
+    return text.length;
+}
+
 function parse(text, prefix) {
     if (!prefix || text.startsWith('?')) return null;
     // An unknown leading command belongs to the actions overlay.
     if (text.startsWith(prefix) && !markerAt(text, 0, prefix)) return null;
     const markers = [];
     for (let pos = 0; pos < text.length; pos++) {
+        const regexEnd = regexEndAt(text, pos);
+        if (regexEnd > pos) { pos = regexEnd - 1; continue; }
         const marker = markerAt(text, pos, prefix);
         if (marker) {
             markers.push(marker);
@@ -66,6 +84,11 @@ function complete(text, prefix) {
     if (!prefix || text.startsWith('?')) return null;
     const pos = text.lastIndexOf(prefix);
     if (pos < 0 || (pos > 0 && !/\s/.test(text[pos - 1]))) return null;
+    for (let start = 0; start <= pos; start++) {
+        const end = regexEndAt(text, start);
+        if (end > pos) return null;
+        if (end > start) start = end - 1;
+    }
     const tail = text.slice(pos + prefix.length);
     if (!/^[a-z]*(?:\s*\|\s*[a-z]*)*$/i.test(tail)) return null;
     const pipe = tail.lastIndexOf('|');

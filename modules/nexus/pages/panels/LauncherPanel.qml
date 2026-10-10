@@ -4,6 +4,9 @@ import QtQuick
 import QtQuick.Layouts
 import Burl.Config
 import qs.modules.nexus.common
+import qs.components
+import qs.components.controls
+import "../../../launcher/services/CommandArguments.js" as CommandArguments
 
 PageBase {
     id: root
@@ -75,6 +78,48 @@ PageBase {
             text: qsTr("Actions")
             checked: GlobalConfig.launcher.useFuzzy.actions
             onToggled: GlobalConfig.launcher.useFuzzy.actions = checked
+        }
+
+        SectionHeader {
+            text: qsTr("Commands")
+        }
+
+        StyledText {
+            Layout.fillWidth: true
+            text: qsTr("Run named commands from the launcher. Changes are saved in your Burl settings.")
+            wrapMode: Text.Wrap
+            font: Tokens.font.body.small
+        }
+
+        CommandEditor {
+            id: commandEditor
+            objectName: "commandEditor"
+            Layout.fillWidth: true
+        }
+
+        IconTextButton {
+            objectName: "commandAdd"
+            visible: !commandEditor.editing
+            icon: "add"
+            text: qsTr("Add command")
+            onClicked: commandEditor.begin(-1)
+        }
+
+        Repeater {
+            model: commandEditor.editing ? [] : GlobalConfig.launcher.actions
+
+            NavRow {
+                required property var modelData
+                required property int index
+                first: index === 0
+                last: index === GlobalConfig.launcher.actions.length - 1
+                label: modelData.name ?? qsTr("Unnamed command")
+                icon: modelData.icon ?? "terminal"
+                status: GlobalConfig.launcher.actionPrefix + CommandArguments.keywordFor(modelData)
+                    + ((modelData.enabled ?? true) ? "" : qsTr(" · disabled"))
+                    + (modelData.description ? " · " + modelData.description : "")
+                onClicked: commandEditor.begin(index)
+            }
         }
     }
 }

@@ -1,0 +1,23 @@
+stateDiagram-v2
+    [*] --> Search
+    Search --> Search: Match keyword, name, description or executable
+    Search --> Arguments: Exact command keyword followed by text
+    Arguments --> Error: Extra arguments disabled or quoting incomplete
+    Error --> Arguments: Correct input
+    Search --> Dispatch: Enter on selected command
+    Arguments --> Dispatch: Parse argument words / append to configured argv
+    Dispatch --> Search: Built-in autocomplete changes prompt
+    Dispatch --> Submitted: Session handler or program accepts command
+    Submitted --> [*]: Close launcher
+    state Settings {
+        List --> Draft: Add or edit
+        Draft --> Draft: Validation error
+        Draft --> List: Save command array to Burl settings
+        Draft --> List: Cancel
+        Draft --> List: Delete selected command
+    }
+    note right of Arguments
+        Quoting groups argument words.
+        No shell expansion or command substitution.
+        Configured arguments precede typed arguments.
+    end note

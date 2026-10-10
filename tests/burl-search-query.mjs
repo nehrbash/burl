@@ -65,3 +65,27 @@ test('emoji candidates include every OR branch and all words of a branch', () =>
     assert.equal(emojis(['']).length, 5);
     assert.equal(emojis([]).length, 5);
 });
+
+test('file scopes accept suffix placement, aliases and unions', () => {
+    for (const text of ['>file report', '>files report', 'report >file'])
+        assert.deepEqual(parse(text), [segment('file', 'report')]);
+    assert.deepEqual(parse('>file|roam report'), [segment('file', 'report'), segment('roam', 'report')]);
+    assert.equal(parser.complete('report >fi', '>'), 'report >files ');
+});
+
+test('bare file regex keeps alternation literal and allows a following scope', () => {
+    assert.deepEqual(parse('>file re:.*\\.(org|md)$ >app editor'),
+        [segment('file', 're:.*\\.(org|md)$'), segment('app', 'editor')]);
+    assert.deepEqual(parse('>file re:foo|roam'), [segment('file', 're:foo|roam')]);
+});
+
+test('delimited file regex protects scope-like text, escapes and character classes', () => {
+    for (const pattern of ['foo >app bar', 'foo|roam', 'foo\\/ >app bar', '[/] >app bar']) {
+        const q = `re:/${pattern}/`;
+        assert.deepEqual(parse(`>file ${q} >roam notes`), [segment('file', q), segment('roam', 'notes')]);
+    }
+    assert.deepEqual(parse('re:/foo >app bar/ >file'), [segment('file', 're:/foo >app bar/')]);
+    assert.deepEqual(parse('>file re:/foo >app'), [segment('file', 're:/foo >app')]);
+    assert.equal(parser.complete('>file re:/foo >ap', '>'), null);
+    assert.equal(parser.complete('>file re:/foo >app/ >ro', '>'), '>file re:/foo >app/ >roam ');
+});

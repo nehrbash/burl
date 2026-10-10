@@ -299,6 +299,7 @@ Item {
         app: "apps",
         roam: "roam",
         recent: "recents",
+        file: "files",
         bookmark: "bookmarks",
         wallpaper: "wallpaper",
         webBookmark: "webbm",
@@ -597,6 +598,21 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: searchWrapper.top
         anchors.bottomMargin: Tokens.spacing.medium
+    }
+
+    StyledText {
+        objectName: "fileSearchStatus"
+        anchors.top: searchWrapper.bottom
+        anchors.topMargin: Tokens.spacing.small
+        anchors.horizontalCenter: searchWrapper.horizontalCenter
+        width: searchWrapper.width
+        horizontalAlignment: Text.AlignHCenter
+        elide: Text.ElideRight
+        z: root.chromeZ
+        visible: root.atSky && graph.fileSearchStatus !== ""
+        text: graph.fileSearchStatus
+        color: Woodland.parchment
+        font.pointSize: Tokens.font.body.small.pointSize
     }
 
     StyledRect {
