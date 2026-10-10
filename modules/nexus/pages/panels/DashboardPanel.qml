@@ -8,6 +8,8 @@ import qs.modules.nexus.common
 PageBase {
     id: root
 
+    readonly property bool hasEdgeGestures: Config.dashboard.navStyle !== "living"
+
     title: qsTr("Dashboard")
     isSubPage: true
 
@@ -24,6 +26,7 @@ PageBase {
 
         ToggleRow {
             first: true
+            last: !root.hasEdgeGestures
             text: qsTr("Enabled")
             checked: Config.dashboard.enabled
             onToggled: GlobalConfig.dashboard.enabled = checked
@@ -31,6 +34,7 @@ PageBase {
 
         ToggleRow {
             last: true
+            visible: root.hasEdgeGestures
             text: qsTr("Show on hover")
             subtext: qsTr("Reveal when the cursor reaches the screen edge")
             checked: Config.dashboard.showOnHover
@@ -110,12 +114,14 @@ PageBase {
         }
 
         SectionHeader {
+            visible: root.hasEdgeGestures
             text: qsTr("Behaviour")
         }
 
         StepperRow {
             first: true
             last: true
+            visible: root.hasEdgeGestures
             label: qsTr("Drag threshold")
             subtext: qsTr("Pixels dragged before the dashboard opens")
             value: Config.dashboard.dragThreshold

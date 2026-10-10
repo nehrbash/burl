@@ -65,8 +65,8 @@ Item {
             const explorerRow = findRow(apps, "File manager");
             if (!explorerRow) throw new Error("File manager row missing");
             explorerRow.selected(entry);
-            if (GlobalConfig.general.apps.explorer.join("|") !== "sh|--new-window")
-                throw new Error("Desktop command not preserved");
+            if (GlobalConfig.general.apps.explorerDesktop !== "burl-test-file-manager" || GlobalConfig.general.apps.explorer.length !== 0)
+                throw new Error("Desktop identity not preserved");
             console.log("SETTINGS-PASS");
         }
     }
@@ -81,5 +81,5 @@ Item {
     assert "SETTINGS-PASS" in log, log
     saved = json.loads(settings.read_text())
     assert saved["services"]["defaultPlayer"] == "", "cleared preference was not saved"
-    assert saved["general"]["apps"]["explorer"] == ["sh", "--new-window"], "file manager was not saved"
+    assert saved["general"]["apps"]["explorerDesktop"] == "burl-test-file-manager", "file manager was not saved"
     print("PASS: settings selections persist")

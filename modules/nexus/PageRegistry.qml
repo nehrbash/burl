@@ -90,7 +90,7 @@ QtObject {
             component: root.appsPage,
             label: qsTr("Apps"),
             icon: "apps",
-            description: qsTr("Default apps, favourites, hidden apps"),
+            description: qsTr("Burl launch preferences, favourites, hidden apps"),
             category: "shell"
         },
         {
@@ -106,7 +106,7 @@ QtObject {
             component: root.languagePage,
             label: qsTr("Language & region"),
             icon: "globe",
-            description: qsTr("UI language, weather location, display units"),
+            description: qsTr("System locale, weather location, display units"),
             category: "shell"
         },
 

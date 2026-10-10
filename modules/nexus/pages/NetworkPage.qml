@@ -71,6 +71,7 @@ PageBase {
 
         ItemList {
             id: networkList
+            last: true
 
             showList: Nmcli.wifiEnabled
             placeholderIcon: Nmcli.wifiEnabled ? "wifi_find" : "signal_wifi_off"
@@ -209,37 +210,6 @@ PageBase {
                     Anim {
                         type: Anim.DefaultEffects
                     }
-                }
-            }
-        }
-
-        ConnectedRect {
-            Layout.fillWidth: true
-            implicitHeight: addNetworkLayout.implicitHeight + addNetworkLayout.anchors.margins * 2
-            last: true
-
-            StateLayer {}
-
-            RowLayout {
-                id: addNetworkLayout
-
-                anchors.fill: parent
-                anchors.margins: Tokens.padding.medium
-                anchors.leftMargin: Tokens.padding.largeIncreased
-                anchors.rightMargin: Tokens.padding.largeIncreased
-
-                spacing: Tokens.spacing.medium
-
-                MaterialIcon {
-                    text: "add"
-                    fontStyle: Tokens.font.icon.medium
-                }
-
-                StyledText {
-                    Layout.fillWidth: true
-                    text: qsTr("Add network")
-                    font: Tokens.font.body.small
-                    elide: Text.ElideRight
                 }
             }
         }

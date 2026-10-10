@@ -4,6 +4,7 @@ import Quickshell
 import Burl
 import Burl.Config
 import qs.utils
+import qs.services
 
 Searcher {
     id: root
@@ -12,10 +13,7 @@ Searcher {
         appDb.incrementFrequency(entry.id);
 
         if (entry.runInTerminal)
-            Quickshell.execDetached({
-                command: [...GlobalConfig.general.apps.terminal, `${Quickshell.shellDir}/assets/wrap_term_launch.sh`, ...entry.command],
-                workingDirectory: entry.workingDirectory
-            });
+            AppPreferences.launchTerminal([`${Quickshell.shellDir}/assets/wrap_term_launch.sh`, ...entry.command], entry.workingDirectory);
         else
             entry.execute();
     }

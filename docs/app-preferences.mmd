@@ -1,0 +1,19 @@
+stateDiagram-v2
+    [*] --> SavedPreference
+    SavedPreference --> DesktopDefault: No file or media override
+    SavedPreference --> DesktopEntry: Saved application ID
+    SavedPreference --> CustomCommand: Legacy or custom argv
+    DesktopEntry --> Unavailable: Application ID is missing
+    DesktopEntry --> Launch: Resolve current installed entry
+    CustomCommand --> Launch: Resolve legacy entry or retain custom argv
+    DesktopDefault --> Launch: xdg-open uses desktop MIME associations
+    Launch --> TerminalChild: Terminal application
+    TerminalChild --> Execute: Add the terminal execution option
+    Launch --> Execute: File or media application
+    Unavailable --> [*]: Show error
+    Execute --> [*]
+    note right of SavedPreference
+        Burl preferences control Burl actions.
+        Desktop MIME defaults and keybindings are separate.
+        Store desktop IDs, not versioned executable paths.
+    end note

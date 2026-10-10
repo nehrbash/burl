@@ -7,6 +7,8 @@ relevant diagram when changing a lifecycle, and exercise its failure transitions
   shell bindings follow the saved palette, application updates are best effort.
 - [[file:settings-pages.mmd][Settings pages]]: one registry owns stable IDs, labels and components;
   only the latest asynchronous request may attach a visible page.
+- [[file:app-preferences.mmd][Application preferences]]: saved desktop IDs resolve at launch;
+  desktop-default file and media actions follow XDG associations.
 - [[file:weather-state.mmd][Weather lookup]]: configuration selects the location source;
   failed lookup waits for retry, superseded responses cannot replace selection.
 - [[file:launcher-scene.mmd][Tree and sky]]: camera motion pauses graph preparation;

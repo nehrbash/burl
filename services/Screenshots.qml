@@ -227,7 +227,7 @@ Singleton {
     // which is the "reveal" behaviour we want here.
     function reveal(dir: string): void {
         if (dir)
-            Quickshell.execDetached([...GlobalConfig.general.apps.explorer, dir]);
+            AppPreferences.open("explorer", dir);
     }
 
     // printf %s, not echo: no trailing newline on the clipboard.

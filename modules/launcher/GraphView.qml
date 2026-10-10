@@ -154,7 +154,8 @@ Item {
     // Tunables.
     readonly property int maxApps: 100
     readonly property int maxRecents: 60
-    readonly property int maxWallpapers: 30
+    readonly property int maxWallpapers: Math.max(1, Math.min(30, Config.launcher.maxWallpapers))
+    onMaxWallpapersChanged: requestRebuild()
     // Cap rendered nodes separately from source fetch limits to bound frame cost.
     readonly property int maxRoam: 600
     readonly property int maxProjects: 80

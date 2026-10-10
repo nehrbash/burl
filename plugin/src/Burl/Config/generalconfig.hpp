@@ -16,8 +16,11 @@ class GeneralApps : public ConfigObject {
 
     CONFIG_GLOBAL_PROPERTY(QStringList, terminal, { u"foot"_s })
     CONFIG_GLOBAL_PROPERTY(QStringList, audio, { u"pavucontrol"_s })
-    CONFIG_GLOBAL_PROPERTY(QStringList, playback, { u"mpv"_s })
-    CONFIG_GLOBAL_PROPERTY(QStringList, explorer, { u"thunar"_s })
+    CONFIG_GLOBAL_PROPERTY(QStringList, playback)
+    CONFIG_GLOBAL_PROPERTY(QStringList, explorer)
+    CONFIG_GLOBAL_PROPERTY(QString, terminalDesktop)
+    CONFIG_GLOBAL_PROPERTY(QString, playbackDesktop)
+    CONFIG_GLOBAL_PROPERTY(QString, explorerDesktop)
 
 public:
     explicit GeneralApps(QObject* parent = nullptr)

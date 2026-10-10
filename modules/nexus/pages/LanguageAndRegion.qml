@@ -50,7 +50,6 @@ PageBase {
             text: qsTr("Language")
         }
 
-        // Read-only: the shell follows the system locale (no in-shell translations yet)
         ConnectedRect {
             Layout.fillWidth: true
             first: true
@@ -79,7 +78,7 @@ PageBase {
 
                     StyledText {
                         Layout.fillWidth: true
-                        text: qsTr("Follows your system locale (%1)").arg(Qt.locale().name)
+                        text: qsTr("System locale (%1); configured outside Burl").arg(Qt.locale().name)
                         color: Woodland.creamSecondary
                         font: Tokens.font.label.small
                         elide: Text.ElideRight

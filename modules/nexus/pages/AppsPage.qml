@@ -25,37 +25,39 @@ PageBase {
 
         SectionHeader {
             first: true
-            text: qsTr("Default applications")
+            text: qsTr("Burl launch preferences")
         }
 
         DefaultRow {
             first: true
             icon: "terminal"
             label: qsTr("Terminal")
-            status: GlobalConfig.general.apps.terminal.join(" ")
-            onSelected: app => GlobalConfig.general.apps.terminal = app.command
-        }
-
-        DefaultRow {
-            icon: "volume_up"
-            label: qsTr("Audio")
-            status: GlobalConfig.general.apps.audio.join(" ")
-            onSelected: app => GlobalConfig.general.apps.audio = app.command
+            status: AppPreferences.label("terminal")
+            preference: "terminal"
+            onSelected: app => AppPreferences.select("terminal", app)
         }
 
         DefaultRow {
             icon: "play_circle"
             label: qsTr("Media playback")
-            status: GlobalConfig.general.apps.playback.join(" ")
-            onSelected: app => GlobalConfig.general.apps.playback = app.command
+            status: AppPreferences.label("playback")
+            preference: "playback"
+            onSelected: app => AppPreferences.select("playback", app)
         }
 
         DefaultRow {
             last: true
             icon: "folder"
             label: qsTr("File manager")
-            status: GlobalConfig.general.apps.explorer.join(" ")
-            onSelected: app => GlobalConfig.general.apps.explorer = app.command
+            status: AppPreferences.label("explorer")
+            preference: "explorer"
+            onSelected: app => AppPreferences.select("explorer", app)
+        }
+
+        StyledText {
+            Layout.fillWidth: true
+            text: qsTr("Used by Burl actions only. Desktop default follows your system’s file associations; keyboard shortcuts are configured separately.")
+            wrapMode: Text.WordWrap
         }
 
         SectionHeader {
@@ -77,7 +79,8 @@ PageBase {
 
         readonly property int popupHeight: root.flickable.height - y + root.flickable.contentY - Tokens.padding.large - Tokens.padding.extraExtraLarge
 
-        signal selected(app: DesktopEntry)
+        required property string preference
+        signal selected(app: var)
 
         keepPopupAsChild: {
             if (root.nState.animatingContainer || root.opacity < 1)
@@ -101,15 +104,16 @@ PageBase {
                 implicitHeight: CUtils.clamp(row.popupHeight, Tokens.sizes.nexus.minPopupHeight, Tokens.sizes.nexus.maxPopupHeight)
 
                 model: {
-                    const apps = [...DesktopEntries.applications.values];
+                    const apps = [...DesktopEntries.applications.values].filter(app => row.preference !== "terminal" || AppPreferences.supportsTerminal(app));
                     const favourited = new Set(apps.filter(a => Strings.testRegexList(GlobalConfig.launcher.favouriteApps, a.id)));
-                    return apps.sort((a, b) => (favourited.has(b) - favourited.has(a)) || a.name.localeCompare(b.name));
+                    const sorted = apps.sort((a, b) => (favourited.has(b) - favourited.has(a)) || a.name.localeCompare(b.name));
+                    return row.preference === "terminal" ? sorted : [null, ...sorted];
                 }
 
                 delegate: StateLayer {
                     id: appItem
 
-                    required property DesktopEntry modelData
+                    required property var modelData
                     required property int index
 
                     anchors.fill: undefined
@@ -133,7 +137,7 @@ PageBase {
                         IconImage {
                             asynchronous: true
                             implicitSize: Math.round(Tokens.font.icon.large.pointSize * 1.8)
-                            source: Quickshell.iconPath(appItem.modelData.icon, "image-missing")
+                            source: Quickshell.iconPath(appItem.modelData?.icon ?? "folder_open", "image-missing")
                         }
 
                         ColumnLayout {
@@ -142,7 +146,7 @@ PageBase {
 
                             StyledText {
                                 Layout.fillWidth: true
-                                text: appItem.modelData.name
+                                text: appItem.modelData?.name ?? qsTr("Desktop default")
                                 font: Tokens.font.body.small
                                 elide: Text.ElideRight
                             }
@@ -150,7 +154,7 @@ PageBase {
                             StyledText {
                                 Layout.fillWidth: true
                                 visible: text
-                                text: (appItem.modelData.comment || appItem.modelData.genericName) ?? ""
+                                text: (appItem.modelData?.comment || appItem.modelData?.genericName) ?? ""
                                 color: Woodland.creamSecondary
                                 font: Tokens.font.label.small
                                 elide: Text.ElideRight
@@ -158,7 +162,7 @@ PageBase {
                         }
 
                         MaterialIcon {
-                            visible: Strings.testRegexList(GlobalConfig.launcher.favouriteApps, appItem.modelData.id)
+                            visible: Strings.testRegexList(GlobalConfig.launcher.favouriteApps, appItem.modelData?.id ?? "")
                             text: "favorite"
                             fill: 1
                             color: Colours.palette.m3primary

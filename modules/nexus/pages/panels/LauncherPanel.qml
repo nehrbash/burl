@@ -24,17 +24,10 @@ PageBase {
 
         ToggleRow {
             first: true
+            last: true
             text: qsTr("Enabled")
             checked: Config.launcher.enabled
             onToggled: GlobalConfig.launcher.enabled = checked
-        }
-
-        ToggleRow {
-            last: true
-            text: qsTr("Show on hover")
-            subtext: qsTr("Reveal when the cursor reaches the screen edge")
-            checked: Config.launcher.showOnHover
-            onToggled: GlobalConfig.launcher.showOnHover = checked
         }
 
         SectionHeader {
@@ -43,32 +36,13 @@ PageBase {
 
         StepperRow {
             first: true
-            label: qsTr("Max items shown")
-            value: Config.launcher.maxShown
-            from: 1
-            to: 20
-            stepSize: 1
-            onMoved: v => GlobalConfig.launcher.maxShown = v
-        }
-
-        StepperRow {
+            last: true
             label: qsTr("Max wallpapers")
             value: Config.launcher.maxWallpapers
             from: 1
             to: 30
             stepSize: 1
             onMoved: v => GlobalConfig.launcher.maxWallpapers = v
-        }
-
-        StepperRow {
-            last: true
-            label: qsTr("Drag threshold")
-            subtext: qsTr("Pixels dragged before the launcher opens")
-            value: Config.launcher.dragThreshold
-            from: 0
-            to: 200
-            stepSize: 5
-            onMoved: v => GlobalConfig.launcher.dragThreshold = v
         }
 
         SectionHeader {
@@ -97,34 +71,10 @@ PageBase {
 
         ToggleRow {
             first: true
-            text: qsTr("Apps")
-            checked: GlobalConfig.launcher.useFuzzy.apps
-            onToggled: GlobalConfig.launcher.useFuzzy.apps = checked
-        }
-
-        ToggleRow {
+            last: true
             text: qsTr("Actions")
             checked: GlobalConfig.launcher.useFuzzy.actions
             onToggled: GlobalConfig.launcher.useFuzzy.actions = checked
-        }
-
-        ToggleRow {
-            text: qsTr("Schemes")
-            checked: GlobalConfig.launcher.useFuzzy.schemes
-            onToggled: GlobalConfig.launcher.useFuzzy.schemes = checked
-        }
-
-        ToggleRow {
-            text: qsTr("Variants")
-            checked: GlobalConfig.launcher.useFuzzy.variants
-            onToggled: GlobalConfig.launcher.useFuzzy.variants = checked
-        }
-
-        ToggleRow {
-            last: true
-            text: qsTr("Wallpapers")
-            checked: GlobalConfig.launcher.useFuzzy.wallpapers
-            onToggled: GlobalConfig.launcher.useFuzzy.wallpapers = checked
         }
     }
 }

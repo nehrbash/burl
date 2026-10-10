@@ -13,6 +13,12 @@ in the consuming Home/System configuration.
 live under the XDG configuration, state and cache directories. The shell's
 settings UI writes `~/.config/burl/shell.json`; keep that file writable.
 
+Apps → Burl launch preferences selects applications for Burl actions. File and
+media choices can follow the desktop's MIME associations with “Desktop default”.
+These preferences do not change system defaults or compositor keybindings.
+Selected applications are saved by desktop-entry ID and resolved when launched;
+custom command arrays remain supported in `general.apps`.
+
 Wallpaper & style → Colours selects a palette for panels, text and controls.
 Nocturne pairs neutral dark surfaces with brass accents; other schemes include
 light appearances where supported. Painted artwork keeps its original colours.

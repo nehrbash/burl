@@ -29,12 +29,6 @@ PageBase {
         }
 
         ToggleRow {
-            text: qsTr("Active trail")
-            checked: Config.bar.workspaces.activeTrail
-            onToggled: GlobalConfig.bar.workspaces.activeTrail = checked
-        }
-
-        ToggleRow {
             text: qsTr("Occupied background")
             checked: Config.bar.workspaces.occupiedBg
             onToggled: GlobalConfig.bar.workspaces.occupiedBg = checked

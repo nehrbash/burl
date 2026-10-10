@@ -72,7 +72,7 @@ Singleton {
     }
 
     function runAction(action: var): void {
-        if (root.runningAction || !action?.command?.length)
+        if (root.runningAction || root.gcBusy || !action?.command?.length)
             return;
         root.runningAction = action;
         root.phase = "";
@@ -87,7 +87,7 @@ Singleton {
     }
 
     function collectGarbage(): void {
-        if (root.gcBusy)
+        if (root.gcBusy || root.runningAction)
             return;
         root.gcBusy = true;
         root.gcDeleted = 0;
@@ -248,6 +248,18 @@ Singleton {
     Process {
         id: actionProc
 
+        onRunningChanged: {
+            // FailedToStart emits no exited signal.
+            if (!running && root.runningAction) {
+                const action = root.runningAction;
+                root.runningAction = null;
+                root.lastExitCode = 127;
+                root.phase = "";
+                root._appendLog(qsTr("Could not start %1").arg(command[0]));
+                root.actionFinished(action.id, false, 127);
+            }
+        }
+
         // Both streams into the log: guix says most of what matters on stderr.
         stdout: SplitParser {
             onRead: data => {
@@ -273,7 +285,7 @@ Singleton {
             root.phase = "";
             root.runningAction = null;
             if (action)
-                root.actionFinished(action.id, code === 0, code);
+                root.actionFinished(action.id, code === 0 && status === 0, code);
             // A pull moves the channel commits; a rebuild can change the
             // profile, so the package index is stale too.
             root.refreshChannels(false);
@@ -287,6 +299,15 @@ Singleton {
         id: gcProc
 
         command: ["guix", "gc"]
+
+        onRunningChanged: {
+            // FailedToStart emits no exited signal.
+            if (!running && root.gcBusy) {
+                root.gcBusy = false;
+                root.phase = "";
+                root._appendLog(qsTr("Could not start guix gc"));
+            }
+        }
 
         stdout: SplitParser {
             onRead: data => {
