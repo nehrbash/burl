@@ -124,4 +124,7 @@ test('session aliases never swallow optional or configured arguments', () => {
     assert.equal(args.isSessionShorthand(['loginctl', 'lock-session']), true);
     assert.equal(args.isSessionShorthand(['loginctl', 'terminate-user', '']), true);
     assert.equal(args.isSessionShorthand(['loginctl', 'reboot', '--help']), false);
+    assert.equal(args.isSessionShorthand(['systemctl', '--reboot']), false);
+    assert.equal(args.isSessionShorthand(['--poweroff']), false);
+    assert.equal(args.isSessionShorthand(['arbitrary-program']), false);
 });

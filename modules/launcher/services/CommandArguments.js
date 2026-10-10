@@ -76,8 +76,11 @@ function invocation(action, text) {
 }
 
 function isSessionShorthand(command) {
-    return command.length === 1
-        || (command.length === 2 && ["loginctl", "systemctl"].includes(command[0]))
+    const verbs = ["logout", "suspend", "suspendthenhibernate", "suspend-then-hibernate",
+        "suspend_then_hibernate", "hibernate", "poweroff", "reboot", "lock", "lock-session", "lock_session", "locksession"];
+    return (command.length === 1 && verbs.includes(command[0].toLowerCase()))
+        || (command.length === 2 && ["loginctl", "systemctl"].includes(command[0])
+            && verbs.includes(command[1].toLowerCase()))
         || (command.length === 3 && command[0] === "loginctl"
             && command[1] === "terminate-user" && command[2] === "");
 }
