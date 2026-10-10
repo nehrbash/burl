@@ -4,6 +4,7 @@ import QtQuick
 import QtQml.Models
 import Quickshell
 import Burl
+import Burl.Config
 import Burl.Sim
 import "GraphDrift.js" as GraphDrift
 import "GraphActions.js" as GraphActions

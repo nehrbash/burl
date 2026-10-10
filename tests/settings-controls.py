@@ -41,7 +41,10 @@ with tempfile.TemporaryDirectory(prefix="burl-controls-test-") as directory:
     for entry in source.iterdir():
         (probe / entry.name).symlink_to(entry)
     (probe / "ControlsProbe.qml").write_text('''import QtQuick
+import Quickshell
 import Burl.Config
+import qs.components
+import qs.modules.launcher
 import qs.modules.nexus
 import qs.modules.nexus.pages
 import qs.modules.nexus.pages.panels
@@ -69,6 +72,8 @@ Item {
     DashboardPanel { id: dashboard; anchors.fill: parent; nState: navigation }
     NetworkPage { id: network; anchors.fill: parent; nState: navigation; visible: false }
     LanguageAndRegion { id: language; anchors.fill: parent; nState: navigation; visible: false }
+    ScreenState { id: graphState; modelData: Quickshell.screens[0] }
+    GraphView { id: graph; visibilities: graphState; width: 640; height: 480; visible: false; transitioning: true }
     Timer {
         interval: 400; repeat: true; running: true
         onTriggered: {
@@ -77,6 +82,7 @@ Item {
             const enabled = root.find(dashboard, "text", "Enabled");
             root.require(hover && threshold && enabled, "Dashboard controls missing");
             if (root.phase === 0) {
+                GlobalConfig.launcher.maxWallpapers = 3;
                 root.require(!hover.visible && !threshold.visible && enabled.last,
                              "Living dashboard exposes edge controls or broken grouping");
                 root.require(!root.find(network, "text", "Add network"), "Inert network control remains");
@@ -87,6 +93,9 @@ Item {
                 GlobalConfig.dashboard.navStyle = "classic";
                 root.phase = 1;
             } else if (root.phase === 1) {
+                root.require(graph.maxWallpapers === 3 && graph.rebuildPending,
+                             "Wallpaper limit did not reach the graph");
+                GlobalConfig.launcher.maxWallpapers = 7;
                 root.require(hover.visible && threshold.visible && !enabled.last,
                              "Classic dashboard has no edge controls or broken grouping");
                 hover.checked = false;
@@ -97,6 +106,8 @@ Item {
                 GlobalConfig.dashboard.navStyle = "living";
                 root.phase = 2;
             } else if (root.phase === 2) {
+                root.require(graph.maxWallpapers === 7 && graph.rebuildPending,
+                             "Wallpaper limit did not update reactively");
                 root.require(!hover.visible && !threshold.visible && enabled.last,
                              "Returning to living leaves edge controls exposed");
                 Guix.runAction({id: "missing", command: ["/burl-test-no-such-executable"]});
@@ -134,4 +145,4 @@ Item {
     assert saved["dashboard"]["showOnHover"] is False, saved
     assert saved["dashboard"]["dragThreshold"] == 85, saved
     assert saved["dashboard"].get("navStyle", "living") == "living", saved
-    print("PASS: conditional controls persist; Guix missing, successful, and failed commands finish")
+    print("PASS: controls persist, wallpaper limits reach the graph, and Guix commands finish")
