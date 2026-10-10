@@ -17,6 +17,7 @@ import qs.components.containers
 import qs.components.filedialog
 import qs.components.widgets
 import qs.services
+import qs.modules.nexus
 
 // A FocusScope, not a plain Item: the nav (tab bar today, world tree next) and
 // the section panes both want keys, and a scope lets the pane that grabbed
@@ -72,6 +73,17 @@ FocusScope {
         }
     ]
     readonly property var enabledSections: sections.filter(s => s.enabled)
+    readonly property var treeActions: [{
+        id: "settings",
+        iconName: "settings",
+        text: qsTr("Settings"),
+        enabled: true,
+        activate: () => {
+            root.screenState.launcher = false;
+            root.screenState.dashboard = false;
+            WindowFactory.create();
+        }
+    }]
     readonly property string activeSectionId: screenState.dashboardSection
     readonly property string focusedSectionId: screenState.dashboardFocusSection
     // Index of the showing section within enabledSections, i.e. within the

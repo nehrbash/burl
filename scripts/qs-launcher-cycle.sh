@@ -60,6 +60,17 @@ if ! grep -q SKY-CONTROLS-COMPLETE "$WORK/sky-controls.log" || grep -q SKY-CONTR
 fi
 
 BURL_NO_AMBIENT=0 "$REPO/scripts/qs-shot.sh" \
+    --root "$ROOT" --size 1280x900 --settle 7500 \
+    --log "$WORK/tree-settings.log" \
+    --decl "$REPO/tests/burl-tree-settings.qmlfrag" \
+    --set 'visibilities: host.cycleState' --set 'panels: ({})' \
+    modules/launcher/Content.qml "$WORK/tree-settings.png"
+if ! grep -q TREE-SETTINGS-PASS "$WORK/tree-settings.log" || grep -q TREE-SETTINGS-FAIL "$WORK/tree-settings.log"; then
+    cat "$WORK/tree-settings.log"
+    exit 1
+fi
+
+BURL_NO_AMBIENT=0 "$REPO/scripts/qs-shot.sh" \
     --root "$ROOT" --size 1600x1000 --settle 9400 \
     --decl "$REPO/tests/burl-graph-drag.qmlfrag" \
     --set 'visibilities: host.cycleState' \

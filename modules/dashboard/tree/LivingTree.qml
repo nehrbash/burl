@@ -26,7 +26,7 @@ Item {
     }
 
     // qmllint disable missing-property
-    readonly property var sections: root.nav.sections ?? []
+    readonly property var sections: [...(root.nav.sections ?? []), ...(root.nav.treeActions ?? [])]
     readonly property string activeId: root.nav.activeSectionId ?? ""
     readonly property string focusedId: root.nav.focusedSectionId ?? ""
     // Plain var, no `as ScreenState` cast: ScreenState is a plain QML component
@@ -155,6 +155,11 @@ Item {
     // directly since this file is URL-mounted and Content.qml's `nav` only
     // wraps a subset of ScreenState's dashboard* functions) -----------------
     function growSection(id: string): void {
+        const action = root.sections.find(section => section.id === id)?.activate;
+        if (action) {
+            action();
+            return;
+        }
         if (typeof root.screenState?.growDashboardSection === "function")
             root.screenState.growDashboardSection(id);
         else
@@ -1176,6 +1181,11 @@ Item {
     component Orb: Item {
         id: orb
 
+        objectName: "worldTreeNode-" + (section?.id ?? "")
+        activeFocusOnTab: !!section?.activate
+        Keys.onReturnPressed: if (section?.activate) activate()
+        Keys.onSpacePressed: if (section?.activate) activate()
+
         property int orbIndex: 0
 
         readonly property var section: root.sections[orb.orbIndex] ?? null
@@ -1188,6 +1198,7 @@ Item {
         readonly property var tip: { void branchTree.reveal; return branchTree.orbEndpoint(orb.orbIndex); }
 
         function ignite(): void { spirit.ignite(); }
+        function activate(): void { root.growSection(section.id); }
 
         readonly property real disc: orb.anchor ? orb.anchor.r * 2 : 40
 
@@ -1198,7 +1209,7 @@ Item {
         // Only the hover bump is smoothed. A Behavior on the product would be
         // restarted every frame while revealP animates, so the grow would
         // never land on its own curve — it would read as lag.
-        property real hoverBump: hoverArea.containsMouse || orb.isOpen ? 1.18 : 1
+        property real hoverBump: hoverArea.containsMouse || orb.activeFocus || orb.isOpen ? 1.18 : 1
 
         scale: (0.18 + 0.82*orb.revealP) * orb.hoverBump
         opacity: orb.section ? orb.revealP*(orb.withered ? 0.42 : 1) : 0
@@ -1261,6 +1272,10 @@ Item {
                     return;
                 root.nav.interacted = true;
                 if (!root.guest) root.nav.forceActiveFocus();
+                if (orb.section.activate) {
+                    if (mouse.button === Qt.LeftButton) orb.activate();
+                    return;
+                }
                 if (mouse.button === Qt.RightButton) {
                     root.nav.toggleSection(orb.section.id);
                     return;

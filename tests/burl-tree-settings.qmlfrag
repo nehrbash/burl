@@ -1,0 +1,44 @@
+property var cycleState: Qt.createQmlObject('import Quickshell; import qs.components; ScreenState { modelData: Quickshell.screens[0] }', host)
+property var settingsFactory: Qt.createQmlObject('import QtQml; import qs.modules.nexus; QtObject { property var factory: WindowFactory }', host).factory
+property bool finished: false
+function find(item, name) {
+    if (item.objectName === name) return item;
+    for (const child of item.children ?? []) {
+        const result = find(child, name);
+        if (result) return result;
+    }
+    return null;
+}
+function check(value, message) {
+    if (!value) {
+        console.error('TREE-SETTINGS-FAIL', message);
+        Qt.quit();
+    }
+    return value;
+}
+Timer {
+    interval: 100; running: true
+    onTriggered: host.cycleState.openWorldRoom('dashboard')
+}
+Timer {
+    interval: 100; running: true; repeat: true
+    onTriggered: {
+        const node = host.find(subject, 'worldTreeNode-settings');
+        if (!node || !node.visible || node.revealP < 0.99) return;
+        running = false;
+        if (!host.check(node.section.iconName === 'settings' && node.activeFocusOnTab, 'settings node is accessible')) return;
+        node.activate();
+        if (!host.check(!host.cycleState.dashboard && !host.cycleState.launcher, 'opening settings closes both world rooms')) return;
+        const window = host.settingsFactory.current;
+        if (!host.check(window !== null, 'settings window opens')) return;
+        node.activate();
+        if (!host.check(host.settingsFactory.current === window, 'settings window is reused')) return;
+        window.visible = false;
+        host.finished = true;
+        console.log('TREE-SETTINGS-PASS');
+    }
+}
+Timer {
+    interval: 7000; running: true
+    onTriggered: host.check(host.finished, 'settings node activation completes')
+}

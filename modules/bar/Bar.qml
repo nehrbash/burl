@@ -12,7 +12,6 @@ import Quickshell
 import qs.components
 import qs.services
 import Burl.Config
-import qs.modules.nexus
 
 ColumnLayout {
     id: root
@@ -134,7 +133,7 @@ ColumnLayout {
         id: repeater
 
         model: ScriptModel {
-            values: root.Config.bar.entries.filter(e => e.enabled ?? true)
+            values: root.Config.bar.entries.filter(e => e.id !== "settings" && (e.enabled ?? true))
         }
 
         DelegateChooser {
@@ -186,15 +185,6 @@ ColumnLayout {
                 delegate: EntryWrapper {
                     StatusIcons {
                         objectName: "taskbarStatusIcons"
-                    }
-                }
-            }
-            DelegateChoice {
-                roleValue: "settings"
-                delegate: EntryWrapper {
-                    Settings {
-                        objectName: "taskbarSettingsButton"
-                        onOpenRequested: WindowFactory.create()
                     }
                 }
             }
