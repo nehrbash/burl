@@ -74,3 +74,10 @@ function invocation(action, text) {
         return {command: [], error: "Arguments cannot contain a null character."};
     return {command: command.concat(parsed.args), error: ""};
 }
+
+function isSessionShorthand(command) {
+    return command.length === 1
+        || (command.length === 2 && ["loginctl", "systemctl"].includes(command[0]))
+        || (command.length === 3 && command[0] === "loginctl"
+            && command[1] === "terminate-user" && command[2] === "");
+}

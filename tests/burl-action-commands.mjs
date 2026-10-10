@@ -7,7 +7,7 @@ function helper(path, names, context = {}) {
     const source = readFileSync(new URL(path, import.meta.url), 'utf8').replace(/^\.(?:pragma|import).*$/gm, '');
     return runInNewContext(source + `\n({${names}})`, context);
 }
-const args = helper('../modules/launcher/services/CommandArguments.js', 'parseArguments,formatArguments,keywordFor,validKeyword,supportsArguments,aliasesFor,executableFor,invocation');
+const args = helper('../modules/launcher/services/CommandArguments.js', 'parseArguments,formatArguments,keywordFor,validKeyword,supportsArguments,aliasesFor,executableFor,invocation,isSessionShorthand');
 const ranking = helper('../modules/launcher/SearchRanking.js', 'normalize,score');
 const search = helper('../modules/launcher/services/ActionSearch.js', 'query', {Arguments: args, Ranking: ranking});
 const plain = value => JSON.parse(JSON.stringify(value));
@@ -86,10 +86,10 @@ test('runtime rejects incomplete arguments and preserves the visible launcher', 
 
 test('runtime uses argv and preserves session handling and built-in actions', () => {
     const launch = activation(editor, '>editor "literal $(date)"');
-    assert.deepEqual(plain(launch.calls), [['session', 'emacsclient', '-n', 'literal $(date)'], ['exec', 'emacsclient', '-n', 'literal $(date)']]);
+    assert.deepEqual(plain(launch.calls), [['exec', 'emacsclient', '-n', 'literal $(date)']]);
     assert.equal(launch.visibility.launcher, false);
     assert.equal(launch.visibility.dashboard, false);
-    const session = activation(editor, '>editor', {IdleInhibitor: {execSessionAction: () => true}});
+    const session = activation({name: 'Shutdown', command: ['poweroff']}, '>poweroff', {IdleInhibitor: {execSessionAction: () => true}});
     assert.deepEqual(session.calls, []);
     const complete = activation({name: 'Calculator', command: ['autocomplete', 'calc']}, '>calc');
     assert.equal(complete.field.text, '>calc ');
@@ -110,4 +110,18 @@ test('runtime launch errors keep the overlay open and dangerous actions stay fil
     assert.deepEqual(Array.from(runInNewContext(model, {GlobalConfig})), [safe]);
     GlobalConfig.launcher.enableDangerousActions = true;
     assert.deepEqual(Array.from(runInNewContext(model, {GlobalConfig})), [safe, dangerous]);
+});
+
+test('session aliases never swallow optional or configured arguments', () => {
+    const sessionCalls = [];
+    const overrides = {IdleInhibitor: {execSessionAction: argv => { sessionCalls.push(argv); return true; }}};
+    const action = {name: 'Shutdown', keyword: 'poweroff', command: ['poweroff'], acceptArgs: true};
+    const typed = activation(action, '>poweroff --help', overrides);
+    assert.deepEqual(plain(typed.calls), [['exec', 'poweroff', '--help']]);
+    const configured = activation({...action, command: ['poweroff', '--help']}, '>poweroff', overrides);
+    assert.deepEqual(plain(configured.calls), [['exec', 'poweroff', '--help']]);
+    assert.equal(sessionCalls.length, 0);
+    assert.equal(args.isSessionShorthand(['loginctl', 'lock-session']), true);
+    assert.equal(args.isSessionShorthand(['loginctl', 'terminate-user', '']), true);
+    assert.equal(args.isSessionShorthand(['loginctl', 'reboot', '--help']), false);
 });

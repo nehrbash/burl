@@ -55,7 +55,7 @@ Singleton {
                     visibilities.launcher = false;
                     visibilities.dashboard = false;
                 } else {
-                    if (!IdleInhibitor.execSessionAction(argv))
+                    if (!CommandArguments.isSessionShorthand(argv) || !IdleInhibitor.execSessionAction(argv))
                         Quickshell.execDetached(argv);
                     visibilities.launcher = false;
                     visibilities.dashboard = false;
