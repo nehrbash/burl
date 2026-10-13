@@ -42,9 +42,6 @@ M.Qs = {
   idle      = function() return burl_ipc("idleInhibitor", "toggle") end,
 
   clipboard   = function() return burl_ipc("launcher", "query", ">clip ") end,
-  clipboard_d = function()
-    return exec("pkill fuzzel || cliphist list | fuzzel --dmenu --prompt='del > ' --placeholder='Delete from clipboard' | cliphist delete")
-  end,
 
   pip = function() return burl_ipc("resizer", "pip") end,
 

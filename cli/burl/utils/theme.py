@@ -239,12 +239,6 @@ def apply_spicetify(colours: dict[str, str], mode: str) -> None:
 
 
 @log_exception
-def apply_fuzzel(colours: dict[str, str]) -> None:
-    template = gen_replace(colours, templates_dir / "fuzzel.ini")
-    write_file(config_dir / "fuzzel/fuzzel.ini", template)
-
-
-@log_exception
 def apply_satty(colours: dict[str, str]) -> None:
     # Two files: config.toml carries the annotation palette, overrides.css the
     # toolbar chrome. Satty's generic GTK-4 widgets are already covered by the
@@ -367,8 +361,6 @@ def apply_colours(colours: dict[str, str], mode: str) -> None:
             apply_spicetify(colours, mode)
         if check("enablePandora"):
             apply_pandora(colours, mode)
-        if check("enableFuzzel"):
-            apply_fuzzel(colours)
         if check("enableSatty"):
             apply_satty(colours)
         if check("enableBtop"):
