@@ -45,7 +45,7 @@ Singleton {
     function launchTerminal(child: var, workingDirectory: string): void {
         try {
             const preferences = GlobalConfig.general.apps;
-            const launch = Commands.resolve(preferences.terminalDesktop, preferences.terminal, entries, "foot");
+            const launch = Commands.resolve(preferences.terminalDesktop, preferences.terminal, entries, "alacritty");
             launch.command = Commands.terminalCommand(launch.command, child);
             launch.workingDirectory = workingDirectory;
             Quickshell.execDetached({command: launch.command, workingDirectory: launch.workingDirectory});

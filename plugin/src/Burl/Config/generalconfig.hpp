@@ -14,7 +14,7 @@ class GeneralApps : public ConfigObject {
     Q_OBJECT
     QML_ANONYMOUS
 
-    CONFIG_GLOBAL_PROPERTY(QStringList, terminal, { u"foot"_s })
+    CONFIG_GLOBAL_PROPERTY(QStringList, terminal, { u"alacritty"_s })
     CONFIG_GLOBAL_PROPERTY(QStringList, audio, { u"pavucontrol"_s })
     CONFIG_GLOBAL_PROPERTY(QStringList, playback)
     CONFIG_GLOBAL_PROPERTY(QStringList, explorer)
