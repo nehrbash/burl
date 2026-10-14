@@ -55,11 +55,32 @@ Singleton {
         return 100 * (1 - liveRemainingSeconds / total);
     }
 
-    property string dailyReport
-    property string weeklyReport
+    property var dailyData: ({rows: []})
+    property var weeklyData: ({rows: []})
+    readonly property bool dailyLoading: dailyProc.running
+    readonly property bool weeklyLoading: weeklyProc.running
+    property string dailyError
+    property string weeklyError
+
+    function toggleBreakReminders(): void {
+        runSideEffect("(sn-tasks/toggle-break-reminders)");
+    }
+
+    property string requestedTab: "tasks"
+    signal viewRequested(string tab)
+
+    function openTasks(tab: string): void {
+        requestedTab = tab || "tasks";
+        viewRequested(requestedTab);
+        const screen = ShellState.forActive();
+        if (!screen) return;
+        screen.growDashboardSection("tasks");
+        screen.openWorldRoom("dashboard");
+        screen.dashboardOpenedByKey = true;
+    }
+
 
     signal snapshotUpdated
-    signal reportUpdated(string period, string body)
 
     property var _snapshot: ({})
     readonly property var _defaultPomo: ({
@@ -195,10 +216,23 @@ Singleton {
             return;
         try {
             _snapshot = JSON.parse(snapshot);
-            _snapshotTakenAt = Date.now();
+            _snapshotTakenAt = _snapshot.generated_at ? _snapshot.generated_at * 1000 : Date.now();
             snapshotUpdated();
         } catch (e) {
             console.warn("Tasks: failed to parse snapshot:", e, snapshot.slice(0, 200));
+        }
+    }
+
+    function _parseReport(raw: string, period: string, code: int): void {
+        try {
+            if (code !== 0) throw new Error("Emacs report request failed");
+            const report = JSON.parse(_unquoteElisp(raw));
+            if (!Array.isArray(report.rows)) throw new Error("Invalid report data");
+            if (period === "today") { dailyData = report; dailyError = ""; }
+            else { weeklyData = report; weeklyError = ""; }
+        } catch (e) {
+            if (period === "today") dailyError = String(e);
+            else weeklyError = String(e);
         }
     }
 
@@ -209,7 +243,7 @@ Singleton {
             return "";
         if (s.startsWith("\"") && s.endsWith("\""))
             s = s.slice(1, -1);
-        return s.replace(/\\"/g, "\"").replace(/\\\\/g, "\\").replace(/\\n/g, "\n");
+        return s.replace(/\\([\\"nrt])/g, (_, c) => c === "n" ? "\n" : c === "r" ? "\r" : c === "t" ? "\t" : c);
     }
 
     // State is pushed by Emacs (sn-tasks/write-state) on every transition:
@@ -240,26 +274,16 @@ Singleton {
 
     Process {
         id: dailyProc
-
-        command: ["timeout", "10", "emacsclient", "-e", "(sn-tasks/report \"today\")"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                root.dailyReport = root._unquoteElisp(text);
-                root.reportUpdated("today", root.dailyReport);
-            }
-        }
+        command: ["timeout", "10", "emacsclient", "-e", "(sn-worklog/report-json \"today\")"]
+        stdout: StdioCollector { id: dailyOut }
+        onExited: code => root._parseReport(dailyOut.text, "today", code)
     }
 
     Process {
         id: weeklyProc
-
-        command: ["timeout", "10", "emacsclient", "-e", "(sn-tasks/report \"thisweek\")"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                root.weeklyReport = root._unquoteElisp(text);
-                root.reportUpdated("thisweek", root.weeklyReport);
-            }
-        }
+        command: ["timeout", "10", "emacsclient", "-e", "(sn-worklog/report-json \"thisweek\")"]
+        stdout: StdioCollector { id: weeklyOut }
+        onExited: code => root._parseReport(weeklyOut.text, "thisweek", code)
     }
 
     // 1Hz tick driving the live countdown between Emacs pushes. Gated on

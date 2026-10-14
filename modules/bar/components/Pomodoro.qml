@@ -9,8 +9,9 @@ Item {
     id: root
     implicitWidth: Tokens.sizes.bar.innerWidth
     implicitHeight: 76
-    readonly property color ink: Services.Pomodoro.onBreak ? "#8abdb5" : Woodland.brass
-    Component.onCompleted: void Services.Pomodoro.active
+    readonly property color ink: Services.Tasks.onBreak ? "#8abdb5" : Woodland.brass
+    Component.onCompleted: Services.Tasks.countdownWatchers++
+    Component.onDestruction: Services.Tasks.countdownWatchers--
 
     Rectangle {
         anchors.fill: parent
@@ -21,7 +22,7 @@ Item {
     Text {
         anchors.horizontalCenter: parent.horizontalCenter
         y: 7
-        text: Services.Pomodoro.onBreak ? qsTr("BREAK") : qsTr("FOCUS")
+        text: Services.Tasks.onBreak ? qsTr("BREAK") : qsTr("FOCUS")
         font.pixelSize: 8
         font.letterSpacing: 0.6
         color: root.ink
@@ -31,12 +32,12 @@ Item {
         y: 21
         width: 28; height: 28
         strokeWidth: 2
-        value: Services.Pomodoro.active ? 1 - Services.Pomodoro.progress : 1
+        value: Services.Tasks.pomodoro.enabled ? 1 - Services.Tasks.livePercent / 100 : 0
         fgColour: root.ink
         bgColour: "#352d36"
         MaterialIcon {
             anchors.centerIn: parent
-            text: Services.Pomodoro.running ? "pause" : "play_arrow"
+            text: "schedule"
             fontStyle: Tokens.font.icon.small
             color: Woodland.ivory
         }
@@ -44,7 +45,7 @@ Item {
     Text {
         anchors.horizontalCenter: parent.horizontalCenter
         y: 54
-        text: Services.Pomodoro.remainingStr
+        text: Services.Tasks.pomodoro.enabled ? Services.Tasks.liveTime : qsTr("OFF")
         color: Woodland.ivory
         font.family: "monospace"
         font.pixelSize: 10
@@ -54,8 +55,8 @@ Item {
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: Services.Pomodoro.toggle()
+        onClicked: Services.Tasks.openTasks()
         Accessible.role: Accessible.Button
-        Accessible.name: Services.Pomodoro.running ? qsTr("Pause focus timer") : Services.Pomodoro.active ? qsTr("Resume focus timer") : qsTr("Start focus timer")
+        Accessible.name: qsTr("Open tasks")
     }
 }

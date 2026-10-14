@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls
 import Quickshell
 import Quickshell.Bluetooth
 import Burl.Components
@@ -104,6 +105,7 @@ StyledRect {
                 DelegateChoice {
                     roleValue: "wifi"
                     delegate: Toggle {
+                        label: qsTr("Wi-Fi")
                         icon: "wifi"
                         checked: Nmcli.wifiEnabled
                         onClicked: Nmcli.toggleWifi()
@@ -112,6 +114,7 @@ StyledRect {
                 DelegateChoice {
                     roleValue: "bluetooth"
                     delegate: Toggle {
+                        label: qsTr("Bluetooth")
                         icon: "bluetooth"
                         checked: Bluetooth.defaultAdapter?.enabled ?? false // qmllint disable unresolved-type
                         onClicked: {
@@ -124,6 +127,7 @@ StyledRect {
                 DelegateChoice {
                     roleValue: "mic"
                     delegate: Toggle {
+                        label: qsTr("Microphone")
                         icon: "mic"
                         checked: !Audio.sourceMuted
                         onClicked: {
@@ -136,6 +140,7 @@ StyledRect {
                 DelegateChoice {
                     roleValue: "gameMode"
                     delegate: Toggle {
+                        label: qsTr("Performance mode")
                         icon: "rocket_launch"
                         checked: GameMode.enabled
                         enabled: GameMode.available
@@ -143,8 +148,29 @@ StyledRect {
                     }
                 }
                 DelegateChoice {
+                    roleValue: "breakReminders"
+                    delegate: Toggle {
+                        label: qsTr("Break reminders")
+                        icon: "hourglass_top"
+                        checked: Tasks.pomodoro.enabled ?? false
+                        enabled: Tasks.integrationEnabled
+                        onClicked: Tasks.toggleBreakReminders()
+                    }
+                }
+                DelegateChoice {
+                    roleValue: "clockInReminders"
+                    delegate: Toggle {
+                        label: qsTr("Clock-in reminders")
+                        icon: "work_history"
+                        checked: Tasks.clockInReminders
+                        enabled: Tasks.integrationEnabled
+                        onClicked: Tasks.toggleClockInReminders()
+                    }
+                }
+                DelegateChoice {
                     roleValue: "dnd"
                     delegate: Toggle {
+                        label: qsTr("Do not disturb")
                         icon: "notifications_off"
                         checked: Notifs.dnd
                         onClicked: Notifs.dnd = !Notifs.dnd
@@ -153,6 +179,7 @@ StyledRect {
                 DelegateChoice {
                     roleValue: "vpn"
                     delegate: Toggle {
+                        label: qsTr("VPN")
                         icon: "vpn_key"
                         checked: VPN.connected && VPN.status.state !== "needs-auth" && VPN.status.state !== "error"
                         enabled: !VPN.connecting
@@ -166,6 +193,11 @@ StyledRect {
     }
 
     component Toggle: IconButton {
+        required property string label
+        Accessible.name: label
+        ToolTip.text: checked ? qsTr("%1 on").arg(label) : qsTr("%1 off").arg(label)
+        ToolTip.visible: hovered
+        ToolTip.delay: 500
         inactiveColour: Colours.layer(Colours.palette.m3surfaceContainerHighest, 2)
         fillWidth: true
         isToggle: true

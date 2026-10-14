@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import "SpatialNavigation.js" as SpatialNavigation
 import QtQuick.Shapes
 import Quickshell
 import Quickshell.Io
@@ -28,7 +29,8 @@ Item {
     // qmllint disable missing-property
     readonly property var sections: [...(root.nav.sections ?? []), ...(root.nav.treeActions ?? [])]
     readonly property string activeId: root.nav.activeSectionId ?? ""
-    readonly property string focusedId: root.nav.focusedSectionId ?? ""
+    property string keyboardNodeId: ""
+    readonly property string focusedId: root.keyboardNodeId || (root.nav.focusedSectionId ?? "")
     // Plain var, no `as ScreenState` cast: ScreenState is a plain QML component
     // and the cast resolves to null in this URL-mounted file, which pinned openP
     // at 0 and made the whole tree invisible while the dashboard was open.
@@ -140,7 +142,54 @@ Item {
         root.selectedCardId = first >= 0 ? root.cards[first].id : "";
     }
 
-    onEmphasisIdChanged: root.reconcileSelection()
+    onEmphasisIdChanged: {
+        root.reconcileSelection();
+        root.keyboardNodeId = root.emphasisId;
+    }
+
+    function keyboardTargets(): var {
+        if (root.openIds.length)
+            return root.sections.filter(s => s.enabled).map((s, i) => ({id: s.id, x: i * 100, y: 0}));
+        const targets = [];
+        for (let i = 0; i < orbNodes.count; i++) {
+            const node = orbNodes.itemAt(i);
+            if (node?.visible && !node.withered)
+                targets.push({id: node.section.id, x: node.x + node.width / 2, y: node.y + node.height / 2});
+        }
+        for (let i = 0; i < rootNodes.count; i++) {
+            const node = rootNodes.itemAt(i);
+            if (node?.visible)
+                targets.push({id: "session:" + node.action.id, x: node.x + node.width / 2, y: node.y + node.height / 2});
+        }
+        return targets;
+    }
+
+    function navigateSpatial(dx: int, dy: int): void {
+        root.releaseKeyboardAction();
+        root.keyboardNodeId = SpatialNavigation.next(root.keyboardTargets(), root.focusedId, dx, dy);
+        if (root.sections.some(s => s.id === root.keyboardNodeId && !s.activate))
+            root.nav.focusSection(root.keyboardNodeId);
+    }
+
+    function activateKeyboardFocus(): void {
+        const section = root.sections.find(s => s.id === root.focusedId && s.enabled);
+        if (section) {
+            root.growSection(section.id);
+            return;
+        }
+        for (let i = 0; i < rootNodes.count; i++) {
+            const node = rootNodes.itemAt(i);
+            if ("session:" + node.action.id === root.focusedId)
+                node.pressKeyboard();
+        }
+    }
+
+    function releaseKeyboardAction(): void {
+        for (let i = 0; i < rootNodes.count; i++) {
+            const node = rootNodes.itemAt(i);
+            if (node?.keyboardHeld) node.cancelHold();
+        }
+    }
 
     function stepCard(delta: int): void {
         if (root.nc <= 0)
@@ -398,10 +447,7 @@ Item {
 
     Behavior on openP {
         enabled: Ambience.grow && !GameMode.enabled
-
-        Anim {
-            type: Anim.SlowSpatial
-        }
+        NumberAnimation { duration: 650; easing.type: Easing.OutCubic }
     }
 
     Connections {
@@ -749,6 +795,14 @@ Item {
         hoverEnabled: root.onScreen
         cursorShape: Qt.PointingHandCursor
         onClicked: root.dismiss()
+    }
+
+    Image {
+        visible: false
+        asynchronous: true
+        source: root.onScreen && root.openP > 0.999 && root.roomP > 0.999
+            && root.sections.some(s => s.id === "tasks" && s.enabled)
+            ? Quickshell.shellPath("assets/images/book/tasks/opening-sheet.png") : ""
     }
 
     Repeater {
@@ -1192,6 +1246,7 @@ Item {
         readonly property var anchor: root.orbGeom(orb.orbIndex)
         readonly property color accent: root.sectionAccent(orb.orbIndex)
         readonly property bool isOpen: orb.section ? root.openIds.includes(orb.section.id) : false
+        readonly property bool isFocused: orb.section?.id === root.focusedId
         readonly property bool isEmphasis: orb.isOpen && orb.section?.id === root.emphasisId
         readonly property bool withered: orb.section ? !(orb.section.enabled ?? true) : false
         readonly property real revealP: { void branchTree.reveal; return branchTree.orbProgress(orb.orbIndex); }
@@ -1209,7 +1264,7 @@ Item {
         // Only the hover bump is smoothed. A Behavior on the product would be
         // restarted every frame while revealP animates, so the grow would
         // never land on its own curve — it would read as lag.
-        property real hoverBump: hoverArea.containsMouse || orb.activeFocus || orb.isOpen ? 1.18 : 1
+        property real hoverBump: hoverArea.containsMouse || orb.activeFocus || orb.isFocused || orb.isOpen ? 1.18 : 1
 
         scale: (0.18 + 0.82*orb.revealP) * orb.hoverBump
         opacity: orb.section ? orb.revealP*(orb.withered ? 0.42 : 1) : 0
@@ -1229,7 +1284,7 @@ Item {
 
             anchors.fill: parent
             accent: orb.accent
-            selected: orb.isOpen
+            selected: orb.isOpen || orb.isFocused
             hovered: hoverArea.containsMouse
             glyph: orb.section?.iconName ?? "circle"
             phase: orb.orbIndex+1
@@ -1299,8 +1354,11 @@ Item {
         property int nodeIndex: 0
         property var action: null
         readonly property bool requiresHold: node.action?.id !== "lock"
-        readonly property bool canActivate: node.visible && node.enabled && root.roomP > 0.95 && root.openP > 0.99 && node.revealP > 0.98
+        readonly property bool canActivate: node.visible && node.enabled && root.screenState.dashboard && root.roomP > 0.95 && root.openP > 0.99 && node.revealP > 0.98
         readonly property int holdDuration: 1200
+        readonly property bool keyboardSelected: root.focusedId === "session:" + node.action?.id
+        property bool keyboardHeld: false
+        readonly property bool holding: keyboardHeld || (nodeHover.pressed && nodeHover.containsMouse)
         property real holdProgress: 0
         property double holdStartedAt: 0
         property string heldActionId: ""
@@ -1308,14 +1366,21 @@ Item {
         function cancelHold(): void {
             holdDelay.stop();
             holdFill.stop();
+            node.keyboardHeld = false;
             node.holdProgress = 0;
             node.heldActionId = "";
             node.holdStartedAt = 0;
         }
 
-        function beginHold(): void {
+        function pressKeyboard(): void {
+            if (node.requiresHold) node.beginHold(true);
+            else node.activateClick();
+        }
+
+        function beginHold(keyboard: bool): void {
             node.cancelHold();
-            if (!node.requiresHold || !node.canActivate || !node.action || !nodeHover.pressed || !nodeHover.containsMouse)
+            node.keyboardHeld = keyboard;
+            if (!node.requiresHold || !node.canActivate || !node.action || !node.holding)
                 return;
             node.heldActionId = node.action.id;
             node.holdStartedAt = Date.now();
@@ -1326,7 +1391,7 @@ Item {
 
         function completeHold(): void {
             const ready = node.canActivate && node.requiresHold && node.action
-                && node.heldActionId === node.action.id && nodeHover.pressed && nodeHover.containsMouse;
+                && node.heldActionId === node.action.id && node.holding;
             const remaining = node.holdDuration-(Date.now()-node.holdStartedAt);
             if (ready && remaining > 0) {
                 holdDelay.interval = Math.max(1,Math.min(node.holdDuration,remaining));
@@ -1344,6 +1409,7 @@ Item {
         }
 
         onCanActivateChanged: if (!canActivate) cancelHold()
+        onKeyboardSelectedChanged: if (!keyboardSelected) cancelHold()
         onActionChanged: cancelHold()
 
         Timer {
@@ -1374,7 +1440,7 @@ Item {
         width: node.disc
         height: node.disc
         // See the Orb above: the Behavior belongs on the hover factor alone.
-        property real hoverBump: nodeHover.containsMouse ? 1.18 : 1
+        property real hoverBump: nodeHover.containsMouse || node.keyboardSelected ? 1.18 : 1
 
         scale: (0.25+0.75*node.revealP) * node.hoverBump
         opacity: node.revealP
@@ -1393,6 +1459,7 @@ Item {
             anchors.fill: parent
             accent: node.accent
             hovered: nodeHover.containsMouse
+            selected: node.keyboardSelected
             glyph: node.action?.icon ?? "circle"
             phase: 40+node.nodeIndex
             animate: root.roomP > 0.01
@@ -1432,7 +1499,7 @@ Item {
             style: Text.Outline
             styleColor: Woodland.barkEdge
             font: Tokens.font.label.small
-            opacity: nodeHover.containsMouse || node.heldActionId.length > 0 ? 1 : 0
+            opacity: nodeHover.containsMouse || node.keyboardSelected || node.heldActionId.length > 0 ? 1 : 0
 
             Behavior on opacity {
                 Anim {}
@@ -1451,7 +1518,7 @@ Item {
                 node.cancelHold();
                 if (root.hoveredRoot === node.nodeIndex) root.hoveredRoot = -1;
             }
-            onPressed: node.beginHold()
+            onPressed: node.beginHold(false)
             onReleased: node.cancelHold()
             onCanceled: node.cancelHold()
             onClicked: node.activateClick()
@@ -1466,25 +1533,32 @@ Item {
         readonly property var sectionObj: root.sections.find(s => s?.id === stage.sectionId) ?? null
         readonly property int orbIdx: root.sections.findIndex(s => s?.id === stage.sectionId)
         readonly property var anchor: root.orbGeom(stage.orbIdx)
+        readonly property bool largePage: sectionId === "tasks" || sectionId === "dashboard"
         readonly property bool isOpenNow: root.openIds.includes(stage.sectionId)
         readonly property bool isEmphasisNow: stage.isOpenNow && stage.sectionId === root.emphasisId
 
         property real flightP: 0
         property bool ready: false
-        Component.onCompleted: { ready = true; flightP = isEmphasisNow ? 1 : 0; }
-        onIsEmphasisNowChanged: if (ready) flightP = isEmphasisNow ? 1 : 0
+        function syncFlight(): void {
+            if (ready) flightP = isEmphasisNow && bookArt.renderReady ? 1 : 0;
+        }
+        Component.onCompleted: { ready = true; syncFlight(); }
+        onIsEmphasisNowChanged: syncFlight()
 
         Behavior on flightP {
             enabled: Ambience.grow && !GameMode.enabled
-            NumberAnimation { duration: 1000; easing.type: Easing.InOutCubic }
+            NumberAnimation { duration: 1000; easing.type: Easing.Linear }
         }
 
-        readonly property real travelP: CUtils.clamp(stage.flightP / 0.35, 0, 1)
-        readonly property real unfurlP: CUtils.clamp((stage.flightP - 0.38) / 0.62, 0, 1)
+        readonly property real travelP: {
+            const p = CUtils.clamp(stage.flightP / 0.35, 0, 1);
+            return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+        }
+        readonly property real unfurlP: (1 - Math.cos(Math.PI * CUtils.clamp((stage.flightP - 0.38) / 0.62, 0, 1))) / 2
         property real natW: 640
         property real natH: 420
-        readonly property real openW: Math.min(root.stageZoneW, Math.max(560, (stage.natW + 56)/0.82))
-        readonly property real openH: Math.min(root.geomH * 0.70, Math.max(430, stage.natH + 94))
+        readonly property real openW: stage.largePage ? Math.min(1600, root.geomW * 0.90) : Math.min(root.stageZoneW, Math.max(560, (stage.natW + 56)/0.82))
+        readonly property real openH: stage.largePage ? root.geomH * 0.86 : Math.min(root.geomH * 0.70, Math.max(430, stage.natH + 94))
 
         // 48ms + 2px hysteresis, the cardSettle recipe: re-latch only once the
         // pane has stopped changing its mind, and ignore sub-pixel churn.
@@ -1522,7 +1596,7 @@ Item {
         x: (stage.anchor?.x ?? root.geomW/2) * (1-stage.travelP)
             + root.stageZoneX*stage.travelP - width/2
         y: (stage.anchor?.y ?? root.geomH/2) * (1-stage.travelP)
-            + (root.geomH/2 + height*0.10)*stage.travelP - height/2
+            + (root.geomH/2 + (stage.largePage ? 0 : height*0.10))*stage.travelP - height/2
         scale: 0.08 + 0.92*stage.travelP
         opacity: CUtils.clamp(stage.flightP*5, 0, 1)
         rotation: -8*(1-stage.travelP)
@@ -1544,6 +1618,7 @@ Item {
                     id: folioTab
                     required property var modelData
                     readonly property bool selected: modelData.id === stage.sectionId
+                    readonly property bool keyboardSelected: modelData.id === root.focusedId
                     width: sectionName.implicitWidth+26
                     height: 34
                     radius: 3
@@ -1551,7 +1626,8 @@ Item {
                         GradientStop { position: 0; color: Woodland.mix(Woodland.barkEdge, Colours.palette.m3primary, folioTab.selected ? 0.38 : 0.12) }
                         GradientStop { position: 1; color: Woodland.barkEdge }
                     }
-                    border.color: Qt.alpha(Woodland.parchmentEdge, folioTab.selected ? 0.75 : 0.35)
+                    border.width: folioTab.keyboardSelected ? 2 : 1
+                    border.color: Qt.alpha(Woodland.parchmentEdge, folioTab.keyboardSelected ? 1 : folioTab.selected ? 0.75 : 0.35)
                     Rectangle {
                         anchors.left: parent.left
                         anchors.right: parent.right
@@ -1577,7 +1653,9 @@ Item {
         }
 
         Grimoire {
+            id: bookArt
             anchors.fill: parent
+            onRenderReadyChanged: stage.syncFlight()
             opening: stage.unfurlP
             preparing: stage.isOpenNow || stage.flightP > 0
             title: stage.sectionObj?.text ?? ""
@@ -1588,7 +1666,7 @@ Item {
             Loader {
                 id: sectionContent
 
-                readonly property real fitScale: Math.max(0.01, Math.min(1,
+                readonly property real fitScale: stage.largePage ? 1 : Math.max(0.01, Math.min(1,
                     parent.width/Math.max(1, stage.natW), parent.height/Math.max(1, stage.natH)))
                 width: parent.width/fitScale
                 height: parent.height/fitScale

@@ -1,0 +1,42 @@
+property var cycleState: Qt.createQmlObject('import Quickshell; import qs.components; ScreenState { modelData: Quickshell.screens[0] }', host)
+function findTaskItem(item, predicate) {
+    if (predicate(item)) return item;
+    for (const child of item.children ?? []) {
+        const match = findTaskItem(child, predicate);
+        if (match) return match;
+    }
+    return null;
+}
+Timer {
+    interval: 200
+    running: true
+    onTriggered: {
+        host.cycleState.openWorldRoom("dashboard");
+        host.cycleState.growDashboardSection("tasks");
+    }
+}
+Timer {
+    interval: 3000
+    running: true
+    onTriggered: {
+        const tab = host.findTaskItem(subject, item => item._groups !== undefined);
+        if (!tab) { console.error("TASK-LAYOUT-FAIL: missing task panel"); Qt.exit(1); return; }
+        const expanded = {};
+        for (const group of tab._groups) expanded[group.key] = true;
+        tab._expandedOverrides = expanded;
+    }
+}
+Timer {
+    interval: 4000
+    running: true
+    onTriggered: {
+        const tab = host.findTaskItem(subject, item => item._groups !== undefined);
+        const loader = host.findTaskItem(subject, item => item.fitScale !== undefined && item.item === tab);
+        const scroller = host.findTaskItem(tab, item => item.contentHeight !== undefined);
+        if (tab.implicitHeight !== 700 || loader?.fitScale !== 1 || scroller.contentHeight <= scroller.height) {
+            console.error("TASK-LAYOUT-FAIL", tab.implicitHeight, loader?.fitScale, scroller.contentHeight, scroller.height);
+            Qt.exit(1); return;
+        }
+        console.log("TASK-LAYOUT-PASS: expanded tasks scroll at full text size");
+    }
+}

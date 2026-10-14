@@ -191,25 +191,28 @@ FocusScope {
         return root.screenState.toggleDashboardSection(id);
     }
 
-    // Left/Right and the wheel. Neither surviving nav draws a focus ring — the
-    // living tree emphasises-and-grows, the tab bar slides its underline — so
-    // this always moves the selection rather than a ring.
+    function navigateSpatial(dx: int, dy: int): void {
+        if (root.useLiving && livingTree.item) livingTree.item.navigateSpatial(dx, dy);
+        else if (dx) root.navigate(dx);
+    }
+
+    onActiveFocusChanged: if (!activeFocus) root.releaseKeyboardAction()
+
+    function releaseKeyboardAction(): void {
+        if (root.useLiving && livingTree.item) livingTree.item.releaseKeyboardAction();
+    }
+
     function navigate(delta: int): void {
-        // The living tree hangs one node per CARD, so stepping whole sections
-        // would jump over most of the canopy. Falls back to sections for the
-        // tab bar, which really does show one section at a time.
-        // qmllint disable missing-property
-        const tree = root.useLiving ? livingTree.item : null;
-        if (tree && typeof tree.stepCard === "function") {
-            tree.stepCard(delta);
+        const ids = root.enabledSections.map(section => section.id);
+        if (!ids.length)
             return;
-        }
-        // qmllint enable missing-property
-        root.screenState.stepDashboardSection(delta);
+        const current = Math.max(0, ids.indexOf(root.focusedSectionId));
+        root.focusSection(ids[(current + delta + ids.length) % ids.length]);
     }
 
     function activateFocused(): void {
-        root.selectSection(root.focusedSectionId || root.activeSectionId);
+        if (root.useLiving && livingTree.item) livingTree.item.activateKeyboardFocus();
+        else root.selectSection(root.focusedSectionId || root.activeSectionId);
     }
 
     // Escape closes outright, wherever this instance is mounted — it never
@@ -256,11 +259,13 @@ FocusScope {
     onWantsKeyboardChanged: if (!root.guest)
         root.screenState.dashboardWantsKeyboard = root.wantsKeyboard
 
-    Keys.onLeftPressed: root.navigate(-1)
-    Keys.onRightPressed: root.navigate(1)
-    Keys.onReturnPressed: root.activateFocused()
-    Keys.onEnterPressed: root.activateFocused()
-    Keys.onSpacePressed: root.activateFocused()
+    Keys.onLeftPressed: root.navigateSpatial(-1, 0)
+    Keys.onRightPressed: root.navigateSpatial(1, 0)
+    Keys.onReturnPressed: event => { if (!event.isAutoRepeat) root.activateFocused(); }
+    Keys.onEnterPressed: event => { if (!event.isAutoRepeat) root.activateFocused(); }
+    Keys.onReleased: event => {
+        if (!event.isAutoRepeat && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) root.releaseKeyboardAction();
+    }
     Keys.onEscapePressed: root.escapeNav()
     // No surviving nav draws a focus ring, and swallowing Tab without one would
     // break ordinary focus navigation inside a pane for no visible benefit.
@@ -292,12 +297,14 @@ FocusScope {
             event.accepted = true;
             break;
         case Qt.Key_Up:
+            if (root.useLiving) { root.navigateSpatial(0, -1); event.accepted = true; break; }
             // Hand focus into the showing pane. Only reached if the pane did
             // not already own the key (TasksTab consumes Up/Down itself).
             (viewLoader.item?.currentItem as Loader)?.item?.forceActiveFocus();
             event.accepted = true;
             break;
         case Qt.Key_Down:
+            if (root.useLiving) { root.navigateSpatial(0, 1); event.accepted = true; break; }
             root.grabKeyboard();
             event.accepted = true;
             break;

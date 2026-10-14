@@ -73,12 +73,11 @@ StyledWindow {
     name: "drawers"
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: (fsTransitionProg > 0 && contentItem.Config.general.showOverFullscreen) || (hasSpecialWorkspace && hasFullscreenOnNormalWs) ? WlrLayer.Overlay : WlrLayer.Top
-    // dashboardWantsKeyboard is one flag on ScreenState — the OR of "a pane
-    // wants keys" and "the panel was opened deliberately enough to own the
-    // keyboard" — reachable from here without a Wrapper passthrough. Still
-    // OnDemand, never Exclusive: clicking the app underneath hands focus
-    // straight back.
-    WlrLayershell.keyboardFocus: screenState.launcher || screenState.dashboardWantsKeyboard ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    // The living tree shares the launcher's keyboard surface, including pointer opens.
+    readonly property bool worldSurfaceOpen: screenState.launcher
+        || (screenState.dashboard && contentItem.Config.dashboard.navStyle === "living"
+            && contentItem.Config.launcher.enabled)
+    WlrLayershell.keyboardFocus: worldSurfaceOpen || screenState.dashboardWantsKeyboard ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     mask: hasFullscreen ? emptyRegion : regions
 

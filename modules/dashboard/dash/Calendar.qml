@@ -3,14 +3,13 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import M3Shapes
 import Burl.Config
 import qs.components
 import qs.components.controls
 import qs.components.effects
 import qs.services
 
-CustomMouseArea {
+MouseArea {
     id: root
 
     required property ScreenState screenState
@@ -25,16 +24,9 @@ CustomMouseArea {
     property real animTranslate
     property real animOpacity: 1
 
-    function onWheel(event: WheelEvent): void {
-        if (event.angleDelta.y > 0)
-            screenState.dashboardDate = new Date(nonAnimCurrYear, nonAnimCurrMonth - 1, 1);
-        else if (event.angleDelta.y < 0)
-            screenState.dashboardDate = new Date(nonAnimCurrYear, nonAnimCurrMonth + 1, 1);
-    }
+    onWheel: event => event.accepted = false
 
-    anchors.left: parent.left
-    anchors.right: parent.right
-    implicitHeight: Math.max(inner.implicitHeight, agenda.implicitHeight) + outer.anchors.margins * 2
+    implicitHeight: outer.implicitHeight + outer.anchors.margins * 2
 
     acceptedButtons: Qt.MiddleButton
     onClicked: root.screenState.dashboardDate = new Date()
@@ -45,7 +37,7 @@ CustomMouseArea {
         running: false
         target: root
         property: "animTranslate"
-        to: root.Tokens.padding.extraLarge * root.animDirection
+        to: Tokens.padding.extraLarge * root.animDirection
         type: Anim.FastSpatial
     }
 
@@ -65,7 +57,7 @@ CustomMouseArea {
             ScriptAction {
                 script: {
                     trOutAnim.complete();
-                    root.animTranslate = root.Tokens.padding.extraLarge * -root.animDirection;
+                    root.animTranslate = Tokens.padding.extraLarge * -root.animDirection;
                 }
             }
             PropertyAction {}
@@ -86,18 +78,22 @@ CustomMouseArea {
         }
     }
 
-    RowLayout {
+    GridLayout {
         id: outer
+        columns: width >= 480 ? 2 : 1
 
         anchors.fill: parent
         anchors.margins: Tokens.padding.large
-        spacing: Tokens.spacing.large
+        columnSpacing: Tokens.spacing.large
+        rowSpacing: Tokens.spacing.large
 
         ColumnLayout {
             id: inner
 
             Layout.alignment: Qt.AlignTop
-            Layout.preferredWidth: 190
+            Layout.fillWidth: true
+            Layout.minimumWidth: 230
+            Layout.preferredWidth: 320
             spacing: Tokens.spacing.extraSmall
 
             RowLayout {
@@ -193,7 +189,7 @@ CustomMouseArea {
                 // 15px with dates drawn on top of each other. Size cells
                 // explicitly instead, clamped so a wide card doesn't blow days up.
                 readonly property real dayMin: dayMetric.implicitHeight + Tokens.padding.small
-                readonly property real dayCell: Math.max(gridBox.dayMin, Math.min(gridBox.dayMin * 2, (gridBox.width - grid.spacing * 6) / 7))
+                readonly property real dayCell: Math.max(gridBox.dayMin, Math.min(gridBox.dayMin * 1.35, (gridBox.width - grid.spacing * 6) / 7))
 
                 Layout.fillWidth: true
                 implicitHeight: gridBox.dayCell * 6 + grid.spacing * 5
@@ -233,6 +229,15 @@ CustomMouseArea {
                         implicitWidth: implicitHeight
                         implicitHeight: text.implicitHeight + Tokens.padding.small
 
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: Math.max(0, Math.min(parent.width, parent.height) - 2)
+                            height: width
+                            radius: width / 2
+                            visible: dayItem.model.today
+                            color: Colours.palette.m3primary
+                        }
+
                         StyledText {
                             id: text
 
@@ -241,6 +246,8 @@ CustomMouseArea {
                             horizontalAlignment: Text.AlignHCenter
                             text: grid.locale.toString(dayItem.model.day)
                             color: {
+                                if (dayItem.model.today)
+                                    return Colours.palette.m3onPrimary;
                                 const dayOfWeek = dayItem.model.date.getDay();
                                 if (dayOfWeek === 0 || dayOfWeek === 6)
                                     return Colours.palette.m3tertiary;
@@ -253,50 +260,25 @@ CustomMouseArea {
                     }
                 }
 
-                MaterialShape {
-                    id: todayIndicator
 
-                    readonly property Item todayItem: grid.contentItem.children.find(c => c.model.today) ?? null
-                    property Item today
-
-                    onTodayItemChanged: {
-                        if (todayItem)
-                            today = todayItem;
-                    }
-
-                    x: today ? today.x + (today.width - implicitWidth) / 2 : 0
-                    y: today ? today.y - Tokens.padding.extraSmall - 1 : 0
-
-                    implicitSize: today ? Math.max(today.implicitWidth, today.implicitHeight) + Tokens.padding.extraSmall * 2 : 0
-                    shape: MaterialShape.Sunny
-
-                    clip: true
-                    color: Colours.palette.m3primary
-
-                    opacity: todayItem ? 1 : 0
-
-                    Colouriser {
-                        x: -todayIndicator.x
-                        y: -todayIndicator.y
-
-                        implicitWidth: grid.width
-                        implicitHeight: grid.height
-
-                        source: grid
-                        sourceColor: Colours.palette.m3onSurface
-                        colorizationColor: Colours.palette.m3onPrimary
-                    }
-                }
             }
         }
 
-        AgendaPanel {
+        ColumnLayout {
             id: agenda
-
             Layout.alignment: Qt.AlignTop
-            Layout.fillHeight: true
             Layout.fillWidth: true
-            Layout.minimumWidth: 200
+            Layout.minimumWidth: outer.columns === 2 ? 200 : 0
+            StyledText {
+                text: qsTr("AGENDA")
+                color: Colours.palette.m3primary
+                font: Tokens.font.title.small
+            }
+            AgendaPanel { Layout.fillWidth: true }
+            TextButton {
+                text: qsTr("Open calendar")
+                onClicked: Tasks.openTasks("calendar")
+            }
         }
     }
 }

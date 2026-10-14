@@ -35,6 +35,13 @@ Scope {
             selectedIndex = 0;
     }
 
+    function stopClockInReminders(): void {
+        if (Tasks.clockInReminders)
+            Tasks.toggleClockInReminders();
+        root.manuallyOpen = false;
+        root.deferred = true;
+    }
+
     function onBreakOrClockIn(): void {
         if (Tasks.onBreak)
             Tasks.endBreak();
@@ -454,18 +461,17 @@ Scope {
 
                                     anchors.fill: parent
                                     anchors.margins: Tokens.padding.medium
-                                    contentWidth: summaryText.implicitWidth
+                                    contentWidth: width
                                     contentHeight: summaryText.implicitHeight
                                     clip: true
-                                    flickableDirection: Flickable.HorizontalAndVerticalFlick
+                                    flickableDirection: Flickable.VerticalFlick
 
-                                    StyledText {
+                                    WorklogReport {
                                         id: summaryText
-
-                                        text: Tasks.dailyReport && Tasks.dailyReport.length > 0 ? Tasks.dailyReport : qsTr("No clocked time today yet.")
-                                        wrapMode: Text.NoWrap
-                                        font: Tokens.font.mono.small
-                                        textFormat: Text.PlainText
+                                        width: summaryFlick.width
+                                        report: Tasks.dailyData
+                                        loading: Tasks.dailyLoading
+                                        error: Tasks.dailyError
                                     }
                                 }
                             }
@@ -477,6 +483,13 @@ Scope {
 
                                 Item {
                                     Layout.fillWidth: true
+                                }
+
+                                ActionButton {
+                                    visible: !Tasks.onBreak
+                                    icon: "notifications_off"
+                                    label: qsTr("Stop clock-in reminders")
+                                    onActivated: root.stopClockInReminders()
                                 }
 
                                 ActionButton {
@@ -539,7 +552,7 @@ Scope {
         const src = Tasks.tasks ?? [];
         for (let i = 0; i < src.length && out.length < 8; i++) {
             const t = src[i];
-            if (t.state !== "PROJECT")
+            if (!t.projectHeading && t.state !== "PROJECT")
                 out.push(t);
         }
         return out;

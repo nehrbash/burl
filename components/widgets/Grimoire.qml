@@ -23,29 +23,34 @@ Item {
     readonly property real fittedWidth: fittedHeight * pageAspect
     readonly property real pageLeft: spine + (pageWidth - fittedWidth) / 2
     readonly property real pageTop: (height - fittedHeight) / 2
-    readonly property int coverFrame: Math.round(Math.max(0, Math.min(1, opening)) * 24)
-    readonly property int renderedFrames: book.frameCount
-    readonly property bool renderReady: finalPage.status === Image.Ready
+    readonly property bool detailedOpening: coverId === "tasks"
+    readonly property int coverFrame: Math.round(Math.max(0, Math.min(1, opening)) * (renderedFrames - 1))
+    readonly property int renderedFrames: detailedOpening ? 49 : 25
+    readonly property bool renderReady: openingSheet.status === Image.Ready && finalPage.status === Image.Ready
     default property alias content: contentHost.data
 
     signal closeRequested()
 
-    AnimatedSprite {
+    Item {
         id: book
         x: root.pageLeft - width * 0.262282372
         y: root.pageTop - height * 0.187282503
         width: root.fittedWidth / 0.644657969
         height: width * 500 / 720
-        source: root.preparing ? Quickshell.shellPath(root.assetDirectory + "opening-sheet.png") : ""
-        visible: root.coverFrame !== 24
-        running: false
-        interpolate: false
-        frameWidth: 720
-        frameHeight: 500
-        frameCount: 25
-        currentFrame: root.coverFrame
+        visible: root.coverFrame !== root.renderedFrames - 1
+        clip: true
 
-        smooth: true
+        Image {
+            id: openingSheet
+            readonly property int columns: root.detailedOpening ? 7 : 5
+            x: -(root.coverFrame % columns) * book.width
+            y: -Math.floor(root.coverFrame / columns) * book.height
+            width: book.width * columns
+            height: book.height * columns
+            source: root.preparing ? Quickshell.shellPath(root.assetDirectory + "opening-sheet.png") : ""
+            asynchronous: true
+            smooth: true
+        }
     }
 
     Image {
@@ -53,7 +58,8 @@ Item {
         x: book.x; y: book.y
         width: book.width; height: book.height
         source: root.preparing ? Quickshell.shellPath(root.assetDirectory + "book-25.png") : ""
-        visible: root.coverFrame === 24
+        visible: root.coverFrame === root.renderedFrames - 1
+        asynchronous: true
         mipmap: true
     }
 

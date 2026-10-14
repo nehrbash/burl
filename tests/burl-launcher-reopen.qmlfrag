@@ -63,7 +63,7 @@
                         const book = host.findCycleItem(subject, item => item.sectionId === "tasks" && item.flightP !== undefined);
                         host.cycleCheck(book?.visible && book.flightP > 0.99, "book opens after cold reopen");
                         const rendered = host.findCycleItem(book, item => item.renderedFrames !== undefined);
-                        host.cycleCheck(rendered?.renderReady && rendered.renderedFrames === 25 && rendered.coverFrame === 24, "Blender book render is loaded and open");
+                        host.cycleCheck(rendered?.renderReady && rendered.renderedFrames === 49 && rendered.coverFrame === 48, "Blender book render is loaded and open");
                         scene.dismiss();
                         rapidCycleReopen.restart();
                         break;

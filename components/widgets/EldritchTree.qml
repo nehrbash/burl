@@ -19,7 +19,7 @@ Item {
     property int selected: -1
     property int hovered: -1
     property bool animated: true
-    property real reveal: 0
+    readonly property real reveal: growth
     property var limbs: []
     property var orbLimbs: []
     readonly property color woodDark: Woodland.mix(Woodland.barkEdge, Colours.palette.m3surface, 0.55)
@@ -152,8 +152,7 @@ Item {
         wood.requestPaint();
     }
 
-    Component.onCompleted: { rebuild(); reveal = growth; }
-    onGrowthChanged: reveal = growth
+    Component.onCompleted: rebuild()
     onRenderedTrunkChanged: rebuild()
     onAnchorsDataChanged: rebuild()
     onRootAnchorsDataChanged: rebuild()
@@ -164,11 +163,6 @@ Item {
     onWoodDarkChanged: wood.requestPaint()
     onWidthChanged: wood.requestPaint()
     onHeightChanged: wood.requestPaint()
-
-    Behavior on reveal {
-        enabled: root.animated && Ambience.grow && !GameMode.enabled
-        NumberAnimation { duration: 1900; easing.type: Easing.InOutCubic }
-    }
 
     PaintedTree {
         anchors.fill: parent

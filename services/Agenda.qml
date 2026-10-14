@@ -86,7 +86,7 @@ Singleton {
 
         command: {
             const fixture = Quickshell.env("BURL_CALENDAR_JSON");
-            return fixture ? ["cat", fixture] : ["timeout", "10", "emacsclient", "-e", "(sn-gcal/upcoming 36)"];
+            return fixture ? ["cat", fixture] : ["timeout", "10", "emacsclient", "-e", "(sn-gcal/upcoming 168)"];
         }
         stdout: StdioCollector {
             id: out

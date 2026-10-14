@@ -45,7 +45,7 @@ test("Close hover is separate from the root-row floor dismissal", () => {
     assert.match(area("closeTree"), /onClicked: root.dismiss\(\)/);
     assert.doesNotMatch(source, /groundBand\.containsMouse/);
     assert.match(tree, /anchors\.margins: -8/);
-    assert.match(tree, /hoverBump: nodeHover\.containsMouse \? 1\.18 : 1/);
+    assert.match(tree, /hoverBump: nodeHover\.containsMouse \|\| node\.keyboardSelected \? 1\.18 : 1/);
 });
 
 test("Close hit target does not overlap enlarged root targets on desktop or compact surfaces", () => {

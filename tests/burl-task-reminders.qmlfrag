@@ -1,0 +1,26 @@
+property var taskService: Qt.createQmlObject('import QtQuick; import qs.services; QtObject { readonly property var tasks: Tasks }', host).tasks
+property var taskReminder: Qt.createQmlObject('import "modules/tasknudge"; TaskNudge {}', host)
+Timer {
+    interval: 250
+    running: true
+    onTriggered: {
+        host.taskService._snapshot = {pomodoro: {enabled: true, task: "Test task", "clocked-in": true, "on-break": true, "remaining-seconds": 300, "total-seconds": 300}};
+    }
+}
+Timer {
+    interval: 800
+    running: true
+    onTriggered: {
+        if (!host.taskReminder.shouldShow) { console.error("REMINDER-SHOW-FAIL"); Qt.exit(1); return; }
+        host.taskService._snapshot = {pomodoro: {enabled: true, task: "Test task", "clocked-in": true, "on-break": false}};
+        console.log("REMINDER-SHOW-PASS");
+    }
+}
+Timer {
+    interval: 1100
+    running: true
+    onTriggered: {
+        if (host.taskReminder.shouldShow) { console.error("REMINDER-HIDE-FAIL"); Qt.exit(1); return; }
+        console.log("REMINDER-HIDE-PASS");
+    }
+}

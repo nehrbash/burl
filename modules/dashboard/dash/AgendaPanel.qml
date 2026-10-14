@@ -11,7 +11,8 @@ import qs.services
 ColumnLayout {
     id: root
 
-    readonly property int maxRows: 4
+    readonly property int maxRows: 3
+    readonly property var following: Agenda.upcoming.slice(1)
     readonly property var next: Agenda.next
     readonly property bool nextIsToday: next !== null && next.start < Agenda.dayEnd
 
@@ -40,7 +41,9 @@ ColumnLayout {
             return qsTr("now · %1 left").arg(span(mins(e.end - now)));
         if (e.start < Agenda.dayEnd)
             return qsTr("in %1").arg(span(mins(e.start - now)));
-        return qsTr("tomorrow %1").arg(clock(e.start));
+        if (e.start < Agenda.tomorrowEnd)
+            return qsTr("tomorrow %1").arg(clock(e.start));
+        return Qt.formatDate(new Date(e.start), "ddd d MMM") + " · " + clock(e.start);
     }
 
     function place(e: var): string {
@@ -54,7 +57,9 @@ ColumnLayout {
 
         Layout.fillWidth: true
         implicitHeight: nextContent.implicitHeight + Tokens.padding.medium * 2
-        radius: Tokens.rounding.large
+        radius: 2
+        border.width: 1
+        border.color: Qt.alpha(Colours.palette.m3primary, 0.25)
         color: Qt.alpha(root.next ? root.colourFor(root.next.calendar) : Colours.palette.m3onSurface, 0.12)
 
         RowLayout {
@@ -78,7 +83,7 @@ ColumnLayout {
 
                 StyledText {
                     Layout.fillWidth: true
-                    elide: Text.ElideRight
+                    wrapMode: Text.Wrap
                     text: root.next ? root.next.title : qsTr("Nothing coming up")
                     color: Colours.palette.m3onSurface
                     font: Tokens.font.body.builders.medium.weight(Font.Medium).build()
@@ -127,7 +132,7 @@ ColumnLayout {
     }
 
     Repeater {
-        model: Agenda.laterToday.slice(0, root.maxRows)
+        model: root.following.slice(0, root.maxRows)
 
         RowLayout {
             id: row
@@ -145,8 +150,8 @@ ColumnLayout {
             }
 
             StyledText {
-                Layout.preferredWidth: timeMetric.implicitWidth
-                text: root.clock(row.modelData.start)
+                Layout.preferredWidth: Math.max(100, timeMetric.implicitWidth)
+                text: (row.modelData.start >= Agenda.dayEnd ? Qt.formatDate(new Date(row.modelData.start), "ddd d MMM") + "\n" : "") + root.clock(row.modelData.start)
                 color: Colours.palette.m3onSurfaceVariant
                 font: Tokens.font.body.small
             }
@@ -170,26 +175,8 @@ ColumnLayout {
 
     StyledText {
         Layout.fillWidth: true
-        visible: Agenda.laterToday.length > root.maxRows
-        text: qsTr("+%1 more today").arg(Agenda.laterToday.length - root.maxRows)
-        color: Colours.palette.m3onSurfaceVariant
-        font: Tokens.font.body.small
-    }
-
-    Item {
-        Layout.fillHeight: true
-    }
-
-    StyledText {
-        Layout.fillWidth: true
-        elide: Text.ElideRight
-        text: {
-            const t = Agenda.tomorrow;
-            if (!t.length)
-                return qsTr("Tomorrow · nothing scheduled");
-            const f = t[0];
-            return qsTr("Tomorrow · %n event(s)", "", t.length) + " · " + (f.allDay ? qsTr("all day") : root.clock(f.start)) + " " + f.title;
-        }
+        visible: root.following.length > root.maxRows
+        text: qsTr("+%1 more upcoming").arg(root.following.length - root.maxRows)
         color: Colours.palette.m3onSurfaceVariant
         font: Tokens.font.body.small
     }

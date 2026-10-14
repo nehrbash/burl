@@ -1,0 +1,55 @@
+property var cycleState: Qt.createQmlObject('import Quickshell; import qs.components; ScreenState { modelData: Quickshell.screens[0] }', host)
+function findTree(item) {
+    if (typeof item.keyboardTargets === "function" && item.guest) return item;
+    for (const child of item.children ?? []) {
+        const found = findTree(child);
+        if (found) return found;
+    }
+    return null;
+}
+function checkSpatial(value, label) {
+    if (!value) { console.error("TREE-SPATIAL-FAIL", label); Qt.quit(); }
+    else console.log("TREE-SPATIAL-PASS", label);
+    return value;
+}
+Timer {
+    interval: 100; running: true
+    onTriggered: host.cycleState.openWorldRoom("dashboard")
+}
+Timer {
+    interval: 2500; running: true
+    onTriggered: {
+        const tree = host.findTree(subject);
+        if (!host.checkSpatial(!!tree, "guest tree loaded")) return;
+        const nodes = tree.keyboardTargets();
+        if (!host.checkSpatial(nodes.some(n => n.id === "settings") && nodes.some(n => n.id.startsWith("session:")), "settings and root actions included")) return;
+        tree.keyboardNodeId = "dashboard";
+        for (const move of [[0, 1, "weather"], [1, 0, "performance"], [0, -1, "media"], [-1, 0, "dashboard"]]) {
+            tree.navigateSpatial(move[0], move[1]);
+            if (!host.checkSpatial(tree.focusedId === move[2], "direction selects " + move[2])) return;
+        }
+        const reached = new Set(["dashboard"]);
+        const queue = ["dashboard"];
+        const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+        while (queue.length) {
+            const id = queue.shift();
+            const origin = nodes.find(n => n.id === id);
+            for (const [dx, dy] of directions) {
+                tree.keyboardNodeId = id;
+                tree.navigateSpatial(dx, dy);
+                const target = nodes.find(n => n.id === tree.focusedId);
+                if (!host.checkSpatial(!!target && (target.id === id || (target.x-origin.x)*dx+(target.y-origin.y)*dy > 0), id + " direction " + dx + "," + dy)) return;
+                if (!reached.has(target.id)) { reached.add(target.id); queue.push(target.id); }
+            }
+        }
+        if (!host.checkSpatial(reached.size === nodes.length, "all " + nodes.length + " visible nodes reachable")) return;
+        if (!host.checkSpatial(host.cycleState.dashboardOpenSections.length === 0, "navigation does not activate nodes")) return;
+        tree.keyboardNodeId = "tasks";
+        tree.activateKeyboardFocus();
+        if (!host.checkSpatial(host.cycleState.dashboardOpenSections[0] === "tasks", "activation opens selected panel")) return;
+        tree.navigateSpatial(1, 0);
+        if (!host.checkSpatial(tree.focusedId === "settings", "open book follows visible tab order")) return;
+        tree.navigateSpatial(1, 0);
+        host.checkSpatial(tree.focusedId === "settings", "edge does not wrap to opposite side");
+    }
+}

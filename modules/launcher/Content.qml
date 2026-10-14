@@ -24,13 +24,10 @@ Item {
     // Both rooms share one camera so an interrupted pan reverses coherently.
     property real panP: 0
 
-    // Read by the Behavior when it starts, so `flyTo` sets them first. Each
-    // trip has its own pace: arriving is a shot, leaving is a dismissal.
-    property int panMs: 1000
-    property int panEase: Easing.InOutQuart
+    property int panMs: 480
+    property int panEase: Easing.OutCubic
 
     function flyTo(target: real, ms: int, ease: int): void {
-        dwell.stop();
         root.panMs = ms;
         root.panEase = ease;
         root.panP = target;
@@ -44,9 +41,6 @@ Item {
     // the flags, not of nudging panP behind their back.
     readonly property bool surfaceOpen: root.visibilities.launcher || root.visibilities.dashboard
 
-    // Tracks the PREVIOUS surfaceOpen so the camera can tell "the surface just
-    // opened, play the arrival" from "we are already up and moving between
-    // rooms". A binding cannot: it would already read the new value.
     property bool wasOpen
 
     function ascend(): void {
@@ -86,54 +80,22 @@ Item {
 
     function syncCamera(): void {
         const open = root.visibilities.launcher || root.visibilities.dashboard;
-        const interruptedClose = !root.wasOpen && root.revealP > 0;
         root.revealP = open ? 1 : 0;
         if (!open) {
             root.flyTo(0, 300, Easing.InCubic);
-        } else if (root.visibilities.launcher) {
-            if (root.wasOpen || interruptedClose)
-                root.flyTo(1, 620, Easing.InOutQuart);
-            else {
-                // The opening shot: hold on the tree, then climb.
-                root.panMs = 1000;
-                root.panEase = Easing.InOutQuart;
-                dwell.restart();
-            }
-        } else if (root.wasOpen) {
-            root.flyTo(0, 760, Easing.InOutQuart);
         } else {
-            // Asked straight for the tree from closed — there is no camera move
-            // to play, the tree just grows in where the camera already is.
-            dwell.stop();
-            root.panP = 0;
+            root.flyTo(root.visibilities.launcher ? 1 : 0, 480, Easing.OutCubic);
         }
         root.wasOpen = open;
     }
 
-    // The opening shot holds on the tree before it moves. Without the hold the
-    // pan starts the instant the surface appears and the tree is gone before
-    // the eye has found it — and a fast-start ease like OutQuint makes that
-    // worse, since two thirds of the distance is covered in the first fifth
-    // of the time. Hold, then InOutQuart.
-    Timer {
-        id: dwell
-
-        interval: 340
-        repeat: false
-        onTriggered: root.panP = 1
-    }
-
-    // Any keystroke skips the shot, and typing while down at the tree means
-    // "take me to the search" — someone who opened this to type a query should
-    // not wait out a second of scenery, and someone who wanted the scenery is,
-    // by definition, not typing.
     function skipToSky(): void {
         if (root.visibilities.dashboard) {
             root.ascend();
             return;
         }
         if (root.panP < 1)
-            root.flyTo(1, 380, Easing.OutCubic);
+            root.flyTo(1, 300, Easing.OutCubic);
     }
 
     Behavior on panP {
@@ -181,8 +143,8 @@ Item {
     Behavior on revealP {
         enabled: Ambience.grow && !GameMode.enabled
         NumberAnimation {
-            duration: root.surfaceOpen ? 640 : 260
-            easing.type: root.surfaceOpen ? Easing.InOutCubic : Easing.InCubic
+            duration: root.surfaceOpen ? 300 : 260
+            easing.type: root.surfaceOpen ? Easing.OutCubic : Easing.InCubic
         }
     }
 
@@ -222,6 +184,7 @@ Item {
         opacity: root.revealP
 
         Loader {
+            id: treeGuest
             anchors.fill: parent
             // Retain the tree geometry between opens; section loaders gate their services.
             active: true
@@ -752,6 +715,24 @@ Item {
             // matches / scope / actions overlay state. Matches the URL
             // bar convention so it's instantly familiar.
             Keys.onPressed: ev => {
+                if (root.atTree && Config.dashboard.keyboardNav && ev.modifiers === Qt.NoModifier) {
+                    const directions = ({});
+                    directions[Qt.Key_Left] = [-1, 0];
+                    directions[Qt.Key_Right] = [1, 0];
+                    directions[Qt.Key_Up] = [0, -1];
+                    directions[Qt.Key_Down] = [0, 1];
+                    const direction = directions[ev.key];
+                    if (direction) {
+                        treeGuest.item?.navigateSpatial(direction[0], direction[1]);
+                        ev.accepted = true;
+                        return;
+                    }
+                    if (ev.key === Qt.Key_Return || ev.key === Qt.Key_Enter) {
+                        if (!ev.isAutoRepeat) treeGuest.item?.activateFocused();
+                        ev.accepted = true;
+                        return;
+                    }
+                }
                 if ((ev.modifiers & Qt.AltModifier) && ev.key === Qt.Key_Left) {
                     graph.navigateBack();
                     ev.accepted = true;
@@ -870,6 +851,11 @@ Item {
             // Escape closes, always — no stepping back through the kind menu or
             // out of the tree into the sky first. One key, one meaning.
             Keys.onEscapePressed: root.dismiss()
+            Keys.onReleased: event => {
+                if (!event.isAutoRepeat && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter))
+                    treeGuest.item?.releaseKeyboardAction();
+            }
+            onActiveFocusChanged: if (!activeFocus) treeGuest.item?.releaseKeyboardAction()
 
             // Wrapper keeps Content mounted across opens, so
             // Component.onCompleted only fires once. Re-grab focus on every
@@ -971,7 +957,7 @@ Item {
     }
 
     // Keep navigation inactive during the opening dwell and camera movement.
-    readonly property bool atTree: root.surfaceOpen && root.panP < 0.02 && !dwell.running
+    readonly property bool atTree: root.surfaceOpen && root.panP < 0.02
     readonly property bool atSky: root.surfaceOpen && root.panP > 0.98
 
     MouseArea {

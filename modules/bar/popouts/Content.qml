@@ -153,7 +153,7 @@ Item {
 
         Popout {
             name: "focustimer"
-            sourceComponent: FocusTimerPanel {}
+            sourceComponent: TaskTimerPanel {}
         }
 
         Popout {

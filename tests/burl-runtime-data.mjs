@@ -79,3 +79,35 @@ test("recording dates retain month-end and leap-day timestamps", () => {
         assert.equal(date.getHours(), 12);
     }
 });
+
+test("worklog report decoding preserves escaped titles and Unicode", () => {
+    const decode = qmlFunction("services/Tasks.qml", "_unquoteElisp", {});
+    const report = {rows: [{title: 'Write "quotes" and \\paths\nλ', seconds: 600}]};
+    assert.deepEqual(JSON.parse(decode(JSON.stringify(JSON.stringify(report)))), report);
+});
+
+test("failed worklog reports retain data and expose an error", () => {
+    const previous = {rows: [{title: "Existing", seconds: 600}]};
+    const context = {dailyData: previous, dailyError: "", _unquoteElisp: raw => raw};
+    const parse = qmlFunction("services/Tasks.qml", "_parseReport", context);
+    parse("", "today", 124);
+    assert.equal(context.dailyData, previous);
+    assert.match(context.dailyError, /failed/);
+    parse('{"rows":[]}', "today", 0);
+    assert.equal(context.dailyError, "");
+    assert.equal(context.dailyData.rows.length, 0);
+});
+
+test("stopping clock-in nudges leaves break reminders alone and never enables nudges", () => {
+    let toggles = 0;
+    const root = { manuallyOpen: true, deferred: false };
+    const Tasks = { clockInReminders: true, toggleClockInReminders() { toggles++; } };
+    const stop = qmlFunction("modules/tasknudge/TaskNudge.qml", "stopClockInReminders", { root, Tasks });
+    stop();
+    assert.equal(toggles, 1);
+    assert.equal(root.manuallyOpen, false);
+    assert.equal(root.deferred, true);
+    Tasks.clockInReminders = false;
+    stop();
+    assert.equal(toggles, 1);
+});

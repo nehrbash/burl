@@ -10,13 +10,14 @@ import qs.components.containers
 import qs.components.controls
 import qs.components.widgets
 import qs.components.tasks
+import "dash" as Dash
 import qs.services
 import Burl.Config
 
 Item {
     id: root
 
-    property string subTab: "tasks"
+    property string subTab: Tasks.requestedTab
     property bool _addProjectOpen: false
     // Living-tree mode: rows are a translucent m3surfaceContainer wash, legible
     // only against Content.qml's WoodPanel — bare parchment washes titles out.
@@ -37,14 +38,14 @@ Item {
     readonly property var _navTasks: {
         const out = [];
         for (const g of _groups) {
-            if (!_isExpanded(g.project))
+            if (!_isExpanded(g.key))
                 continue;
             for (const t of (g.tasks ?? []))
                 out.push({
                     project: g.project,
                     title: t.title,
                     state: t.state,
-                    key: g.project + "\u0000" + t.title
+                    key: g.key + "\u0000" + t.title
                 });
         }
         return out;
@@ -75,8 +76,8 @@ Item {
     Keys.onReturnPressed: root.clockInSelected()
     Keys.onEnterPressed: root.clockInSelected()
 
-    implicitWidth: 760
-    implicitHeight: layout.implicitHeight + Tokens.padding.large * 2
+    implicitWidth: 1000
+    implicitHeight: 700
 
     // One plate behind the whole pane, not per-row opacity fixes: rows, headers
     // and the pomodoro strip were designed against one dark surface. Sibling
@@ -94,7 +95,10 @@ Item {
     onSubTabChanged: if (subTab === "tasks")
         forceActiveFocus()
 
+    Component.onDestruction: Tasks.countdownWatchers--
+
     Component.onCompleted: {
+        Tasks.countdownWatchers++;
         Tasks.refresh();
         Tasks.fetchReport("today");
         Tasks.fetchReport("thisweek");
@@ -102,6 +106,8 @@ Item {
     }
 
     Connections {
+        function onViewRequested(tab: string): void { root.subTab = tab; }
+
         function onSnapshotUpdated(): void {
             const n = root._navTasks.length;
             if (root.selectedIndex >= n)
@@ -110,6 +116,16 @@ Item {
 
         target: Tasks
     }
+
+    Flickable {
+        id: taskScroll
+        anchors.fill: parent
+        contentWidth: width
+        contentHeight: layout.implicitHeight + Tokens.padding.large * 2
+        clip: true
+        flickableDirection: Flickable.VerticalFlick
+        boundsBehavior: Flickable.StopAtBounds
+        StyledScrollBar.vertical: StyledScrollBar { flickable: taskScroll }
 
     ColumnLayout {
         id: layout
@@ -133,9 +149,9 @@ Item {
                 onActivated: root.subTab = "tasks"
             }
             SubTabPill {
-                label: qsTr("Focus timer")
-                active: root.subTab === "timer"
-                onActivated: root.subTab = "timer"
+                label: qsTr("Calendar")
+                active: root.subTab === "calendar"
+                onActivated: { root.subTab = "calendar"; Agenda.refresh(); }
             }
             SubTabPill {
                 label: qsTr("Today")
@@ -158,62 +174,22 @@ Item {
             }
         }
 
-        ClippingRectangle {
-            id: reportCard
-
+        WorklogReport {
             Layout.fillWidth: true
             visible: root.subTab === "today" || root.subTab === "thisweek"
-            color: root.cardColour
-            radius: root.folio ? 2 : Tokens.rounding.large
-            implicitHeight: 440
-
-            WoodPanel {
-                visible: !root.folio
-                anchors.fill: parent
-                // reportCard, not `parent`: ClippingRectangle reparents children
-                // onto an inner content Item that has no radius.
-                radius: reportCard.radius
-            }
-
-            Flickable {
-                id: reportFlick
-
-                anchors.fill: parent
-                anchors.margins: Tokens.padding.large
-                contentWidth: reportText.implicitWidth
-                contentHeight: reportText.implicitHeight
-                flickableDirection: Flickable.HorizontalAndVerticalFlick
-                clip: true
-
-                StyledScrollBar.vertical: StyledScrollBar {
-                    flickable: reportFlick
-                }
-                StyledScrollBar.horizontal: StyledScrollBar {
-                    flickable: reportFlick
-                }
-
-                StyledText {
-                    id: reportText
-
-                    text: {
-                        const r = root.subTab === "today" ? Tasks.dailyReport : Tasks.weeklyReport;
-                        return r && r.length > 0 ? r : qsTr("No data");
-                    }
-                    wrapMode: Text.NoWrap
-                    font: Tokens.font.mono.small
-                    textFormat: Text.PlainText
-                }
-            }
+            report: root.subTab === "today" ? Tasks.dailyData : Tasks.weeklyData
+            loading: root.subTab === "today" ? Tasks.dailyLoading : Tasks.weeklyLoading
+            error: root.subTab === "today" ? Tasks.dailyError : Tasks.weeklyError
         }
 
-        FocusTimerPanel {
+        Dash.CalendarAgenda {
             Layout.fillWidth: true
-            visible: root.subTab === "timer"
+            visible: root.subTab === "calendar"
         }
 
         StyledRect {
             Layout.fillWidth: true
-            visible: root.subTab !== "timer"
+            visible: root.subTab === "tasks"
             color: root.cardColour
             border.width: 1
             border.color: root.grooveColour
@@ -258,7 +234,7 @@ Item {
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: Tasks.onBreak ? qsTr("REST") : Tasks.pomodoro.enabled ? qsTr("FOCUS") : qsTr("OFF")
-                            font.pixelSize: 9
+                            font.pixelSize: 11
                             font.letterSpacing: 1.5
                             color: Woodland.brass
                         }
@@ -289,19 +265,10 @@ Item {
                         font: Tokens.font.body.builders.medium.weight(Font.Medium).build()
                     }
 
-                    StyledText {
-                        visible: Tasks.pomodoro.enabled ?? false
-                        text: qsTr("%1 / %2 keystrokes")
-                            .arg(Tasks.pomodoro.keystrokes ?? 0)
-                            .arg(Tasks.pomodoro["keystrokes-target"] ?? 0)
-                        color: Colours.palette.m3outline
-                        font: Tokens.font.body.small
-                    }
-
                     PomoButton {
                         icon: Tasks.pomodoro.enabled ? "notifications_off" : "notifications_active"
                         label: Tasks.pomodoro.enabled ? qsTr("Turn reminders off") : qsTr("Enable break reminders")
-                        onActivated: Tasks.onBreak ? Tasks.stopPomodoro() : Tasks.toggleTypeBreak()
+                        onActivated: Tasks.toggleBreakReminders()
                     }
 
                     RowLayout {
@@ -337,7 +304,7 @@ Item {
             spacing: Tokens.spacing.small
 
             StyledText {
-                text: qsTr("Agenda [%1/%2]").arg(Tasks.visibleCount).arg(Tasks.totalCount)
+                text: qsTr("Projects · %1 tasks").arg(Tasks.totalCount)
                 font: Tokens.font.label.builders.medium.weight(Font.Medium).build()
             }
 
@@ -384,7 +351,7 @@ Item {
 
                 readonly property string projectTitle: modelData.project ?? ""
                 readonly property var tasks: modelData.tasks ?? []
-                readonly property bool expanded: root._isExpanded(projectTitle)
+                readonly property bool expanded: root._isExpanded(modelData.key)
                 // Exposed for taskDelegate (a separate Component, outside groupGrow's
                 // id-scope) to read via its runtime `parent` reference instead of the
                 // unresolvable bare id.
@@ -431,7 +398,7 @@ Item {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: root._toggle(groupCol.projectTitle)
+                        onClicked: root._toggle(groupCol.modelData.key)
                     }
 
                     RowLayout {
@@ -479,7 +446,8 @@ Item {
                                 title: t.title,
                                 state: t.state,
                                 tags: t.tags,
-                                project: groupCol.projectTitle
+                                project: groupCol.projectTitle,
+                                key: groupCol.modelData.key + "\u0000" + t.title
                             })) : []
 
                     delegate: taskDelegate
@@ -540,7 +508,7 @@ Item {
                     id: rowRect
 
                     readonly property bool inactive: modelData.state === "DONE" || modelData.state === "HOLD" || modelData.state === "CANCELLED"
-                    readonly property bool selected: root.selectedKey.length > 0 && root.selectedKey === (modelData.project + "\u0000" + modelData.title)
+                    readonly property bool selected: root.selectedKey.length > 0 && root.selectedKey === modelData.key
 
                     anchors.left: parent.left
                     anchors.leftMargin: Tokens.padding.medium + Tokens.spacing.small + 2
@@ -557,7 +525,7 @@ Item {
                         hoverEnabled: true
                         enabled: !rowRect.inactive
                         cursorShape: rowRect.inactive ? Qt.ArrowCursor : Qt.PointingHandCursor
-                        onEntered: root.selectByKey(modelData.project + "\u0000" + modelData.title)
+                        onEntered: root.selectByKey(modelData.key)
                         onClicked: Tasks.clockIn(modelData.title)
                     }
 
@@ -597,7 +565,7 @@ Item {
                             Layout.fillWidth: true
                             text: modelData.title
                             opacity: rowRect.dimOpacity
-                            elide: Text.ElideRight
+                            wrapMode: Text.Wrap
                             font.strikeout: modelData.state === "DONE" || modelData.state === "CANCELLED"
                         }
 
@@ -657,28 +625,20 @@ Item {
 
     }
 
-    // Project grouping. Each group is { project, tasks }. Tasks before the
-    // first PROJECT row land in a synthetic "" group.
+    }
+
     readonly property var _groups: {
         const out = [];
-        let current = {
-            project: "",
-            tasks: []
-        };
-        for (const t of (Tasks.tasks ?? [])) {
-            if (t.state === "PROJECT") {
-                if (current.tasks.length > 0 || current.project.length > 0)
-                    out.push(current);
-                current = {
-                    project: t.title,
-                    tasks: []
-                };
-            } else {
-                current.tasks.push(t);
+        for (const task of (Tasks.tasks ?? [])) {
+            const key = task.projectKey || "inbox";
+            let group = out.find(g => g.key === key);
+            if (!group) {
+                group = {key, project: task.project || "", tasks: []};
+                out.push(group);
             }
+            if (!task.projectHeading && task.state !== "PROJECT")
+                group.tasks.push(task);
         }
-        if (current.tasks.length > 0)
-            out.push(current);
         return out;
     }
 
@@ -687,7 +647,7 @@ Item {
         for (const g of _groups)
             for (const t of g.tasks)
                 if (t.state === "ACTIVE")
-                    return g.project;
+                    return g.key;
         return "";
     }
 
@@ -707,40 +667,8 @@ Item {
         _expandedOverrides = next;
     }
 
-    // Locally ticked pomodoro countdown — keeps the ring live between 5-min syncs.
-    property real _baseSeconds: Tasks.pomodoro["remaining-seconds"] ?? 0
-    property real _totalSeconds: (Tasks.pomodoro["total-seconds"] ?? 1500)
-    property real _snapshotAt: Date.now()
-    property real _tick: 0
-
-    readonly property real _elapsed: {
-        _tick;
-        return Math.max(0, (Date.now() - _snapshotAt) / 1000);
-    }
-    readonly property real _remaining: Math.max(0, _baseSeconds - _elapsed)
-    readonly property string displayTime: {
-        const m = Math.floor(_remaining / 60);
-        const s = Math.floor(_remaining % 60);
-        return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
-    }
-    readonly property real displayPercent: _totalSeconds > 0 ? (_remaining / _totalSeconds) * 100 : 0
-
-    Connections {
-        function onSnapshotUpdated(): void {
-            root._baseSeconds = Tasks.pomodoro["remaining-seconds"] ?? 0;
-            root._totalSeconds = Tasks.pomodoro["total-seconds"] ?? 1500;
-            root._snapshotAt = Date.now();
-        }
-
-        target: Tasks
-    }
-
-    Timer {
-        interval: 1000
-        running: Tasks.pomodoro.enabled ?? false
-        repeat: true
-        onTriggered: root._tick++
-    }
+    readonly property string displayTime: Tasks.liveTime
+    readonly property real displayPercent: 100 - Tasks.livePercent
 
     component AddInline: StyledRect {
         id: addRoot

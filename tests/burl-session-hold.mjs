@@ -10,17 +10,18 @@ function fixture(id = "reboot") {
     let now = 10000;
     const calls = [];
     const node = { action: { id }, requiresHold: id !== "lock", canActivate: true,
-        holdDuration: 1200, holdProgress: 0, heldActionId: "", holdStartedAt: 0 };
+        keyboardHeld: false, holdDuration: 1200, holdProgress: 0, heldActionId: "", holdStartedAt: 0 };
     const nodeHover = { pressed: true, containsMouse: true };
+    Object.defineProperty(node, "holding", { get: () => node.keyboardHeld || (nodeHover.pressed && nodeHover.containsMouse) });
     const holdDelay = { interval: 1200, running: false,
         start() { this.running = true; }, restart() { this.running = true; }, stop() { this.running = false; } };
     const holdFill = { start() {}, stop() {} };
     const context = { node, nodeHover, holdDelay, holdFill, Date: { now: () => now },
         root: { runSessionAction: action => calls.push(action.id) } };
-    for (const name of ["cancelHold", "beginHold", "completeHold", "activateClick"]) {
-        const match = component.match(new RegExp(`function ${name}\\(\\): void \\{([\\s\\S]*?)\\n        \\}`));
+    for (const name of ["cancelHold", "beginHold", "completeHold", "activateClick", "pressKeyboard"]) {
+        const match = component.match(new RegExp(`function ${name}\\(([^)]*)\\): void \\{([\\s\\S]*?)\\n        \\}`));
         assert.ok(match, name);
-        node[name] = runInNewContext(`(function() {${match[1]}\n})`, context);
+        node[name] = runInNewContext(`(function(${match[1].replace(/: bool/g, "")}) {${match[2]}\n})`, context);
     }
     return { node, nodeHover, holdDelay, calls, advance: ms => { now += ms; } };
 }
@@ -95,4 +96,24 @@ test("pointer handlers cancel and the hold timer has no reduced-motion bypass", 
     assert.match(component, /onExited:\s*\{\s*node\.cancelHold\(\)/);
     assert.match(component, /onCanActivateChanged: if \(!canActivate\) cancelHold\(\)/);
     assert.match(component, /Timer\s*\{\s*id: holdDelay\s*interval: node.holdDuration\s*onTriggered: node.completeHold\(\)/);
+});
+
+
+test("keyboard activation preserves the hold and releasing cancels it", () => {
+    const f = fixture();
+    f.nodeHover.pressed = false;
+    f.nodeHover.containsMouse = false;
+    f.node.pressKeyboard();
+    f.advance(1199);
+    f.node.completeHold();
+    assert.deepEqual(f.calls, []);
+    f.node.cancelHold();
+    f.advance(100);
+    f.node.completeHold();
+    assert.deepEqual(f.calls, []);
+    f.node.pressKeyboard();
+    f.advance(1200);
+    f.node.completeHold();
+    assert.deepEqual(f.calls, ["reboot"]);
+    assert.equal(f.node.keyboardHeld, false);
 });
