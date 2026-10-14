@@ -38,13 +38,20 @@ Scope {
     // A binding alone does not eagerly load a lazy Quickshell singleton; touch
     // it from JS at startup so its persisted state + inhibit surface come up
     // immediately rather than only when the utilities card is first opened.
-    Component.onCompleted: void Services.IdleInhibitor.enabled
+    Component.onCompleted: {
+        void Services.IdleInhibitor.enabled;
+        // A restart while locked loses the unlock edge; settle Emacs's idle state.
+        if (!root.lock.lock.locked)
+            Tasks.idleEnd();
+    }
 
     Connections {
         target: root.lock.lock
         function onLockedChanged(): void {
-            if (root.lock.lock.locked && Tasks.clockedIn)
-                Tasks.clockOut();
+            if (root.lock.lock.locked)
+                Tasks.idleStart();
+            else
+                Tasks.idleEnd();
         }
     }
 

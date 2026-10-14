@@ -109,6 +109,15 @@ Singleton {
         runSideEffect("(sn-tasks/clock-out)");
     }
 
+    // Emacs decides after its idle threshold whether to close the clock at lock time.
+    function idleStart(): void {
+        runSideEffect("(when (fboundp 'sn-worklog/idle-start) (sn-worklog/idle-start))");
+    }
+
+    function idleEnd(): void {
+        runSideEffect("(when (fboundp 'sn-worklog/idle-end) (sn-worklog/idle-end))");
+    }
+
     function markDone(): void {
         runSideEffect("(sn-tasks/mark-done)");
     }
