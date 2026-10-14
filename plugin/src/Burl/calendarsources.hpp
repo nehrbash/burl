@@ -4,14 +4,16 @@
 #include <qobject.h>
 #include <qqmlintegration.h>
 #include <qstring.h>
+#include <qstringlist.h>
 #include <qtimer.h>
 #include <qvariant.h>
 
 namespace burl {
 
-// Parses an org-gcal agenda file (~/doc/gcal.org) into upcoming-event
-// nodes for the launcher graph. Each top-level `* Heading` with an active
-// `<YYYY-MM-DD ...>` timestamp becomes an event; past events are dropped.
+// Parses org-gcal agenda files into upcoming-event nodes for the launcher
+// graph and dashboard. Each `* Heading` with an active `<YYYY-MM-DD ...>`
+// timestamp becomes an event; events on past days are dropped.
+// agendaFile may hold several paths separated by ':'.
 //
 // dayLinks clusters events by calendar day: every event on a given day
 // links to the earliest event that day, so a busy day reads as a cluster.
@@ -52,6 +54,7 @@ signals:
 
 private:
     void rewatch();
+    [[nodiscard]] QStringList files() const;
     void scheduleReload();
 
     QString m_agendaFile;

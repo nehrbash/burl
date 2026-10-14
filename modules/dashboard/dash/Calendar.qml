@@ -34,7 +34,7 @@ CustomMouseArea {
 
     anchors.left: parent.left
     anchors.right: parent.right
-    implicitHeight: inner.implicitHeight + inner.anchors.margins * 2
+    implicitHeight: Math.max(inner.implicitHeight, agenda.implicitHeight) + outer.anchors.margins * 2
 
     acceptedButtons: Qt.MiddleButton
     onClicked: root.screenState.dashboardDate = new Date()
@@ -86,200 +86,217 @@ CustomMouseArea {
         }
     }
 
-    ColumnLayout {
-        id: inner
+    RowLayout {
+        id: outer
 
         anchors.fill: parent
         anchors.margins: Tokens.padding.large
-        spacing: Tokens.spacing.extraSmall
+        spacing: Tokens.spacing.large
 
-        RowLayout {
-            id: monthNavigationRow
+        ColumnLayout {
+            id: inner
 
-            Layout.fillWidth: true
+            Layout.alignment: Qt.AlignTop
+            Layout.preferredWidth: 190
             spacing: Tokens.spacing.extraSmall
 
-            IconButton {
-                isRound: true
-                icon: "chevron_left"
-                type: IconButton.Text
-                font: Tokens.font.icon.builders.small.weight(Font.Bold).build()
-                padding: Tokens.padding.small
-                onClicked: root.screenState.dashboardDate = new Date(root.nonAnimCurrYear, root.nonAnimCurrMonth - 1, 1)
+            RowLayout {
+                id: monthNavigationRow
+
+                Layout.fillWidth: true
+                spacing: Tokens.spacing.extraSmall
+
+                IconButton {
+                    isRound: true
+                    icon: "chevron_left"
+                    type: IconButton.Text
+                    font: Tokens.font.icon.builders.small.weight(Font.Bold).build()
+                    padding: Tokens.padding.small
+                    onClicked: root.screenState.dashboardDate = new Date(root.nonAnimCurrYear, root.nonAnimCurrMonth - 1, 1)
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
+                    implicitWidth: monthYearDisplay.implicitWidth + Tokens.padding.large * 2
+                    implicitHeight: monthYearDisplay.implicitHeight + Tokens.padding.extraSmall * 2
+
+                    StateLayer {
+                        color: Colours.palette.m3primary
+                        radius: pressed ? Tokens.rounding.small : height / 2
+                        disabled: {
+                            const now = new Date();
+                            return root.nonAnimCurrMonth === now.getMonth() && root.nonAnimCurrYear === now.getFullYear();
+                        }
+                        onClicked: root.screenState.dashboardDate = new Date()
+
+                        Behavior on radius {
+                            Anim {
+                                type: Anim.DefaultEffects
+                            }
+                        }
+                    }
+
+                    StyledText {
+                        id: monthYearDisplay
+
+                        opacity: root.animOpacity
+                        transform: Translate {
+                            x: root.animTranslate
+                        }
+
+                        anchors.centerIn: parent
+                        text: grid.title
+                        color: Colours.palette.m3primary
+                        font: Tokens.font.title.builders.small.capitalisation(Font.Capitalize).build()
+                    }
+                }
+
+                IconButton {
+                    isRound: true
+                    icon: "chevron_right"
+                    type: IconButton.Text
+                    font: Tokens.font.icon.builders.small.weight(Font.Bold).build()
+                    padding: Tokens.padding.small
+                    onClicked: root.screenState.dashboardDate = new Date(root.nonAnimCurrYear, root.nonAnimCurrMonth + 1, 1)
+                }
+            }
+
+            DayOfWeekRow {
+                id: daysRow
+
+                Layout.fillWidth: true
+                // DayOfWeekRow reports a 12px implicitHeight for an 18px delegate,
+                // clipping the weekday names. The minimum (same day-glyph metric as
+                // the month grid below) keeps the row from shrinking when the card
+                // comes in a few px short (Dash's scatterH nudges it ±6px).
+                Layout.preferredHeight: dayMetric.implicitHeight + Tokens.padding.extraSmall * 2
+                Layout.minimumHeight: daysRow.Layout.preferredHeight
+                locale: grid.locale
+
+                delegate: StyledText {
+                    required property var model
+
+                    horizontalAlignment: Text.AlignHCenter
+                    text: model.narrowName
+                    font: Tokens.font.body.builders.small.weight(Font.Medium).build()
+                    color: (model.day === 0 || model.day === 6) ? Colours.palette.m3tertiary : Colours.palette.m3onSurface
+                }
             }
 
             Item {
+                id: gridBox
+
+                // MonthGrid reports a bogus implicit size (0x15 for a full
+                // six-week month), so binding to it crammed all six weeks into
+                // 15px with dates drawn on top of each other. Size cells
+                // explicitly instead, clamped so a wide card doesn't blow days up.
+                readonly property real dayMin: dayMetric.implicitHeight + Tokens.padding.small
+                readonly property real dayCell: Math.max(gridBox.dayMin, Math.min(gridBox.dayMin * 2, (gridBox.width - grid.spacing * 6) / 7))
+
                 Layout.fillWidth: true
-                Layout.fillHeight: true
+                implicitHeight: gridBox.dayCell * 6 + grid.spacing * 5
+                Layout.minimumHeight: gridBox.implicitHeight
 
-                implicitWidth: monthYearDisplay.implicitWidth + Tokens.padding.large * 2
-                implicitHeight: monthYearDisplay.implicitHeight + Tokens.padding.extraSmall * 2
-
-                StateLayer {
-                    color: Colours.palette.m3primary
-                    radius: pressed ? Tokens.rounding.small : height / 2
-                    disabled: {
-                        const now = new Date();
-                        return root.nonAnimCurrMonth === now.getMonth() && root.nonAnimCurrYear === now.getFullYear();
-                    }
-                    onClicked: root.screenState.dashboardDate = new Date()
-
-                    Behavior on radius {
-                        Anim {
-                            type: Anim.DefaultEffects
-                        }
-                    }
-                }
-
+                // Measures a day cell the same way the grid delegate builds one
+                // (text.implicitHeight + padding.small).
                 StyledText {
-                    id: monthYearDisplay
+                    id: dayMetric
 
-                    opacity: root.animOpacity
-                    transform: Translate {
-                        x: root.animTranslate
-                    }
-
-                    anchors.centerIn: parent
-                    text: grid.title
-                    color: Colours.palette.m3primary
-                    font: Tokens.font.title.builders.small.capitalisation(Font.Capitalize).build()
+                    visible: false
+                    text: "30"
+                    font: Tokens.font.body.small
                 }
-            }
 
-            IconButton {
-                isRound: true
-                icon: "chevron_right"
-                type: IconButton.Text
-                font: Tokens.font.icon.builders.small.weight(Font.Bold).build()
-                padding: Tokens.padding.small
-                onClicked: root.screenState.dashboardDate = new Date(root.nonAnimCurrYear, root.nonAnimCurrMonth + 1, 1)
-            }
-        }
+                opacity: root.animOpacity
+                transform: Translate {
+                    x: root.animTranslate
+                }
 
-        DayOfWeekRow {
-            id: daysRow
+                MonthGrid {
+                    id: grid
 
-            Layout.fillWidth: true
-            // DayOfWeekRow reports a 12px implicitHeight for an 18px delegate,
-            // clipping the weekday names. The minimum (same day-glyph metric as
-            // the month grid below) keeps the row from shrinking when the card
-            // comes in a few px short (Dash's scatterH nudges it ±6px).
-            Layout.preferredHeight: dayMetric.implicitHeight + Tokens.padding.extraSmall * 2
-            Layout.minimumHeight: daysRow.Layout.preferredHeight
-            locale: grid.locale
+                    month: root.currMonth
+                    year: root.currYear
 
-            delegate: StyledText {
-                required property var model
+                    anchors.fill: parent
 
-                horizontalAlignment: Text.AlignHCenter
-                text: model.shortName
-                font: Tokens.font.body.builders.small.weight(Font.Medium).build()
-                color: (model.day === 0 || model.day === 6) ? Colours.palette.m3tertiary : Colours.palette.m3onSurface
-            }
-        }
+                    spacing: 3
+                    locale: Qt.locale()
 
-        Item {
-            id: gridBox
+                    delegate: Item {
+                        id: dayItem
 
-            // MonthGrid reports a bogus implicit size (0x15 for a full
-            // six-week month), so binding to it crammed all six weeks into
-            // 15px with dates drawn on top of each other. Size cells
-            // explicitly instead, clamped so a wide card doesn't blow days up.
-            readonly property real dayMin: dayMetric.implicitHeight + Tokens.padding.small
-            readonly property real dayCell: Math.max(gridBox.dayMin, Math.min(gridBox.dayMin * 2, (gridBox.width - grid.spacing * 6) / 7))
+                        required property var model
 
-            Layout.fillWidth: true
-            implicitHeight: gridBox.dayCell * 6 + grid.spacing * 5
-            Layout.minimumHeight: gridBox.implicitHeight
+                        implicitWidth: implicitHeight
+                        implicitHeight: text.implicitHeight + Tokens.padding.small
 
-            // Measures a day cell the same way the grid delegate builds one
-            // (text.implicitHeight + padding.small).
-            StyledText {
-                id: dayMetric
+                        StyledText {
+                            id: text
 
-                visible: false
-                text: "30"
-                font: Tokens.font.body.small
-            }
+                            anchors.centerIn: parent
 
-            opacity: root.animOpacity
-            transform: Translate {
-                x: root.animTranslate
-            }
+                            horizontalAlignment: Text.AlignHCenter
+                            text: grid.locale.toString(dayItem.model.day)
+                            color: {
+                                const dayOfWeek = dayItem.model.date.getDay();
+                                if (dayOfWeek === 0 || dayOfWeek === 6)
+                                    return Colours.palette.m3tertiary;
 
-            MonthGrid {
-                id: grid
-
-                month: root.currMonth
-                year: root.currYear
-
-                anchors.fill: parent
-
-                spacing: 3
-                locale: Qt.locale()
-
-                delegate: Item {
-                    id: dayItem
-
-                    required property var model
-
-                    implicitWidth: implicitHeight
-                    implicitHeight: text.implicitHeight + Tokens.padding.small
-
-                    StyledText {
-                        id: text
-
-                        anchors.centerIn: parent
-
-                        horizontalAlignment: Text.AlignHCenter
-                        text: grid.locale.toString(dayItem.model.day)
-                        color: {
-                            const dayOfWeek = dayItem.model.date.getDay();
-                            if (dayOfWeek === 0 || dayOfWeek === 6)
-                                return Colours.palette.m3tertiary;
-
-                            return Colours.palette.m3onSurfaceVariant;
+                                return Colours.palette.m3onSurfaceVariant;
+                            }
+                            opacity: dayItem.model.today || dayItem.model.month === grid.month ? 1 : 0.4
+                            font: Tokens.font.body.small
                         }
-                        opacity: dayItem.model.today || dayItem.model.month === grid.month ? 1 : 0.4
-                        font: Tokens.font.body.small
+                    }
+                }
+
+                MaterialShape {
+                    id: todayIndicator
+
+                    readonly property Item todayItem: grid.contentItem.children.find(c => c.model.today) ?? null
+                    property Item today
+
+                    onTodayItemChanged: {
+                        if (todayItem)
+                            today = todayItem;
+                    }
+
+                    x: today ? today.x + (today.width - implicitWidth) / 2 : 0
+                    y: today ? today.y - Tokens.padding.extraSmall - 1 : 0
+
+                    implicitSize: today ? Math.max(today.implicitWidth, today.implicitHeight) + Tokens.padding.extraSmall * 2 : 0
+                    shape: MaterialShape.Sunny
+
+                    clip: true
+                    color: Colours.palette.m3primary
+
+                    opacity: todayItem ? 1 : 0
+
+                    Colouriser {
+                        x: -todayIndicator.x
+                        y: -todayIndicator.y
+
+                        implicitWidth: grid.width
+                        implicitHeight: grid.height
+
+                        source: grid
+                        sourceColor: Colours.palette.m3onSurface
+                        colorizationColor: Colours.palette.m3onPrimary
                     }
                 }
             }
+        }
 
-            MaterialShape {
-                id: todayIndicator
+        AgendaPanel {
+            id: agenda
 
-                readonly property Item todayItem: grid.contentItem.children.find(c => c.model.today) ?? null
-                property Item today
-
-                onTodayItemChanged: {
-                    if (todayItem)
-                        today = todayItem;
-                }
-
-                x: today ? today.x + (today.width - implicitWidth) / 2 : 0
-                y: today ? today.y - Tokens.padding.extraSmall - 1 : 0
-
-                implicitSize: today ? Math.max(today.implicitWidth, today.implicitHeight) + Tokens.padding.extraSmall * 2 : 0
-                shape: MaterialShape.Sunny
-
-                clip: true
-                color: Colours.palette.m3primary
-
-                opacity: todayItem ? 1 : 0
-
-                Colouriser {
-                    x: -todayIndicator.x
-                    y: -todayIndicator.y
-
-                    implicitWidth: grid.width
-                    implicitHeight: grid.height
-
-                    source: grid
-                    sourceColor: Colours.palette.m3onSurface
-                    colorizationColor: Colours.palette.m3onPrimary
-                }
-            }
+            Layout.alignment: Qt.AlignTop
+            Layout.fillHeight: true
+            Layout.fillWidth: true
+            Layout.minimumWidth: 200
         }
     }
 }

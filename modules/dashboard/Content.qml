@@ -615,7 +615,7 @@ FocusScope {
         id: cardCalendar
 
         TreeCard {
-            preferW: 400
+            preferW: 500
             preferH: 300
             grainSeed: 4
 
