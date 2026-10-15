@@ -94,7 +94,7 @@ Singleton {
     }
 
     // Build the `hl.monitor({...})` lua expression for one config. Matches the
-    // line format hypr-monitor-write persists, so live and saved state agree.
+    // line format persist() writes, so live and saved state agree.
     function monitorExpr(cfg): string {
         if (cfg.disabled)
             return `hl.monitor({ output = "${cfg.output}", disabled = true })`;
@@ -148,49 +148,33 @@ Singleton {
     function persist(configs): void {
         if (root.persisting)
             return;
-        // Strip the QML-only availableModes field before serialising.
-        const clean = configs.map(c => ({
-                    output: c.output,
-                    disabled: c.disabled,
-                    width: c.width,
-                    height: c.height,
-                    refresh: c.refresh,
-                    x: c.x,
-                    y: c.y,
-                    scale: c.scale,
-                    transform: c.transform,
-                    vrr: c.vrr,
-                    bitdepth: c.bitdepth
-                }));
-        writer.command = ["hypr-monitor-write", root.luaPath, JSON.stringify(clean)];
         root.persisting = true;
-        writer.running = true;
+        writer.setText("-- Machine-local monitor settings; saving in Burl replaces this file.\n\n" + configs.filter(c => c.output).map(root.monitorExpr).join("\n") + "\n");
     }
 
-    Process {
+    function finishPersist(ok: bool, err: string): void {
+        root.persisting = false;
+        if (ok) {
+            if (root._reloadAfter) {
+                root._reloadAfter = false;
+                reloader.running = true;
+            } else {
+                Toaster.toast(qsTr("Monitors saved"), qsTr("Persisted for next reload"), "save");
+            }
+        } else {
+            root._reloadAfter = false;
+            Toaster.toast(qsTr("Save failed"), err, "error");
+        }
+        root.persisted(ok, err);
+    }
+
+    FileView {
         id: writer
 
-        stderr: StdioCollector {
-            id: writerErr
-        }
-
-        onExited: code => {
-            root.persisting = false;
-            if (code === 0) {
-                if (root._reloadAfter) {
-                    root._reloadAfter = false;
-                    reloader.running = true;
-                } else {
-                    Toaster.toast(qsTr("Monitors saved"), qsTr("Persisted for next reload"), "save");
-                }
-                root.persisted(true, "");
-            } else {
-                root._reloadAfter = false;
-                const err = writerErr.text || qsTr("exit %1").arg(code);
-                Toaster.toast(qsTr("Save failed"), err, "error");
-                root.persisted(false, err);
-            }
-        }
+        path: root.luaPath
+        preload: false
+        onSaved: root.finishPersist(true, "")
+        onSaveFailed: error => root.finishPersist(false, FileViewError.toString(error))
     }
 
     Process {

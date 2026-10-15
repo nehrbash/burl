@@ -10,15 +10,26 @@ Singleton {
 
     property var entries: []
     property var modes: []
+    property var variants: []
+    property string variant
     property string catalogError
     property string modeError
     property string applyError
     readonly property string error: applyError || catalogError || modeError
-    readonly property bool busy: apply.running || catalog.running || availableModes.running
+    readonly property bool busy: apply.running || catalog.running || availableModes.running || availableVariants.running
 
     function refresh(): void {
         catalog.running = true;
         availableModes.running = true;
+        availableVariants.running = true;
+    }
+
+    function selectVariant(variant: string): void {
+        if (busy || !variants.includes(variant))
+            return;
+        applyError = "";
+        apply.command = ["burl", "scheme", "set", "--variant", variant];
+        apply.running = true;
     }
 
     function select(name: string, flavour: string): void {
@@ -85,6 +96,23 @@ Singleton {
         }
         stdout: StdioCollector {
             onStreamFinished: root.modes = text.trim().split("\n").filter(mode => ["light", "dark"].includes(mode))
+        }
+    }
+
+    Process {
+        id: availableVariants
+        command: ["burl", "scheme", "list", "--variants"]
+        stdout: StdioCollector {
+            onStreamFinished: root.variants = text.trim().split("\n").filter(variant => variant.length > 0)
+        }
+        onExited: currentVariant.running = true
+    }
+
+    Process {
+        id: currentVariant
+        command: ["burl", "scheme", "get", "--variant"]
+        stdout: StdioCollector {
+            onStreamFinished: root.variant = text.trim()
         }
     }
 

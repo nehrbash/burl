@@ -32,8 +32,47 @@ Item {
     property bool inKindMode: false
     property var kindActions: []
 
+    // `>scheme ` and `>variant ` (written by the Scheme/Variant actions)
+    // list the choices themselves; the rest of the text filters them.
+    readonly property string pickKind: ["scheme", "variant"].find(kind => search.text.startsWith(`${prefix}${kind} `)) ?? ""
+    readonly property string pickFilter: pickKind ? search.text.slice(prefix.length + pickKind.length + 1).trim().toLowerCase() : ""
+    onPickKindChanged: if (pickKind) Schemes.refresh()
+
+    function close(visibilities: var): void {
+        visibilities.launcher = false;
+        visibilities.dashboard = false;
+    }
+
+    readonly property var pickMatches: {
+        const words = pickFilter.split(/\s+/).filter(word => word.length > 0);
+        const wanted = label => words.every(word => label.toLowerCase().includes(word));
+        if (pickKind === "scheme")
+            return Schemes.entries.filter(entry => wanted(`${entry.name} ${entry.flavour}`)).map(entry => ({
+                name: entry.flavour === "default" ? entry.name : `${entry.name} ${entry.flavour}`,
+                desc: entry.name === Colours.scheme && entry.flavour === Colours.flavour ? qsTr("Current scheme") : qsTr("Colour scheme"),
+                icon: "palette",
+                activate: (search, visibilities) => {
+                    Schemes.select(entry.name, entry.flavour);
+                    root.close(visibilities);
+                }
+            }));
+        if (pickKind === "variant")
+            return Schemes.variants.filter(wanted).map(variant => ({
+                name: variant,
+                desc: variant === Schemes.variant ? qsTr("Current variant") : qsTr("Scheme variant"),
+                icon: "colors",
+                activate: (search, visibilities) => {
+                    Schemes.selectVariant(variant);
+                    root.close(visibilities);
+                }
+            }));
+        return [];
+    }
+
     readonly property var matches: calcMode
         ? []
+        : pickKind
+        ? pickMatches
         : inKindMode
         ? kindActions
         : Actions.query(search.text)
