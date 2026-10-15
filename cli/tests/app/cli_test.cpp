@@ -59,7 +59,7 @@ void writeText(const QString& path, const QByteArray& content) {
 void installStubs(const QString& directory) {
     for (const auto* name : {"notify-send", "spicetify", "killall", "pass", "sass", "xdg-open"}) {
         const auto path = directory + u"/" + QString::fromLatin1(name);
-        writeText(path, "#!/bin/sh\nexit 0\n");
+        writeText(path, shebang() + "exit 0\n");
         QFile::setPermissions(path, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
     }
     qputenv("PATH", (directory + u":"_s + qEnvironmentVariable("PATH")).toLocal8Bit());

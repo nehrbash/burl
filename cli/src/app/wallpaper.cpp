@@ -20,6 +20,7 @@
 #include <qfileinfo.h>
 #include <qimagereader.h>
 #include <qjsonobject.h>
+#include <qstandardpaths.h>
 #include <qrandom.h>
 
 using Qt::StringLiterals::operator""_s;
@@ -149,7 +150,9 @@ void runPostHook(const QString& hook, const QString& wall) {
     process.setProcessChannelMode(QProcess::ForwardedOutputChannel);
     process.setStandardInputFile(QProcess::nullDevice());
     process.setStandardErrorFile(QProcess::nullDevice());
-    process.start(u"/bin/sh"_s, {u"-c"_s, hook});
+    // Guix build environments have no /bin/sh.
+    auto shell = QStandardPaths::findExecutable(u"sh"_s);
+    process.start(shell.isEmpty() ? u"/bin/sh"_s : shell, {u"-c"_s, hook});
     if (process.waitForStarted()) {
         process.waitForFinished(-1);
     }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <qdir.h>
+#include <qstandardpaths.h>
 #include <qtemporarydir.h>
 
 // XDG directories under a temporary root, with Hyprland unreachable.
@@ -32,3 +33,8 @@ struct Sandbox {
         qunsetenv("BURL_WALLPAPERS_DIR");
     }
 };
+
+// Stub scripts resolve sh from PATH: build sandboxes have no /bin/sh.
+inline QByteArray shebang() {
+    return "#!" + QStandardPaths::findExecutable(QStringLiteral("sh")).toLocal8Bit() + "\n";
+}

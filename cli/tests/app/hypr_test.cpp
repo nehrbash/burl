@@ -16,8 +16,7 @@ const QByteArray oldPalette = "old palette";
 // from files named for the 1-based call number.
 void installHyprctl(const QString& directory) {
     const auto path = directory + u"/hyprctl";
-    blackbox::writeText(path, R"sh(#!/bin/sh
-d=$(dirname "$0")
+    blackbox::writeText(path, shebang() + R"sh(d=$(dirname "$0")
 printf '%s\n' "$*" >> "$d/calls"
 n=$(( $(wc -l < "$d/calls") ))
 cp "$XDG_CONFIG_HOME/hypr/scheme/current.conf" "$d/conf.$n" 2>/dev/null
@@ -33,8 +32,7 @@ exit 0
 // Holds each call open long enough for unserialised runs to overlap.
 void installSlowHyprctl(const QString& directory) {
     const auto path = directory + u"/hyprctl";
-    blackbox::writeText(path, R"sh(#!/bin/sh
-d=$(dirname "$0")
+    blackbox::writeText(path, shebang() + R"sh(d=$(dirname "$0")
 case "$1" in -j) call=monitors ;; *) call=$1 ;; esac
 echo "start $call" >> "$d/log"
 sleep 0.2
