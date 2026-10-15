@@ -61,7 +61,7 @@ Singleton {
 
     function load(data: string, isPreview: bool): void {
         const colours = isPreview ? preview : current;
-        // scheme.json is written by burl-py while this FileView watches it, so
+        // scheme.json is written by the burl CLI while this FileView watches it, so
         // a read can land mid-write. Throwing here would leave the palette
         // half-applied until the next write.
         let scheme;

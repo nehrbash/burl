@@ -198,7 +198,7 @@ Singleton {
     // satty is the same editor the screenshot notification's Open action uses.
     // Passing only `-f`: an "edit" must never overwrite the original, so the
     // destination is left to satty's own `output-filename`, which
-    // burl-py/burl/data/templates/satty.toml points at the saved-screenshots
+    // cli/data/templates/satty.toml points at the saved-screenshots
     // directory under this service's timestamp convention — so a Ctrl+S in
     // satty shows up in this very list, flagged saved. No `setsid -f` either;
     // execDetached already reparents.

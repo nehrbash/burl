@@ -1,0 +1,42 @@
+[
+ {
+  "source": "hd-gradient-noise.jpg",
+  "thumbnail": "hd-gradient-noise.thumb.jpg"
+ },
+ {
+  "source": "portrait-blocks.png",
+  "thumbnail": "portrait-blocks.thumb.jpg"
+ },
+ {
+  "source": "alpha-333x129.png",
+  "thumbnail": "alpha-333x129.thumb.jpg"
+ },
+ {
+  "source": "ultrawide-blocks.png",
+  "thumbnail": "ultrawide-blocks.thumb.jpg"
+ },
+ {
+  "source": "sliver-blocks.png",
+  "thumbnail": "sliver-blocks.thumb.jpg"
+ },
+ {
+  "source": "near-square.png",
+  "thumbnail": "near-square.thumb.jpg"
+ },
+ {
+  "source": "exact-box.png",
+  "thumbnail": "exact-box.thumb.jpg"
+ },
+ {
+  "source": "small.png",
+  "thumbnail": "small.thumb.jpg"
+ },
+ {
+  "source": "odd-prime.jpg",
+  "thumbnail": "odd-prime.thumb.jpg"
+ },
+ {
+  "source": "photo.webp",
+  "thumbnail": "photo.thumb.jpg"
+ }
+]

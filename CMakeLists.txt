@@ -34,7 +34,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 
 set(DISTRIBUTOR "Unset" CACHE STRING "Distributor")
-set(ENABLE_MODULES "extras;plugin;shell;m3shapes" CACHE STRING "Modules to build/install")
+set(ENABLE_MODULES "extras;plugin;shell;m3shapes;cli" CACHE STRING "Modules to build/install")
 set(INSTALL_LIBDIR "usr/lib/burl" CACHE STRING "Library install dir")
 set(INSTALL_QMLDIR "usr/lib/qt6/qml" CACHE STRING "QML install dir")
 set(INSTALL_QSCONFDIR "etc/xdg/quickshell/burl" CACHE STRING "Quickshell config install dir")
@@ -57,6 +57,11 @@ endif()
 
 if("plugin" IN_LIST ENABLE_MODULES)
     add_subdirectory(plugin)
+endif()
+
+if("cli" IN_LIST ENABLE_MODULES)
+    include(CTest)
+    add_subdirectory(cli)
 endif()
 
 if("shell" IN_LIST ENABLE_MODULES)

@@ -1,0 +1,106 @@
+[
+ {
+  "image": "flat-blue.png",
+  "score": "FF285AC8",
+  "colourfulness": 43.188540146663904,
+  "variant": "tonalspot",
+  "meanPixel": [
+   40,
+   90,
+   200
+  ],
+  "tone": 41.110354142703116,
+  "mode": "dark"
+ },
+ {
+  "image": "flat-grey.png",
+  "score": "FF808080",
+  "colourfulness": 0.0,
+  "variant": "neutral",
+  "meanPixel": [
+   128,
+   128,
+   128
+  ],
+  "tone": 53.585013452169036,
+  "mode": "dark"
+ },
+ {
+  "image": "flat-light.png",
+  "score": "FFEBE6DC",
+  "colourfulness": 4.038873605350878,
+  "variant": "neutral",
+  "meanPixel": [
+   235,
+   230,
+   220
+  ],
+  "tone": 91.42539025471885,
+  "mode": "light"
+ },
+ {
+  "image": "gradient.png",
+  "score": "FFF77309",
+  "colourfulness": 121.0650753604069,
+  "variant": "tonalspot",
+  "meanPixel": [
+   127,
+   106,
+   128
+  ],
+  "tone": 47.46734185481261,
+  "mode": "dark"
+ },
+ {
+  "image": "noise.png",
+  "score": "FF2BEE1D",
+  "colourfulness": 113.39454395548805,
+  "variant": "tonalspot",
+  "meanPixel": [
+   128,
+   128,
+   128
+  ],
+  "tone": 53.585013452169036,
+  "mode": "dark"
+ },
+ {
+  "image": "blocks.png",
+  "score": "FFF0C828",
+  "colourfulness": 116.75731819002253,
+  "variant": "tonalspot",
+  "meanPixel": [
+   144,
+   126,
+   82
+  ],
+  "tone": 53.449516352358046,
+  "mode": "dark"
+ },
+ {
+  "image": "alpha.png",
+  "score": "FFE664EF",
+  "colourfulness": 90.57773002449542,
+  "variant": "tonalspot",
+  "meanPixel": [
+   126,
+   100,
+   126
+  ],
+  "tone": 45.711240612338344,
+  "mode": "dark"
+ },
+ {
+  "image": "thumbnail.jpg",
+  "score": "FF7ABC5A",
+  "colourfulness": 43.08838694671627,
+  "variant": "tonalspot",
+  "meanPixel": [
+   128,
+   128,
+   128
+  ],
+  "tone": 53.585013452169036,
+  "mode": "dark"
+ }
+]

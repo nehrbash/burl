@@ -1,8 +1,9 @@
 .PHONY: check check-lifecycle
 check:
 	node --test tests/burl-*.mjs
-	python3 tests/theme-schemes.py
-	python3 tests/theme-hyprland.py
+	cmake -S . -B build/cli-check -G Ninja -DENABLE_MODULES=cli -DVERSION=0 -DGIT_REVISION=dev
+	ninja -C build/cli-check
+	ctest --test-dir build/cli-check --output-on-failure
 	@for file in tests/hyprland-*.lua; do lua "$$file" || exit 1; done
 check-lifecycle:
 	./scripts/qs-launcher-cycle.sh

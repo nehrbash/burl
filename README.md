@@ -86,8 +86,8 @@ configuration lifecycle. They do not choose your keybindings or applications.
 
 ## Development
 
-The root contains the QML shell and `plugin/`; `cli/` contains the Python
-appearance tool. `bin/` contains runtime helpers and `scripts/` contains
+The root contains the QML shell and `plugin/`; `cli/` contains the C++
+`burl` appearance tool, whose colour output is pinned by `tests/colour-oracle`. `bin/` contains runtime helpers and `scripts/` contains
 rendering and validation tools. Guix recipes live in Cellar.
 
 Run `make check` for behavioral regressions. `make check-lifecycle` exercises

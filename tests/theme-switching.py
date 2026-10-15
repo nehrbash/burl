@@ -19,21 +19,19 @@ with tempfile.TemporaryDirectory(prefix="burl-theme-test-") as directory:
     root = Path(directory)
     config = root / "config/burl"
     config.mkdir(parents=True)
-    keys = re.findall(r'check\("([^"]+)"\)', (source / "cli/burl/utils/theme.py").read_text())
+    keys = re.findall(r'enabled\("([^"]+)"\)', (source / "cli/src/app/theme.cpp").read_text())
     (config / "cli.json").write_text(json.dumps({"theme": dict.fromkeys(keys, False)}))
     (root / "bin").mkdir()
     cli = root / "bin/burl"
-    cli.write_text("#!/bin/sh\nexec " + shlex.quote(sys.executable) + ' -m burl "$@"\n')
+    cli.write_text("#!/bin/sh\nexec " + shlex.quote(os.environ.get("BURL_CLI", str(package / "bin/burl"))) + ' "$@"\n')
     cli.chmod(0o755)
     notification = root / "bin/notify-send"
     notification.write_text("#!/bin/sh\nprintf '%s\\n' \"$*\" > " + shlex.quote(str(root / "notification")) + "\n")
     notification.chmod(0o755)
     env.update(XDG_CONFIG_HOME=str(root / "config"), XDG_STATE_HOME=str(root / "state"),
                XDG_CACHE_HOME=str(root / "cache"), XDG_DATA_HOME=str(root / "data"),
-               PYTHONPATH=str(source / "cli"), PATH=str(root / "bin") + ":" + env["PATH"])
-    subprocess.run([sys.executable, "-c",
-                    "from burl.utils.scheme import get_scheme; get_scheme().select('gruvbox', 'medium', 'dark')"],
-                   env=env, check=True)
+               PATH=str(root / "bin") + ":" + env["PATH"])
+    subprocess.run([str(cli), "scheme", "set", "-n", "gruvbox", "-f", "medium", "-m", "dark"], env=env, check=True)
     probe = root / "probe"
     probe.mkdir()
     for path in source.iterdir():
