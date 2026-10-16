@@ -69,14 +69,13 @@ Timer {
             const d = host.bounds(down), u = host.bounds(up), s = host.bounds(search);
             host.check(host.checkedAscent, 'initial ascent was exercised');
             host.check(down.enabled && !up.enabled, 'sky enables only its navigation');
-            host.check(down.width <= 240 && down.width <= subject.width * 0.4 + 0.1,
-                'return target has bounded width');
+            host.check(Math.abs(d.x) < 0.1 && Math.abs(d.right - subject.width) < 0.1,
+                'return target spans the full bottom edge');
             host.check(down.height <= 64 && down.height <= subject.height * 0.08 + 0.1,
                 'return target has bounded height');
             host.check(Math.abs(d.x + down.width / 2 - subject.width / 2) < 0.1
                 && Math.abs(d.bottom - subject.height) < 0.1, 'return target is bottom centered');
             host.check(d.y >= s.bottom - 0.1, 'return target stays below search');
-            host.check(d.x >= sidebarStub.trunkX + sidebarStub.trunkWidth, 'return target clears sidebar roots');
             host.check(up.height <= 56 && up.height <= subject.height * 0.1 + 0.1
                 && Math.abs(u.y) < 0.1 && Math.abs(u.x) < 0.1
                 && Math.abs(up.width - subject.width) < 0.1, 'ascent uses only a narrow top strip');

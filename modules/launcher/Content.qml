@@ -403,9 +403,9 @@ Item {
         id: descend
         objectName: "skyDescend"
 
-        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.left: parent.left
+        anchors.right: parent.right
         anchors.bottom: parent.bottom
-        width: Math.min(240, parent.width * 0.4)
         height: Math.min(64, parent.height * 0.08)
         z: root.chromeZ
         enabled: root.atSky
