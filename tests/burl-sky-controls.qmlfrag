@@ -50,11 +50,10 @@ Timer {
     onTriggered: {
         const down = host.find(subject, 'skyDescend');
         const up = host.find(subject, 'treeAscend');
-        const close = host.find(subject, 'skyClose');
         const search = host.find(subject, 'skySearch');
-        if (!host.check(down && up && close && search, 'navigation controls and search exist')) return;
+        if (!host.check(down && up && search, 'navigation controls and search exist')) return;
         if (subject.panP > 0.1 && subject.panP < 0.9) {
-            host.check(!down.enabled && !up.enabled && !close.enabled, 'camera travel disables navigation');
+            host.check(!down.enabled && !up.enabled, 'camera travel disables navigation');
             if (host.controlPhase === 1) {
                 const graph = host.find(subject, 'skyGraph');
                 host.check(graph && Math.abs(graph.y + subject.height * 1.12 * (1 - subject.panP)) < 0.1,
@@ -67,9 +66,9 @@ Timer {
             }
         }
         if (host.controlPhase === 1 && subject.panP > 0.999 && subject.atSky) {
-            const d = host.bounds(down), u = host.bounds(up), c = host.bounds(close), s = host.bounds(search);
+            const d = host.bounds(down), u = host.bounds(up), s = host.bounds(search);
             host.check(host.checkedAscent, 'initial ascent was exercised');
-            host.check(down.enabled && close.enabled && !up.enabled, 'sky enables only its navigation');
+            host.check(down.enabled && !up.enabled, 'sky enables only its navigation');
             host.check(down.width <= 240 && down.width <= subject.width * 0.4 + 0.1,
                 'return target has bounded width');
             host.check(down.height <= 64 && down.height <= subject.height * 0.08 + 0.1,
@@ -81,25 +80,23 @@ Timer {
             host.check(up.height <= 56 && up.height <= subject.height * 0.1 + 0.1
                 && Math.abs(u.y) < 0.1 && Math.abs(u.x) < 0.1
                 && Math.abs(up.width - subject.width) < 0.1, 'ascent uses only a narrow top strip');
-            host.check(c.x > subject.width / 2 && c.right <= subject.width + 0.1
-                && c.y >= 0 && c.bottom < subject.height / 2, 'close stays in the upper right');
             if (host.controlPhase < 0) return;
             host.controlPhase = 2;
             down.clicked(null);
             host.check(host.cycleState.dashboard && !host.cycleState.launcher, 'return click opens world tree');
         } else if (host.controlPhase === 2 && subject.panP < 0.001 && subject.atTree) {
             host.check(host.checkedDescent, 'descent camera travel was exercised');
-            host.check(up.enabled && !down.enabled && !close.enabled, 'tree enables only ascent');
+            host.check(up.enabled && !down.enabled, 'tree enables only ascent');
             if (host.controlPhase < 0) return;
             host.controlPhase = 3;
             up.clicked(null);
             host.check(host.cycleState.launcher && !host.cycleState.dashboard, 'ascent click opens sky');
         } else if (host.controlPhase === 3 && subject.panP > 0.999 && subject.atSky) {
             host.check(host.checkedReturnAscent, 'clicked ascent camera travel was exercised');
-            host.check(down.enabled && close.enabled && !up.enabled, 'return ascent restores exclusive sky controls');
-            close.clicked(null);
+            host.check(down.enabled && !up.enabled, 'return ascent restores exclusive sky controls');
+            subject.dismiss();
             host.check(!host.cycleState.launcher && !host.cycleState.dashboard, 'close exits both rooms');
-            host.check(!down.enabled && !up.enabled && !close.enabled, 'closed surface disables every navigation target');
+            host.check(!down.enabled && !up.enabled, 'closed surface disables every navigation target');
             if (host.controlPhase !== -1) {
                 host.controlPhase = 4;
                 console.log('SKY-CONTROLS-COMPLETE');

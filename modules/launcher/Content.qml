@@ -366,38 +366,6 @@ Item {
         }
     }
 
-    MouseArea {
-        id: closeSky
-        objectName: "skyClose"
-        anchors.right: parent.right
-        anchors.top: parent.top
-        anchors.margins: Tokens.spacing.large
-        width: closeLabel.implicitWidth + 30
-        height: 44
-        z: root.chromeZ
-        enabled: root.atSky
-        visible: descend.visible
-        opacity: root.arrivalP * root.revealP
-        hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
-        onClicked: root.dismiss()
-
-        Rectangle {
-            anchors.fill: parent
-            radius: height / 2
-            color: closeSky.containsMouse ? Colours.palette.m3surfaceContainerHighest : Colours.palette.m3surfaceContainer
-            border.width: 1
-            border.color: Qt.alpha(closeSky.containsMouse ? Colours.palette.m3primary : Colours.palette.m3outline, 0.3)
-        }
-        Text {
-            id: closeLabel
-            anchors.centerIn: parent
-            text: qsTr("Close · Esc")
-            color: Woodland.creamSecondary
-            font.pixelSize: 12
-        }
-    }
-
     Item {
         id: quickGrid
         z: root.chromeZ
