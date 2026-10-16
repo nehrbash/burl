@@ -101,8 +101,8 @@ ColumnLayout {
                 icon: "play_arrow"
                 type: IconButton.Text
                 onClicked: {
-                    root.screenState.utilities = false;
-                    root.screenState.sidebar = false;
+                    root.screenState.setVisible("utilities", false, "pointer");
+                    root.screenState.setVisible("sidebar", false, "pointer");
                     AppPreferences.open("playback", recording.modelData.path);
                 }
             }
@@ -111,8 +111,8 @@ ColumnLayout {
                 icon: "folder"
                 type: IconButton.Text
                 onClicked: {
-                    root.screenState.utilities = false;
-                    root.screenState.sidebar = false;
+                    root.screenState.setVisible("utilities", false, "pointer");
+                    root.screenState.setVisible("sidebar", false, "pointer");
                     AppPreferences.open("explorer", recording.modelData.path.substring(0, recording.modelData.path.lastIndexOf("/")));
                 }
             }

@@ -57,7 +57,7 @@ Item {
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
-                    root.screenState.dashboard = false;
+                    root.screenState.setVisible("dashboard", false, "pointer");
                     root.facePicker.open();
                 }
             }

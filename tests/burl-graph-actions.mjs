@@ -1,3 +1,4 @@
+import { state as navigation } from "./lib/navigation-state.mjs";
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
@@ -14,7 +15,7 @@ function harness(overrides = {}) {
         dispatch: command => commands.push(command),
         ...overrides
     };
-    return { context, commands, visibility: { launcher: true } };
+    return { context, commands, visibility: navigation({navStyle: "tabs"}, {launcher: true}).root };
 }
 
 test('mail actions retain source identity and sender rather than graph identity', () => {

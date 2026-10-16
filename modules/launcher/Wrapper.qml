@@ -16,9 +16,17 @@ Item {
     required property var panels
 
     // Both rooms share one surface so their camera transition stays continuous.
-    readonly property bool shouldBeActive: (visibilities.launcher || visibilities.dashboard) && Config.launcher.enabled
+    readonly property bool shouldBeActive: visibilities.worldOpen && Config.launcher.enabled
 
     property real offsetScale: shouldBeActive ? 0 : 1
+
+    // Dismissal must be available before the asynchronous scene is ready.
+    Shortcut {
+        sequence: "Escape"
+        context: Qt.WindowShortcut
+        enabled: root.shouldBeActive
+        onActivated: root.visibilities.closeWorld("escape")
+    }
 
     // Retain the warm scene between opens outside Performance mode.
     property bool loaderActive: false

@@ -52,13 +52,11 @@ Singleton {
                     searchField.text = argv[1];
                 } else if (argv[0] === "setMode" && argv.length > 1) {
                     Colours.setMode(argv[1]);
-                    visibilities.launcher = false;
-                    visibilities.dashboard = false;
+                    visibilities.closeWorld("dismiss");
                 } else {
                     if (!CommandArguments.isSessionShorthand(argv) || !IdleInhibitor.execSessionAction(argv))
                         Quickshell.execDetached(argv);
-                    visibilities.launcher = false;
-                    visibilities.dashboard = false;
+                    visibilities.closeWorld("dismiss");
                 }
             } catch (error) {
                 Toaster.toast(qsTr("Cannot run command"), String(error), "error");

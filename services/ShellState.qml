@@ -20,13 +20,12 @@ Singleton {
 
     function setBarAll(v: bool): void {
         for (const s of states.instances)
-            s.bar = v;
+            s.setVisible("bar", v, "ipc");
     }
 
     function selectWorkspace(requests: var): void {
         for (const state of states.instances) {
-            state.launcher = false;
-            state.dashboard = false;
+            state.closeWorld("workspace");
         }
         if (requests.length > 0)
             Hypr.batchDispatch(requests);

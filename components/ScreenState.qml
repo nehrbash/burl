@@ -11,35 +11,41 @@ Scope {
     readonly property var dashboardSections: DashboardSections.sections
     readonly property var dashboardSectionIds: dashboardSections.map(section => section.id)
     readonly property var dashboardEnabledIds: DashboardSections.enabledIds(dashboardConfig)
+    readonly property bool worldOpen: intent.worldRoom !== ""
+    readonly property string worldRoom: intent.worldRoom
     readonly property int dashboardTab: dashboardEnabledIds.indexOf(dashboardSection)
 
-    property alias bar: intent.bar
-    property alias osd: intent.osd
-    property alias launcher: intent.launcher
-    property alias dashboard: intent.dashboard
-    property alias utilities: intent.utilities
-    property alias sidebar: intent.sidebar
-    property alias dashboardSection: intent.dashboardSection
+    readonly property bool bar: intent.bar
+    readonly property bool osd: intent.osd
+    readonly property bool launcher: intent.worldRoom === "launcher" || intent.worldRoom === "both"
+    readonly property bool dashboard: intent.worldRoom === "dashboard" || intent.worldRoom === "both"
+    readonly property bool utilities: intent.utilities
+    readonly property bool sidebar: intent.sidebar
+    readonly property string dashboardSection: intent.dashboardSection
     readonly property var dashboardOpenSections: intent.dashboardOpenSection ? [intent.dashboardOpenSection] : []
-    property alias dashboardFocusSection: intent.dashboardFocusSection
-    property alias dashboardDate: intent.dashboardDate
+    readonly property string dashboardFocusSection: intent.dashboardFocusSection
+    readonly property date dashboardDate: intent.dashboardDate
 
-    property bool dashboardWantsKeyboard
-    property bool dashboardOpenedByKey
-    property var dashboardMaskRects: []
-    property var dashboardTrunkRect: null
-    property bool dashboardTreeGrown
-    property bool dashboardTreePinned
+    readonly property bool dashboardOpenedByKey: session.openedByKey
+    readonly property bool dashboardTreePinned: session.pinned
     property bool initialized
+
+    QtObject {
+        id: session
+        property bool openedByKey
+        property bool pinned
+    }
 
     PersistentProperties {
         id: intent
         reloadableId: "screen-intent-" + root.modelData.name
-        onLoaded: root.reconcileDashboardSection()
-        onReloaded: root.reconcileDashboardSection()
+        onLoaded: { root.migrateRoom(); root.reconcileRoom(); root.reconcileDashboardSection(); }
+        onReloaded: { root.migrateRoom(); root.reconcileRoom(); root.reconcileDashboardSection(); }
 
         property bool bar
         property bool osd
+        property string worldRoom
+        // Consumed once when restoring the pre-scalar navigation schema.
         property bool launcher
         property bool dashboard
         property bool utilities
@@ -50,26 +56,103 @@ Scope {
         property date dashboardDate: new Date()
     }
 
-    function openWorldRoom(room: string): void {
-        // Raise the incoming room first to keep the shared surface mounted.
-        if (room === "launcher") {
-            root.launcher = true;
-            root.dashboard = false;
+    function setVisible(name: string, visible: bool, origin: string): bool {
+        if (name === "launcher" || name === "dashboard") {
+            if (visible)
+                root.openRoom(name, origin);
+            else
+                root.closeRoom(name, origin);
+        } else if (["bar", "osd", "utilities", "sidebar"].includes(name)) {
+            intent[name] = visible;
         } else {
-            root.dashboard = true;
-            root.launcher = false;
-            root.dashboardOpenedByKey = true;
+            return false;
+        }
+        return true;
+    }
+
+    function toggleVisible(name: string, origin: string): bool {
+        if (!["bar", "osd", "launcher", "dashboard", "utilities", "sidebar"].includes(name))
+            return false;
+        return root.setVisible(name, !root[name], origin);
+    }
+
+    function openRoom(room: string, origin: string): void {
+        if (room !== "launcher" && room !== "dashboard")
+            return;
+        if (root.dashboardConfig.navStyle === "living") {
+            root.openWorldRoom(room, origin);
+        } else {
+            if (room === "dashboard" && (!root.dashboard || origin === "key" || origin === "ipc"))
+                session.openedByKey = origin === "key" || origin === "ipc";
+            const other = room === "launcher" ? root.dashboard : root.launcher;
+            intent.worldRoom = other ? "both" : room;
         }
     }
 
-    function toggleWorldRoom(room: string): void {
+    function toggleRoom(room: string, origin: string): void {
+        if (room !== "launcher" && room !== "dashboard")
+            return;
+        if (root[room])
+            root.closeRoom(room, "toggle");
+        else
+            root.openRoom(room, origin);
+    }
+
+    function closeRoom(room: string, reason: string): void {
+        if (room !== "launcher" && room !== "dashboard")
+            return;
+        if (intent.worldRoom === "both")
+            intent.worldRoom = room === "launcher" ? "dashboard" : "launcher";
+        else if (intent.worldRoom === room)
+            intent.worldRoom = "";
+    }
+
+    function closeWorld(reason: string): void {
+        intent.worldRoom = "";
+    }
+
+    function openWorldRoom(room: string, origin: var): void {
+        if (room !== "launcher" && room !== "dashboard")
+            return;
+        if (room === "dashboard" && (!root.dashboard || !origin || origin === "key" || origin === "ipc"))
+            session.openedByKey = !origin || origin === "key" || origin === "ipc";
+        intent.worldRoom = room;
+    }
+
+    function toggleWorldRoom(room: string, origin: var): void {
         const current = root.launcher ? "launcher" : root.dashboard ? "dashboard" : "";
-        if (current === room) {
-            root.launcher = false;
-            root.dashboard = false;
-        } else {
-            root.openWorldRoom(room);
+        if (current === room)
+            root.closeWorld("toggle");
+        else
+            root.openWorldRoom(room, origin);
+    }
+
+    function migrateRoom(): void {
+        if (intent.launcher || intent.dashboard) {
+            intent.worldRoom = intent.launcher && intent.dashboard ? "both" : intent.launcher ? "launcher" : "dashboard";
+            intent.launcher = false;
+            intent.dashboard = false;
         }
+    }
+
+    function reconcileRoom(): void {
+        if (!["", "launcher", "dashboard", "both"].includes(intent.worldRoom))
+            intent.worldRoom = "";
+        if (root.dashboardConfig.navStyle === "living" && intent.worldRoom === "both")
+            intent.worldRoom = "launcher";
+    }
+
+    function setDashboardDate(date: date): void {
+        intent.dashboardDate = date;
+    }
+
+    function setDashboardPinned(pinned: bool): void {
+        session.pinned = root.dashboard && pinned;
+    }
+
+    Connections {
+        target: root.dashboardConfig
+        function onNavStyleChanged(): void { root.reconcileRoom(); }
     }
 
     function dashboardSectionFlag(id: string): string {
@@ -83,19 +166,15 @@ Scope {
         return root.selectDashboardSection(ids[Math.max(0, Math.min(ids.length - 1, index))]);
     }
 
-    function storeDashboardOpenSections(ids: var): void {
-        intent.dashboardOpenSection = ids.length ? ids[ids.length - 1] : "";
-    }
-
     function growDashboardSection(id: string): bool {
         if (!id)
             return false;
         const ids = root.dashboardEnabledIds;
         if (!ids.includes(id))
             return false;
-        root.storeDashboardOpenSections([id]);
-        root.dashboardSection = id;
-        root.dashboardFocusSection = id;
+        intent.dashboardOpenSection = id;
+        intent.dashboardSection = id;
+        intent.dashboardFocusSection = id;
         return true;
     }
 
@@ -108,19 +187,19 @@ Scope {
         if (!id || open.length === 0 || !open.includes(id))
             return false;
         const next = open.filter(x => x !== id);
-        root.storeDashboardOpenSections(next);
+        intent.dashboardOpenSection = next[next.length - 1] ?? "";
         if (next.length === 0)
             return true;
         const emphasis = next[next.length - 1];
         if (root.dashboardSection !== emphasis) {
-            root.dashboardSection = emphasis;
-            root.dashboardFocusSection = emphasis;
+            intent.dashboardSection = emphasis;
+            intent.dashboardFocusSection = emphasis;
         }
         return true;
     }
 
     function foldAllDashboardSections(): void {
-        root.storeDashboardOpenSections([]);
+        intent.dashboardOpenSection = "";
     }
 
     function emphasiseDashboardSection(id: string): bool {
@@ -129,19 +208,19 @@ Scope {
             return false;
         const next = open.filter(x => x !== id);
         next.push(id);
-        root.storeDashboardOpenSections(next);
-        root.dashboardSection = id;
-        root.dashboardFocusSection = id;
+        intent.dashboardOpenSection = next[next.length - 1] ?? "";
+        intent.dashboardSection = id;
+        intent.dashboardFocusSection = id;
         return true;
     }
 
     function setDashboardOpenSections(ids: var): void {
         const list = (ids ?? []).filter(id => root.dashboardEnabledIds.includes(id));
-        root.storeDashboardOpenSections(list);
+        intent.dashboardOpenSection = list[list.length - 1] ?? "";
         const emphasis = root.dashboardOpenSections[0] ?? root.dashboardSection;
         if (root.dashboardSection !== emphasis) {
-            root.dashboardSection = emphasis;
-            root.dashboardFocusSection = emphasis;
+            intent.dashboardSection = emphasis;
+            intent.dashboardFocusSection = emphasis;
         }
     }
 
@@ -165,7 +244,7 @@ Scope {
         const ids = root.dashboardSectionIds;
         if (!id || (ids.length > 0 && !ids.includes(id)))
             return false;
-        root.dashboardFocusSection = id;
+        intent.dashboardFocusSection = id;
         return true;
     }
 
@@ -184,19 +263,18 @@ Scope {
         const ids = root.dashboardEnabledIds;
         const openFiltered = root.dashboardOpenSections.filter(id => ids.includes(id)).slice(-1);
         if (JSON.stringify(openFiltered) !== JSON.stringify(root.dashboardOpenSections))
-            root.storeDashboardOpenSections(openFiltered);
+            intent.dashboardOpenSection = openFiltered[0] ?? "";
         if (!ids.includes(root.dashboardSection))
-            root.dashboardSection = openFiltered[0] ?? ids[0] ?? "";
+            intent.dashboardSection = openFiltered[0] ?? ids[0] ?? "";
         if (!ids.includes(root.dashboardFocusSection))
-            root.dashboardFocusSection = ids[0] ?? "";
+            intent.dashboardFocusSection = ids[0] ?? "";
     }
 
     onDashboardChanged: {
         if (root.initialized && !root.dashboard) {
-            root.dashboardOpenedByKey = false;
-            root.dashboardTreeGrown = false;
-            root.dashboardTreePinned = false;
-            root.storeDashboardOpenSections([]);
+            session.openedByKey = false;
+            session.pinned = false;
+            intent.dashboardOpenSection = "";
         }
     }
     onDashboardEnabledIdsChanged: root.reconcileDashboardSection()

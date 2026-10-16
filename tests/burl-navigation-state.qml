@@ -29,6 +29,10 @@ ShellRoot {
               message + ": " + JSON.stringify(actual));
     }
 
+    function savedIntent() {
+        return navigation.fixtureSavedIntent;
+    }
+
     function run() {
         try {
             if (progress.phase === 0)
@@ -39,6 +43,10 @@ ShellRoot {
                 invalidRestored();
             else if (progress.phase === 3)
                 disabledRestored();
+            else if (progress.phase === 4)
+                migratedTabs();
+            else if (progress.phase === 5)
+                migratedLiving();
             else
                 throw new Error("unexpected reload phase " + progress.phase);
         } catch (error) {
@@ -78,14 +86,13 @@ ShellRoot {
         equal(navigation.dashboardEnabledIds, ["dashboard", "performance", "weather", "tasks"],
               "catalog follows screen config changes");
 
-        navigation.openWorldRoom("dashboard");
+        navigation.openRoom("dashboard", "key");
         check(navigation.selectDashboardSection("tasks"), "select persistent intent");
-        navigation.dashboardWantsKeyboard = true;
-        navigation.dashboardOpenedByKey = true;
-        navigation.dashboardTreePinned = true;
-        navigation.dashboardTreeGrown = true;
-        navigation.dashboardMaskRects = [{x: 1, y: 2, width: 3, height: 4}];
-        navigation.dashboardTrunkRect = {x: 1, y: 2, width: 3, height: 4};
+        navigation.setDashboardPinned(true);
+        check(navigation.dashboardOpenedByKey && navigation.dashboardTreePinned, "transient input intent set through commands");
+        check(navigation.dashboardMaskRects === undefined && navigation.dashboardTrunkRect === undefined
+              && navigation.dashboardWantsKeyboard === undefined && navigation.dashboardTreeGrown === undefined,
+              "navigation does not own window presentation");
         progress.phase = 1;
         console.log("NAVIGATION-INITIAL-PASS");
         Qt.callLater(function () { Quickshell.reload(false); });
@@ -96,11 +103,8 @@ ShellRoot {
         check(navigation.dashboardSection === "tasks", "selected intent survives reload");
         equal(navigation.dashboardOpenSections, ["tasks"], "open section survives reload");
         check(navigation.dashboardFocusSection === "tasks", "focus ring survives reload");
-        check(!navigation.dashboardWantsKeyboard && !navigation.dashboardOpenedByKey
-              && !navigation.dashboardTreePinned && !navigation.dashboardTreeGrown,
-              "transient focus and presentation reset");
-        equal(navigation.dashboardMaskRects, [], "mask rectangles reset");
-        check(navigation.dashboardTrunkRect === null, "trunk rectangle resets");
+        check(!navigation.dashboardOpenedByKey && !navigation.dashboardTreePinned,
+              "transient input intent resets");
 
         const config = GlobalConfig.forScreen(navigation.modelData.name).dashboard;
         config.showPerformance = false;
@@ -113,8 +117,8 @@ ShellRoot {
               "derived tab index follows restored config");
         console.log("NAVIGATION-RELOAD-PASS");
         config.showWeather = false;
-        navigation.dashboardSection = "missing";
-        navigation.dashboardFocusSection = "weather";
+        savedIntent().dashboardSection = "missing";
+        savedIntent().dashboardFocusSection = "weather";
         check(navigation.dashboardSection === "missing", "unknown intent seeded before reload");
         progress.phase = 2;
         Qt.callLater(function () { Quickshell.reload(false); });
@@ -125,8 +129,8 @@ ShellRoot {
         check(navigation.dashboardFocusSection === navigation.dashboardEnabledIds[0],
               "disabled restored focus reconciles");
         equal(navigation.dashboardOpenSections, ["tasks"], "valid open intent survives invalid selection");
-        navigation.dashboardSection = "weather";
-        navigation.dashboardFocusSection = "missing";
+        savedIntent().dashboardSection = "weather";
+        savedIntent().dashboardFocusSection = "missing";
         check(navigation.dashboardSection === "weather", "disabled intent seeded before reload");
         progress.phase = 3;
         Qt.callLater(function () { Quickshell.reload(false); });
@@ -140,6 +144,31 @@ ShellRoot {
         check(navigation.dashboardTab === navigation.dashboardEnabledIds.indexOf("tasks"),
               "tab binding follows reconciled selection");
         console.log("NAVIGATION-RESTORE-RECONCILE-PASS");
+        navigation.dashboardConfig.navStyle = "tabs";
+        savedIntent().worldRoom = "";
+        savedIntent().launcher = true;
+        savedIntent().dashboard = true;
+        progress.phase = 4;
+        Qt.callLater(function () { Quickshell.reload(false); });
+    }
+
+    function migratedTabs() {
+        check(navigation.launcher && navigation.dashboard && navigation.worldOpen,
+              "legacy tabs visibility migrates with both rooms open");
+        check(!savedIntent().launcher && !savedIntent().dashboard, "legacy migration flags clear");
+        navigation.dashboardConfig.navStyle = "living";
+        savedIntent().worldRoom = "";
+        savedIntent().launcher = true;
+        savedIntent().dashboard = true;
+        progress.phase = 5;
+        Qt.callLater(function () { Quickshell.reload(false); });
+    }
+
+    function migratedLiving() {
+        check(navigation.launcher && !navigation.dashboard && navigation.worldOpen,
+              "legacy living visibility normalizes to one room");
+        check(!savedIntent().launcher && !savedIntent().dashboard, "legacy living flags clear");
+        console.log("NAVIGATION-MIGRATION-PASS");
         Qt.quit();
     }
 }

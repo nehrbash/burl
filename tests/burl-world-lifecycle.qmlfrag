@@ -1,0 +1,109 @@
+property var cycleState: Qt.createQmlObject('import Quickshell; import qs.components; ScreenState { modelData: Quickshell.screens[0] }', host)
+property int worldPhase: 0
+property int worldTicks: 0
+property var retainedScene: null
+property bool watchContinuity: false
+property bool worldPassed: false
+
+function worldLoader() {
+    return subject.children.find(child => child.asynchronous !== undefined && child.sourceComponent !== undefined);
+}
+
+function worldCheck(condition, message) {
+    if (!condition) {
+        console.error("WORLD-LIFECYCLE-FAIL", message);
+        Qt.quit();
+        return false;
+    }
+    return true;
+}
+
+Connections {
+    target: subject
+    function onShouldBeActiveChanged() {
+        if (host.watchContinuity)
+            host.worldCheck(subject.shouldBeActive, "room switch must not drop surface eligibility");
+    }
+}
+
+Timer {
+    interval: 16
+    repeat: true
+    running: !host.worldPassed
+    onTriggered: {
+        const loader = host.worldLoader();
+        const scene = loader?.item;
+        if (++host.worldTicks > 1500) {
+            host.worldCheck(false, "timeout in phase " + host.worldPhase);
+            stop();
+            return;
+        }
+        if (host.watchContinuity && !host.worldCheck(loader.active && scene === host.retainedScene,
+                                                    "room switch retains the same scene"))
+            return;
+        switch (host.worldPhase) {
+        case 0:
+            host.cycleState.openRoom("dashboard", "key");
+            if (!host.worldCheck(!loader.item, "cold close occurs before asynchronous scene readiness"))
+                return;
+            host.cycleState.closeWorld("test-before-ready");
+            host.worldPhase = 1;
+            break;
+        case 1:
+            if (!scene || subject.visible)
+                return;
+            if (!host.worldCheck(!scene.surfaceOpen && !scene.wasOpen && scene.revealP === 0,
+                                 "late scene initialization reads closed intent"))
+                return;
+            host.cycleState.openRoom("dashboard", "key");
+            host.worldPhase = 2;
+            break;
+        case 2:
+            if (!scene || scene.revealP < 0.99 || !scene.atTree)
+                return;
+            host.retainedScene = scene;
+            host.watchContinuity = true;
+            scene.ascend();
+            host.worldPhase = 3;
+            break;
+        case 3:
+            if (scene.panP <= 0.1)
+                return;
+            scene.descend();
+            host.worldPhase = 4;
+            break;
+        case 4:
+            if (!scene.atTree)
+                return;
+            host.watchContinuity = false;
+            host.cycleState.closeWorld("test-reversal");
+            host.worldPhase = 5;
+            break;
+        case 5:
+            if (subject.offsetScale <= 0 || scene.revealP >= 1)
+                return;
+            if (!host.worldCheck(subject.visible, "reopen occurs during closing"))
+                return;
+            host.cycleState.openRoom("launcher", "key");
+            host.worldPhase = 6;
+            break;
+        case 6:
+            if (!scene.atSky || scene.revealP < 0.99)
+                return;
+            if (!host.worldCheck(scene === host.retainedScene && subject.shouldBeActive && subject.visible,
+                                 "closing reversal preserves scene and reaches latest room"))
+                return;
+            host.cycleState.closeWorld("test-finish");
+            host.worldPhase = 7;
+            break;
+        case 7:
+            if (subject.visible || scene.revealP > 0)
+                return;
+            if (!host.worldCheck(!scene.surfaceOpen && !scene.wasOpen, "final close settles without stale reopen"))
+                return;
+            console.log("WORLD-LIFECYCLE-PASS");
+            host.worldPassed = true;
+            break;
+        }
+    }
+}

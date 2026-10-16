@@ -29,7 +29,7 @@ MouseArea {
     implicitHeight: outer.implicitHeight + outer.anchors.margins * 2
 
     acceptedButtons: Qt.MiddleButton
-    onClicked: root.screenState.dashboardDate = new Date()
+    onClicked: root.screenState.setDashboardDate(new Date())
 
     Anim {
         id: trOutAnim
@@ -108,7 +108,7 @@ MouseArea {
                     type: IconButton.Text
                     font: Tokens.font.icon.builders.small.weight(Font.Bold).build()
                     padding: Tokens.padding.small
-                    onClicked: root.screenState.dashboardDate = new Date(root.nonAnimCurrYear, root.nonAnimCurrMonth - 1, 1)
+                    onClicked: root.screenState.setDashboardDate(new Date(root.nonAnimCurrYear, root.nonAnimCurrMonth - 1, 1))
                 }
 
                 Item {
@@ -125,7 +125,7 @@ MouseArea {
                             const now = new Date();
                             return root.nonAnimCurrMonth === now.getMonth() && root.nonAnimCurrYear === now.getFullYear();
                         }
-                        onClicked: root.screenState.dashboardDate = new Date()
+                        onClicked: root.screenState.setDashboardDate(new Date())
 
                         Behavior on radius {
                             Anim {
@@ -155,7 +155,7 @@ MouseArea {
                     type: IconButton.Text
                     font: Tokens.font.icon.builders.small.weight(Font.Bold).build()
                     padding: Tokens.padding.small
-                    onClicked: root.screenState.dashboardDate = new Date(root.nonAnimCurrYear, root.nonAnimCurrMonth + 1, 1)
+                    onClicked: root.screenState.setDashboardDate(new Date(root.nonAnimCurrYear, root.nonAnimCurrMonth + 1, 1))
                 }
             }
 

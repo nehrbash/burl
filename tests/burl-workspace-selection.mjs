@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { runInNewContext } from "node:vm";
+import { state } from "./lib/navigation-state.mjs";
 
 const shellState = readFileSync(new URL("../services/ShellState.qml", import.meta.url), "utf8");
 
@@ -23,9 +24,9 @@ function selector(calls, screens) {
 test("workspace selection closes sky and tree on every screen before dispatch", () => {
     const calls = [];
     const screens = [
-        { launcher: true, dashboard: false },
-        { launcher: false, dashboard: true },
-        { launcher: true, dashboard: true },
+        state({ navStyle: "tabs" }, { launcher: true, dashboard: false }).root,
+        state({ navStyle: "tabs" }, { launcher: false, dashboard: true }).root,
+        state({ navStyle: "tabs" }, { launcher: true, dashboard: true }).root,
     ];
     const selectWorkspace = selector(calls, screens);
     selectWorkspace(["workspace 4"]);
@@ -40,7 +41,7 @@ test("workspace selection closes sky and tree on every screen before dispatch", 
 
 test("choosing the current workspace closes overlays without dispatching", () => {
     const calls = [];
-    const screen = { launcher: true, dashboard: true };
+    const screen = state({ navStyle: "tabs" }, { launcher: true, dashboard: true }).root;
     const selectWorkspace = selector(calls, [screen]);
     selectWorkspace([]);
 

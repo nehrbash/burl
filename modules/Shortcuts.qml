@@ -11,7 +11,7 @@ Scope {
     id: root
 
     property bool launcherInterrupted
-    readonly property bool hasFullscreen: Hypr.focusedWorkspace?.toplevels.values.some(t => t.lastIpcObject?.fullscreen > 1) ?? false
+    readonly property bool hasFullscreen: Hypr.focusedNormalFullscreen
     // The `drawers` IPC contract — keep in sync with components/ScreenState.qml.
     readonly property list<string> drawerNames: ["bar", "osd", "launcher", "dashboard", "utilities", "sidebar"]
 
@@ -30,10 +30,7 @@ Scope {
     }
 
     function toggleRoom(screenState: var, room: string): void {
-        if (screenState.dashboardConfig.navStyle === "living")
-            screenState.toggleWorldRoom(room);
-        else
-            screenState[room] = !screenState[room];
+        screenState?.toggleRoom(room, "key");
     }
 
     // Session controls need a bare tree, with no book covering the roots.
@@ -44,7 +41,6 @@ Scope {
         root.toggleRoom(screenState, "dashboard");
         if (!screenState.dashboard)
             return;
-        screenState.dashboardOpenedByKey = true;
         screenState.foldAllDashboardSections();
     }
 
@@ -71,13 +67,11 @@ Scope {
             const includeDashboard = v.dashboardConfig.navStyle !== "living";
             const anyOpen = v.launcher || (includeDashboard && v.dashboard) || v.osd || v.utilities;
             const next = !anyOpen;
-            v.launcher = next;
+            v.setVisible("launcher", next, "key");
             if (includeDashboard)
-                v.dashboard = next;
-            v.osd = next;
-            v.utilities = next;
-            if (includeDashboard && v.dashboard)
-                v.dashboardOpenedByKey = true;
+                v.setVisible("dashboard", next, "key");
+            v.setVisible("osd", next, "key");
+            v.setVisible("utilities", next, "key");
         }
     }
 
@@ -91,10 +85,6 @@ Scope {
                 return;
             const screenState = ShellState.forActive();
             root.toggleRoom(screenState, "dashboard");
-            // Opened on purpose, so it may take keyboard focus (a merely
-            // hover-opened dashboard must not steal keystrokes).
-            if (screenState.dashboard)
-                screenState.dashboardOpenedByKey = true;
         }
     }
 
@@ -138,7 +128,7 @@ Scope {
             if (root.hasFullscreen)
                 return;
             const screenState = ShellState.forActive();
-            screenState.sidebar = !screenState.sidebar;
+            screenState.toggleVisible("sidebar", "key");
         }
     }
 
@@ -151,7 +141,7 @@ Scope {
             if (root.hasFullscreen)
                 return;
             const screenState = ShellState.forActive();
-            screenState.utilities = !screenState.utilities;
+            screenState.toggleVisible("utilities", "key");
         }
     }
 
@@ -172,10 +162,7 @@ Scope {
                 return;
             ShellState.pendingLauncherQuery = q;
             const state = ShellState.forActive();
-            if (state.dashboardConfig.navStyle === "living")
-                state.openWorldRoom("launcher");
-            else
-                state.launcher = true;
+            state.openRoom("launcher", "ipc");
         }
 
         target: "launcher"
@@ -188,11 +175,9 @@ Scope {
                     return;
                 const screenState = ShellState.forActive();
                 if (["dashboard", "launcher"].includes(drawer))
-                    root.toggleRoom(screenState, drawer);
+                    screenState.toggleRoom(drawer, "ipc");
                 else
-                    screenState[drawer] = !screenState[drawer];
-                if (drawer === "dashboard" && screenState.dashboard)
-                    screenState.dashboardOpenedByKey = true;
+                    screenState.toggleVisible(drawer, "ipc");
             } else {
                 console.warn(lc, `Drawer "${drawer}" does not exist`);
             }
@@ -268,11 +253,7 @@ Scope {
             if (!screenState)
                 return "no active screen";
             if (screenState.growDashboardSection(id)) {
-                if (screenState.dashboardConfig.navStyle === "living")
-                    screenState.openWorldRoom("dashboard");
-                else
-                    screenState.dashboard = true;
-                screenState.dashboardOpenedByKey = true;
+                screenState.openRoom("dashboard", "ipc");
                 return `open=${formatOpenSections(screenState)}`;
             }
             const known = (screenState.dashboardSectionIds ?? []).includes(id);
@@ -356,7 +337,7 @@ Scope {
             const screenState = ShellState.forActive();
             if (!screenState)
                 return;
-            screenState.utilities = true;
+            screenState.setVisible("utilities", true, "ipc");
             Screenshots.expanded = true;
         }
 
@@ -365,7 +346,7 @@ Scope {
             Screenshots.closePreview();
             Screenshots.expanded = false;
             if (screenState)
-                screenState.utilities = false;
+                screenState.setVisible("utilities", false, "ipc");
         }
 
         function toggle(): void {
@@ -386,7 +367,7 @@ Scope {
             }
             if (index < 0 || index >= Screenshots.entries.length)
                 return `out of range (0..${Screenshots.entries.length - 1})`;
-            screenState.utilities = true;
+            screenState.setVisible("utilities", true, "ipc");
             Screenshots.expanded = true;
             Screenshots.openPreview(Screenshots.entries[index].path);
             return `preview=${Screenshots.previewPath}`;

@@ -39,8 +39,7 @@ Item {
     onPickKindChanged: if (pickKind) Schemes.refresh()
 
     function close(visibilities: var): void {
-        visibilities.launcher = false;
-        visibilities.dashboard = false;
+        visibilities.closeWorld("dismiss");
     }
 
     readonly property var pickMatches: {
@@ -86,7 +85,7 @@ Item {
         if (calcMode) {
             if (Qalculator.rawResult)
                 Quickshell.execDetached(["wl-copy", Qalculator.rawResult]);
-            visibilities.launcher = false;
+            visibilities.setVisible("launcher", false, "pointer");
             return;
         }
         const m = matches[list.currentIndex] ?? matches[0];

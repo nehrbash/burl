@@ -39,7 +39,7 @@ Item {
     // Either one keeps this surface mounted (see Wrapper), and which one is set
     // decides where the camera points — so flying by hand is a matter of moving
     // the flags, not of nudging panP behind their back.
-    readonly property bool surfaceOpen: root.visibilities.launcher || root.visibilities.dashboard
+    readonly property bool surfaceOpen: root.visibilities.worldOpen
 
     property bool wasOpen
 
@@ -52,8 +52,7 @@ Item {
     }
 
     function dismiss(): void {
-        root.visibilities.launcher = false;
-        root.visibilities.dashboard = false;
+        root.visibilities.closeWorld("dismiss");
     }
 
     // Window shortcuts remain reachable when a book's editor consumes arrow keys.
@@ -71,15 +70,8 @@ Item {
         onActivated: root.descend()
     }
 
-    Shortcut {
-        sequence: "Escape"
-        context: Qt.WindowShortcut
-        enabled: root.surfaceOpen
-        onActivated: root.dismiss()
-    }
-
     function syncCamera(): void {
-        const open = root.visibilities.launcher || root.visibilities.dashboard;
+        const open = root.visibilities.worldOpen;
         root.revealP = open ? 1 : 0;
         if (!open) {
             root.flyTo(0, 300, Easing.InCubic);
@@ -252,7 +244,7 @@ Item {
     function runWebSearch(q: string): void {
         if (!q) return;
         const url = webSearchUrl.replace("%1", encodeURIComponent(q));
-        visibilities.launcher = false;
+        visibilities.setVisible("launcher", false, "pointer");
         Quickshell.execDetached(["xdg-open", url]);
     }
     readonly property var scope: SearchQuery.parse(search.text, prefix)
@@ -867,7 +859,7 @@ Item {
             property bool grewThisOpen
 
             function syncOpen(): void {
-                if (!(root.visibilities.launcher || root.visibilities.dashboard)) {
+                if (!root.visibilities.worldOpen) {
                     search.text = "";
                     graph.pivotKind = "";
                     search.grewThisOpen = false;

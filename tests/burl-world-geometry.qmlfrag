@@ -1,0 +1,76 @@
+property var cycleState: Qt.createQmlObject('import Quickshell; import qs.components; ScreenState { modelData: Quickshell.screens[0] }', host)
+property int geometryPhase: 0
+property int geometryTicks: 0
+property real resizedWidth: 0
+property bool geometryPassed: false
+
+function geometryTree(item) {
+    if (item.maskEligible !== undefined)
+        return item;
+    for (const child of item.children ?? []) {
+        const found = geometryTree(child);
+        if (found)
+            return found;
+    }
+    return null;
+}
+
+function geometryCheck(condition, message) {
+    if (!condition) {
+        console.error("WORLD-GEOMETRY-FAIL", message);
+        Qt.quit();
+        return false;
+    }
+    return true;
+}
+
+Timer {
+    interval: 200
+    repeat: true
+    running: !host.geometryPassed
+    onTriggered: {
+        const tree = host.geometryTree(subject);
+        if (++host.geometryTicks > 25) {
+            host.geometryCheck(false, "tree did not become ready");
+            return;
+        }
+        switch (host.geometryPhase) {
+        case 0:
+            host.cycleState.openRoom("dashboard", "key");
+            host.geometryPhase = 1;
+            break;
+        case 1:
+            if (!tree || !subject.treeGrown)
+                return;
+            if (!host.geometryCheck(subject.maskRects.length === 1 && subject.trunkRect !== null,
+                                    "eligible tree exposes local geometry"))
+                return;
+            host.cycleState.closeWorld("test-geometry");
+            if (!host.geometryCheck(subject.maskRects.length === 0 && subject.trunkRect === null && !subject.treeGrown,
+                                    "close clears exposed geometry synchronously"))
+                return;
+            tree.anchors.fill = null;
+            tree.width -= 40;
+            host.resizedWidth = tree.width;
+            host.geometryPhase = 2;
+            break;
+        case 2:
+            if (tree.geomW !== host.resizedWidth)
+                return;
+            if (!host.geometryCheck(subject.maskRects.length === 0 && subject.trunkRect === null,
+                                    "late geometry cannot restore a closed input mask"))
+                return;
+            host.cycleState.openRoom("dashboard", "key");
+            host.geometryPhase = 3;
+            break;
+        case 3:
+            if (!host.geometryCheck(subject.maskRects[0]?.width === host.resizedWidth,
+                                    "reopening exposes current local geometry"))
+                return;
+            host.cycleState.closeWorld("test-finish");
+            console.log("WORLD-GEOMETRY-PASS");
+            host.geometryPassed = true;
+            break;
+        }
+    }
+}

@@ -50,8 +50,7 @@ FocusScope {
         text: qsTr("Settings"),
         enabled: true,
         activate: () => {
-            root.screenState.launcher = false;
-            root.screenState.dashboard = false;
+            root.screenState.closeWorld("dismiss");
             WindowFactory.create();
         }
     }]
@@ -137,6 +136,10 @@ FocusScope {
 
     readonly property bool keyboardNavEnabled: Config.dashboard.keyboardNav
 
+    readonly property var maskRects: livingTree.item?.maskRects ?? []
+    readonly property var trunkRect: livingTree.item?.trunkRect ?? null
+    readonly property bool treeGrown: livingTree.item?.maskEligible ?? false
+
     // Claiming layershell keyboard focus for the whole time the dashboard is
     // merely open would eat keystrokes from the app underneath, and with
     // showOnHover the panel opens without anyone asking. So: claim it when the
@@ -196,14 +199,14 @@ FocusScope {
         if (root.guest)
             root.guestCloseRequested();
         else
-            root.screenState.dashboard = false;
+            root.screenState.setVisible("dashboard", false, "pointer");
     }
 
     function dismissSurface(): void {
         if (root.guest)
             root.guestDismissRequested();
         else
-            root.screenState.dashboard = false;
+            root.screenState.setVisible("dashboard", false, "pointer");
     }
 
     function grabKeyboard(): void {
@@ -218,11 +221,6 @@ FocusScope {
 
     implicitWidth: nonAnimWidth
     implicitHeight: nonAnimHeight
-
-    // Guests never touch it: two instances writing one shell-global property
-    // means the guest's `false` can land on top of the drawer's `true`.
-    onWantsKeyboardChanged: if (!root.guest)
-        root.screenState.dashboardWantsKeyboard = root.wantsKeyboard
 
     Keys.onLeftPressed: root.navigateSpatial(-1, 0)
     Keys.onRightPressed: root.navigateSpatial(1, 0)
@@ -286,12 +284,8 @@ FocusScope {
     }
 
     Component.onCompleted: {
-        if (!root.guest)
-            root.screenState.dashboardWantsKeyboard = root.wantsKeyboard;
         root.grabKeyboard();
     }
-    Component.onDestruction: if (!root.guest)
-        root.screenState.dashboardWantsKeyboard = false
 
     // Section Components, hoisted to root scope (not nested inside the
     // Flickable below) so they stay resolvable by id from `sections` above no

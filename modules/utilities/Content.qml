@@ -245,8 +245,8 @@ Item {
                             icon: "draw"
                             type: IconButton.Text
                             onClicked: {
-                                root.screenState.utilities = false;
-                                root.screenState.sidebar = false;
+                                root.screenState.setVisible("utilities", false, "pointer");
+                                root.screenState.setVisible("sidebar", false, "pointer");
                                 Screenshots.closePreview();
                                 Screenshots.edit(card.entry?.path ?? "");
                             }
@@ -263,8 +263,8 @@ Item {
                             icon: "folder_open"
                             type: IconButton.Text
                             onClicked: {
-                                root.screenState.utilities = false;
-                                root.screenState.sidebar = false;
+                                root.screenState.setVisible("utilities", false, "pointer");
+                                root.screenState.setVisible("sidebar", false, "pointer");
                                 Screenshots.closePreview();
                                 Screenshots.reveal(card.entry?.parentDir ?? "");
                             }

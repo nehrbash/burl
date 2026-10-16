@@ -25,14 +25,6 @@ Singleton {
     // per browser tab, per poll) grows the list until a bulk clear stalls the shell.
     readonly property int maxHistory: 100
 
-    function hasFullscreen(): bool {
-        for (const monitor of Hypr.monitors.values) {
-            if (monitor?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1))
-                return true;
-        }
-        return false;
-    }
-
     // Drops the oldest entries past maxHistory, keeping any still held by a
     // visible delegate.
     function trim(l): var {
@@ -52,7 +44,7 @@ Singleton {
     function shouldShowPopup(): bool {
         if (props.dnd || ShellState.anySidebarOpen())
             return false;
-        if (GlobalConfig.notifs.fullscreen === "off" && hasFullscreen())
+        if (GlobalConfig.notifs.fullscreen === "off" && Hypr.anyNormalFullscreen)
             return false;
         return true;
     }

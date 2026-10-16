@@ -1,3 +1,4 @@
+import { state as navigation } from "./lib/navigation-state.mjs";
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
@@ -58,7 +59,7 @@ test('keyword fallback preserves display names and exact commands rank above des
 
 const qml = readFileSync(new URL('../modules/launcher/services/Actions.qml', import.meta.url), 'utf8');
 function activation(action, text, overrides = {}) {
-    const visibility = {launcher: true, dashboard: true};
+    const visibility = navigation({navStyle: "tabs"}, {launcher: true, dashboard: true}).root;
     const field = {text};
     const calls = [];
     const context = {

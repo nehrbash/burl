@@ -74,15 +74,15 @@ CustomMouseArea {
     onContainsMouseChanged: {
         if (!containsMouse) {
             if (!osdShortcutActive) {
-                screenState.osd = false;
+                screenState.setVisible("osd", false, "pointer");
                 root.panels.osd.hovered = false;
             }
 
             if (!dashboardShortcutActive && !root.livingDashboardOpen)
-                screenState.dashboard = false;
+                screenState.setVisible("dashboard", false, "pointer");
 
             if (!utilitiesShortcutActive)
-                screenState.utilities = false;
+                screenState.setVisible("utilities", false, "pointer");
 
             if (!popouts.currentName.startsWith("traymenu") || ((popouts.current as StackView)?.depth ?? 0) <= 1) {
                 popouts.hasCurrent = false;
@@ -93,7 +93,7 @@ CustomMouseArea {
                 bar.isHovered = false;
 
             if (Config.sidebar.showOnHover)
-                screenState.sidebar = false;
+                screenState.setVisible("sidebar", false, "pointer");
         }
     }
 
@@ -116,16 +116,16 @@ CustomMouseArea {
 
         if (pressed && dragStart.x < bar.clampedWidth) {
             if (dragX > Config.bar.dragThreshold)
-                screenState.bar = true;
+                screenState.setVisible("bar", true, "pointer");
             else if (dragX < -Config.bar.dragThreshold)
-                screenState.bar = false;
+                screenState.setVisible("bar", false, "pointer");
         }
 
         if (panels.sidebar.offsetScale === 1) {
             const showOsd = inRightPanel(panels.osdWrapper, x, y);
 
             if (!osdShortcutActive) {
-                screenState.osd = showOsd;
+                screenState.setVisible("osd", showOsd, "pointer");
                 root.panels.osd.hovered = showOsd;
             } else if (showOsd) {
                 osdShortcutActive = false;
@@ -138,17 +138,17 @@ CustomMouseArea {
                 const sidebarTriggerY = Math.max(Config.sidebar.minHoverThreshold, panels.notifications.y + panels.notifications.height + borderThickness);
                 const showSidebarHover = x > Math.min(width - Config.border.minThickness, bar.implicitWidth + panels.sidebar.x) && y <= sidebarTriggerY;
                 if (showSidebarHover && !screenState.sidebar)
-                    screenState.sidebar = true;
+                    screenState.setVisible("sidebar", true, "pointer");
             }
 
             if (showSidebar && dragX < -Config.sidebar.dragThreshold)
-                screenState.sidebar = true;
+                screenState.setVisible("sidebar", true, "pointer");
         } else {
             const outOfSidebar = x < width - panels.sidebar.width * (1 - panels.sidebar.offsetScale);
             const showOsd = outOfSidebar && inRightPanel(panels.osdWrapper, x, y);
 
             if (!osdShortcutActive) {
-                screenState.osd = showOsd;
+                screenState.setVisible("osd", showOsd, "pointer");
                 root.panels.osd.hovered = showOsd;
             } else if (showOsd) {
                 osdShortcutActive = false;
@@ -159,16 +159,16 @@ CustomMouseArea {
                 const sidebarTriggerY = Math.max(Config.sidebar.minHoverThreshold, panels.notifications.y + panels.notifications.height + borderThickness);
                 const showSidebarHover = x > Math.min(width - Config.border.minThickness, bar.implicitWidth + panels.sidebar.x) && y <= sidebarTriggerY;
                 if (showSidebarHover && !screenState.sidebar) {
-                    screenState.sidebar = true;
+                    screenState.setVisible("sidebar", true, "pointer");
                 } else {
                     const inSidebarArea = inRightPanel(panels.sidebar, x, y);
                     if (!inSidebarArea)
-                        screenState.sidebar = false;
+                        screenState.setVisible("sidebar", false, "pointer");
                 }
             }
 
             if (pressed && inRightPanel(panels.sidebar, dragStart.x, 0) && dragX > Config.sidebar.dragThreshold)
-                screenState.sidebar = false;
+                screenState.setVisible("sidebar", false, "pointer");
         }
 
         // navStyle "living" forces showOnHover off (also read in
@@ -179,7 +179,7 @@ CustomMouseArea {
             const showDashboard = Config.dashboard.showOnHover && inTopPanel(panels.dashboard, x, y);
 
             if (!dashboardShortcutActive) {
-                screenState.dashboard = showDashboard;
+                screenState.setVisible("dashboard", showDashboard, "hover");
             } else if (showDashboard) {
                 dashboardShortcutActive = false;
             }
@@ -187,16 +187,16 @@ CustomMouseArea {
             // Drag-to-open, for touchscreen devices.
             if (pressed && inTopPanel(panels.dashboard, dragStart.x, dragStart.y) && withinPanelWidth(panels.dashboard, x, y)) {
                 if (dragY > Config.dashboard.dragThreshold)
-                    screenState.dashboard = true;
+                    screenState.setVisible("dashboard", true, "pointer");
                 else if (dragY < -Config.dashboard.dragThreshold)
-                    screenState.dashboard = false;
+                    screenState.setVisible("dashboard", false, "pointer");
             }
         }
 
         const showUtilities = inBottomPanel(panels.utilities, x, y, true);
 
         if (!utilitiesShortcutActive) {
-            screenState.utilities = showUtilities;
+            screenState.setVisible("utilities", showUtilities, "pointer");
         } else if (showUtilities) {
             utilitiesShortcutActive = false;
         }
@@ -224,10 +224,10 @@ CustomMouseArea {
                 const inOsdArea = root.inRightPanel(root.panels.osdWrapper, root.mouseX, root.mouseY);
 
                 if (!inDashboardArea) {
-                    root.screenState.dashboard = false;
+                    root.screenState.setVisible("dashboard", false, "pointer");
                 }
                 if (!inOsdArea) {
-                    root.screenState.osd = false;
+                    root.screenState.setVisible("osd", false, "pointer");
                     root.panels.osd.hovered = false;
                 }
             }

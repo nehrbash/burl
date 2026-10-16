@@ -668,7 +668,7 @@ Item {
                 color: colorFor("app"),
                 onColor: onColorFor("app"),
                 glyph: glyphFor("app"),
-                onClicked: vis => { Apps.launch(entry); vis.launcher = false; }
+                onClicked: vis => { Apps.launch(entry); vis.setVisible("launcher", false, "pointer"); }
             });
             idx[id] = out.length - 1;
             appIdx.push(out.length - 1);
@@ -709,7 +709,7 @@ Item {
                 color: catColor,
                 onColor: catOnColor,
                 glyph: catGlyph,
-                onClicked: vis => { vis.launcher = false; }
+                onClicked: vis => { vis.setVisible("launcher", false, "pointer"); }
             });
             idx[id] = out.length - 1;
         }
@@ -732,7 +732,7 @@ Item {
                 color: wpColor,
                 onColor: wpOnColor,
                 glyph: wpGlyph,
-                onClicked: vis => { Wallpapers.setWallpaper(w.path); vis.launcher = false; }
+                onClicked: vis => { Wallpapers.setWallpaper(w.path); vis.setVisible("launcher", false, "pointer"); }
             });
             idx[id] = out.length - 1;
             wpIdx.push(out.length - 1);
@@ -890,7 +890,7 @@ Item {
                 color: monColor,
                 onColor: monOnColor,
                 glyph: monGlyph,
-                onClicked: vis => { vis.launcher = false; }
+                onClicked: vis => { vis.setVisible("launcher", false, "pointer"); }
             });
             idx[id] = out.length - 1;
         }
@@ -945,7 +945,7 @@ Item {
                 clientWorkspace: o.workspace?.name,
                 clientMonitor: o.monitor,       // monitor *index*
                 onClicked: vis => {
-                    vis.launcher = false;
+                    vis.setVisible("launcher", false, "pointer");
                     // Pass Lua directly — Hypr.dispatch passes
                     // 'hl.…' strings straight through to
                     // Hyprland.dispatch. The hyprland-next bindings
@@ -979,7 +979,7 @@ Item {
                 glyph: isF ? webBmFolderGlyph : webBmGlyph,
                 onClicked: vis => {
                     if (isF || !url) return;
-                    vis.launcher = false;
+                    vis.setVisible("launcher", false, "pointer");
                     Quickshell.execDetached(["xdg-open", url]);
                 }
             });
@@ -1003,7 +1003,7 @@ Item {
                 onColor: webHistOnColor,
                 glyph: webHistGlyph,
                 onClicked: vis => {
-                    vis.launcher = false;
+                    vis.setVisible("launcher", false, "pointer");
                     Quickshell.execDetached(["xdg-open", url]);
                 }
             });
@@ -1028,7 +1028,7 @@ Item {
                 onColor: webTabOnColor,
                 glyph: webTabGlyph,
                 onClicked: vis => {
-                    vis.launcher = false;
+                    vis.setVisible("launcher", false, "pointer");
                     // Focus the existing Zen window — opening the
                     // URL via xdg-open would just create a duplicate
                     // tab. Then, if the tab is within Ctrl+1..9 reach
@@ -1065,7 +1065,7 @@ Item {
                 onColor: spPlOnColor,
                 glyph: spPlGlyph,
                 onClicked: vis => {
-                    vis.launcher = false;
+                    vis.setVisible("launcher", false, "pointer");
                     SpotifySources.play(uri);
                 }
             });
@@ -1094,7 +1094,7 @@ Item {
                 spotifyAlbum: t.album ?? "",
                 uri: uri,            // payload for now-playing accent
                 onClicked: vis => {
-                    vis.launcher = false;
+                    vis.setVisible("launcher", false, "pointer");
                     SpotifySources.play(uri);
                 }
             });
@@ -1135,7 +1135,7 @@ Item {
                 onColor: emojiOnColor,
                 glyph: e.glyph,
                 onClicked: vis => {
-                    vis.launcher = false;
+                    vis.setVisible("launcher", false, "pointer");
                     Emoji.copy(e.glyph);
                 }
             });
@@ -1162,7 +1162,7 @@ Item {
                 onColor: clipOnColor,
                 glyph: clipGlyph,
                 onClicked: vis => {
-                    vis.launcher = false;
+                    vis.setVisible("launcher", false, "pointer");
                     Clipboard.copy(c.id);
                 }
             });

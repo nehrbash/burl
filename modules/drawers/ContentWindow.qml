@@ -23,17 +23,8 @@ StyledWindow {
 
     readonly property HyprlandMonitor monitor: Hypr.monitorFor(screen)
     readonly property bool hasSpecialWorkspace: (monitor?.lastIpcObject?.specialWorkspace?.name.length ?? 0) > 0
-    readonly property bool hasFullscreenOnNormalWs: monitor?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject?.fullscreen > 1) ?? false
-    readonly property bool hasFullscreen: {
-        if (hasSpecialWorkspace) {
-            const specialName = monitor?.lastIpcObject?.specialWorkspace?.name;
-            if (!specialName)
-                return false;
-            const specialWs = Hypr.workspaces.values.find(ws => ws.name === specialName);
-            return specialWs?.toplevels.values.some(t => t.lastIpcObject?.fullscreen > 1) ?? false;
-        }
-        return hasFullscreenOnNormalWs;
-    }
+    readonly property bool hasFullscreenOnNormalWs: Hypr.normalFullscreenFor(monitor)
+    readonly property bool hasFullscreen: Hypr.visibleFullscreenFor(monitor)
 
     property real fsTransitionProg: hasFullscreen ? 1 : 0
     readonly property real sdfBorderOffset: 2 * fsTransitionProg // SDFs joins are not exact, so offset by 2px to ensure nothing shows
@@ -65,8 +56,7 @@ StyledWindow {
     }
 
     onHasFullscreenChanged: {
-        screenState.launcher = false;
-        screenState.dashboard = false;
+        screenState.closeWorld("fullscreen");
         panels.popouts.close();
     }
 
@@ -74,10 +64,9 @@ StyledWindow {
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: (fsTransitionProg > 0 && contentItem.Config.general.showOverFullscreen) || (hasSpecialWorkspace && hasFullscreenOnNormalWs) ? WlrLayer.Overlay : WlrLayer.Top
     // The living tree shares the launcher's keyboard surface, including pointer opens.
-    readonly property bool worldSurfaceOpen: screenState.launcher
-        || (screenState.dashboard && contentItem.Config.dashboard.navStyle === "living"
-            && contentItem.Config.launcher.enabled)
-    WlrLayershell.keyboardFocus: worldSurfaceOpen || screenState.dashboardWantsKeyboard ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    readonly property bool worldSurfaceOpen: contentItem.Config.dashboard.navStyle === "living"
+        && contentItem.Config.launcher.enabled ? screenState.worldOpen : screenState.launcher
+    WlrLayershell.keyboardFocus: worldSurfaceOpen || panels.dashboard.wantsKeyboard ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     mask: hasFullscreen ? emptyRegion : regions
 
@@ -126,12 +115,9 @@ StyledWindow {
             const conf = root.contentItem.Config;
             if ((s.launcher && conf.launcher.enabled) || (s.sidebar && conf.sidebar.enabled))
                 return true;
-            // navStyle "living" forces showOnHover off (it is a deliberate
-            // surface, not a hover reflex), so it never reaches the
-            // hover-controlled early-return below. Instead it grabs for the
-            // whole grown episode UNLESS pinned (middle-click) — the escape
-            // hatch for "stay up while I click around".
             const isLiving = conf.dashboard.navStyle === "living";
+            if (isLiving && conf.launcher.enabled && conf.dashboard.enabled && s.worldOpen)
+                return !s.dashboardTreePinned;
             const dashboardHoverOpen = conf.dashboard.showOnHover && !isLiving;
             if (!dashboardHoverOpen && s.dashboard && conf.dashboard.enabled)
                 return isLiving ? !s.dashboardTreePinned : true;
@@ -141,10 +127,8 @@ StyledWindow {
         }
         windows: [root]
         onCleared: {
-            root.screenState.launcher = false;
-            root.screenState.sidebar = false;
-            root.screenState.dashboard = false;
-            root.screenState.dashboardTreePinned = false;
+            root.screenState.closeWorld("focus-lost");
+            root.screenState.setVisible("sidebar", false, "pointer");
             panels.popouts.close();
             bar.closeTray();
         }

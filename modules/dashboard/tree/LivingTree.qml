@@ -404,62 +404,28 @@ Item {
         return out;
     }
 
-    // ---- mask / trunk publication -----------------------------------------
-    // Committed from: openIds changes, resize, and the moment the dashboard
-    // opens. Never from anything bound to openP/flightP — those tick
-    // every frame and would violate the region-churn discipline Regions.qml's
-    // header comment documents.
-    function commitMask(): void {
-        // The rects describe where the DRAWERS window takes clicks; a guest
-        // lives in someone else's window and would be publishing lies.
-        if (!root.screenState || root.guest)
-            return;
-        root.screenState.dashboardMaskRects = [
-            {
-                x: 0,
-                y: 0,
-                width: root.geomW,
-                height: root.geomH
-            }
-        ];
-        root.screenState.dashboardTrunkRect = {
-            x: root.trunkXHome - root.trunkWBase * 1.5,
-            y: root.trunkTopY,
-            width: root.trunkWBase * 3,
-            height: root.geomH - root.trunkTopY
-        };
-    }
+    readonly property bool maskEligible: !root.guest && !root.sproutOnly && (root.screenState?.dashboard ?? false)
+    readonly property var maskRects: maskEligible ? [{x: 0, y: 0, width: geomW, height: geomH}] : []
+    readonly property var trunkRect: maskEligible ? ({
+        x: trunkXHome - trunkWBase * 1.5,
+        y: trunkTopY,
+        width: trunkWBase * 3,
+        height: geomH - trunkTopY
+    }) : null
 
     anchors.fill: parent
 
-    onOpenIdsChanged: {
-        root._trackRetiring();
-        root.commitMask();
-    }
+    onOpenIdsChanged: root._trackRetiring()
     onWidthChanged: geomSettle.restart()
     onHeightChanged: geomSettle.restart()
-    onSectionsChanged: root.commitMask()
     Component.onCompleted: {
         console.info(lcLiving, "mounted: screenState=" + (root.screenState ? "ok" : "NULL") + " dashboard=" + root.screenState?.dashboard + " sections=" + root.na + " size=" + root.width + "x" + root.height);
         root._prevOpenIds = root.openIds.slice();
-        root.commitMask();
     }
 
     Behavior on openP {
         enabled: Ambience.grow && !GameMode.enabled
         NumberAnimation { duration: 650; easing.type: Easing.OutCubic }
-    }
-
-    Connections {
-        function onDashboardChanged(): void {
-            // Committed exactly once per open, not per frame.
-            if (!root.guest && !root.sproutOnly && root.screenState?.dashboard) {
-                root.commitMask();
-                root.screenState.dashboardTreeGrown = true;
-            }
-        }
-
-        target: root.screenState
     }
 
     // Geometry latch (see geomW/geomH above): a Behavior-animated resize
@@ -473,7 +439,6 @@ Item {
             root.geomW = Math.max(1, root.width);
             root.geomH = Math.max(1, root.height);
             console.info(lcLiving, "layout " + root.geomW + "x" + root.geomH + " openP=" + root.openP.toFixed(2) + " dash=" + root.screenState?.dashboard);
-            root.commitMask();
         }
     }
 
@@ -759,7 +724,7 @@ Item {
             if (!root.screenState || root.screenState.dashboard)
                 return;
             root.nav.interacted = true;
-            root.screenState.dashboard = true;
+            root.screenState.setVisible("dashboard", true, "pointer");
         }
     }
 

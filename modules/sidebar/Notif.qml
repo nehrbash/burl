@@ -141,7 +141,7 @@ StyledRect {
 
             onLinkActivated: link => {
                 Qt.openUrlExternally(link);
-                root.screenState.sidebar = false;
+                root.screenState.setVisible("sidebar", false, "pointer");
             }
         }
 

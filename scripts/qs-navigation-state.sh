@@ -7,7 +7,19 @@ WORK=$(mktemp -d "${TMPDIR:-/tmp}/burl-navigation-state.XXXXXX")
 trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$WORK/quickshell/qs" "$WORK/config/burl" "$WORK/cache" "$WORK/state"
 for entry in "$ROOT"/*; do
-    ln -s "$entry" "$WORK/quickshell/qs/"
+    if [[ $(basename "$entry") != components ]]; then
+        ln -s "$entry" "$WORK/quickshell/qs/"
+    fi
+done
+mkdir "$WORK/quickshell/qs/components"
+for entry in "$ROOT/components"/*; do
+    if [[ $(basename "$entry") == ScreenState.qml ]]; then
+        # Inject invalid saved intent without exposing production state writers.
+        sed '/^    id: root$/a\    readonly property var fixtureSavedIntent: intent' "$entry" \
+            > "$WORK/quickshell/qs/components/ScreenState.qml"
+    else
+        ln -s "$entry" "$WORK/quickshell/qs/components/"
+    fi
 done
 cp "$REPO/tests/burl-navigation-state.qml" "$WORK/quickshell/qs/_navigation.qml"
 printf '%s\n' '{"dashboard":{"showWeather":false}}' > "$WORK/config/burl/shell.json"
@@ -30,6 +42,7 @@ fi
 grep -q 'NAVIGATION-INITIAL-PASS' "$WORK/runtime.log"
 grep -q 'NAVIGATION-RELOAD-PASS' "$WORK/runtime.log"
 grep -q 'NAVIGATION-RESTORE-RECONCILE-PASS' "$WORK/runtime.log"
+grep -q 'NAVIGATION-MIGRATION-PASS' "$WORK/runtime.log"
 
 cat > "$WORK/quickshell/qs/_tabs.qml" <<EOF
 import QtQuick

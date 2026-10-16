@@ -26,7 +26,7 @@ Item {
     property real brightness
 
     function show(): void {
-        screenState.osd = true;
+        screenState.setVisible("osd", true, "pointer");
         timer.restart();
     }
 
@@ -87,7 +87,7 @@ Item {
         interval: root.Config.osd.hideDelay
         onTriggered: {
             if (!root.hovered)
-                root.screenState.osd = false;
+                root.screenState.setVisible("osd", false, "pointer");
         }
     }
 

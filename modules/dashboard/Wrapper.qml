@@ -14,6 +14,10 @@ Item {
 
     readonly property real nonAnimHeight: (content.item as Content)?.nonAnimHeight ?? 0
     readonly property bool shouldBeActive: screenState.dashboard && Config.dashboard.enabled
+    readonly property bool wantsKeyboard: shouldBeActive && (content.item?.wantsKeyboard ?? false)
+    readonly property var maskRects: shouldBeActive ? (content.item?.maskRects ?? []) : []
+    readonly property var trunkRect: shouldBeActive ? (content.item?.trunkRect ?? null) : null
+    readonly property bool treeGrown: shouldBeActive && (content.item?.treeGrown ?? false)
     // navStyle "living": full-bleed, no slide/fade — the tree's own growth IS
     // the reveal. Geometry (anchors.fill vs. horizontalCenter+top) is switched
     // externally by Panels.qml, which owns this instance's anchoring; this

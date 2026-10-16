@@ -75,8 +75,7 @@ Singleton {
         const screen = ShellState.forActive();
         if (!screen) return;
         screen.growDashboardSection("tasks");
-        screen.openWorldRoom("dashboard");
-        screen.dashboardOpenedByKey = true;
+        screen.openWorldRoom("dashboard", "ipc");
     }
 
 

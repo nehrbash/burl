@@ -115,6 +115,6 @@ function execute(action, context, visibility) {
     else
         return false;
     if (visibility)
-        visibility.launcher = false;
+        visibility.closeRoom("launcher", "action");
     return true;
 }

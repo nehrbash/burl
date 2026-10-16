@@ -263,8 +263,8 @@ StyledRect {
                                 type: IconButton.Text
                                 font: Tokens.font.icon.small
                                 onClicked: {
-                                    root.screenState.utilities = false;
-                                    root.screenState.sidebar = false;
+                                    root.screenState.setVisible("utilities", false, "pointer");
+                                    root.screenState.setVisible("sidebar", false, "pointer");
                                     Screenshots.edit(cell.modelData.path);
                                 }
                             }

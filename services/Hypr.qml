@@ -8,6 +8,7 @@ import Burl
 import Burl.Config
 import Burl.Internal
 import qs.components.misc
+import "../utils/DesktopFacts.js" as DesktopFacts
 
 Singleton {
     id: root
@@ -24,6 +25,18 @@ Singleton {
     readonly property HyprlandWorkspace focusedWorkspace: Hyprland.focusedWorkspace
     readonly property HyprlandMonitor focusedMonitor: Hyprland.focusedMonitor
     readonly property int activeWsId: focusedWorkspace?.id ?? 1
+    readonly property bool anyNormalFullscreen: DesktopFacts.anyNormalFullscreen(monitors.values)
+    readonly property bool focusedNormalFullscreen: root.normalFullscreenFor(focusedMonitor)
+    readonly property bool focusedVisibleFullscreen: root.visibleFullscreenFor(focusedMonitor)
+
+    function normalFullscreenFor(monitor: var): bool {
+        return DesktopFacts.normalFullscreenFor(monitor);
+    }
+
+    function visibleFullscreenFor(monitor: var): bool {
+        return DesktopFacts.visibleFullscreenFor(monitor, root.workspaces.values);
+    }
+
 
     readonly property HyprKeyboard keyboard: extras.devices.keyboards.find(kb => kb.main) ?? null
     readonly property bool capsLock: keyboard?.capsLock ?? false
