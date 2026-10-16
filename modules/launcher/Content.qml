@@ -325,6 +325,10 @@ Item {
                   ? root.webSearchQuery(search.text)
                   : search.text))
         scopeSegments: root.scope ?? []
+        onCategorySelected: category => {
+            search.text = root.prefix + SearchQuery.categoryKeyword(category) + " ";
+            search.forceActiveFocus();
+        }
         // Camera motion and graph settling share the GUI thread.
         paused: !root.surfaceOpen || root.arrivalP < 0.999
         transitioning: root.revealP > 0 && (!root.surfaceOpen || root.revealP < 0.999

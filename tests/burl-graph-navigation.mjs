@@ -9,6 +9,7 @@ function graph(points) {
         nodes: points.map((_, i) => ({ id: String(i) })), currentNode: 0,
         matchIndices: [], currentMatchIndex: 0, navigationHistory: [], browsing: false,
         width: 1200, height: 900, nodeAdjacency: {},
+        appliedVisibilityPolicyKey: "general", visibilityPolicyKey: "general",
         searchActive: false, nodeScores: [], filterTimer: { running: false },
         sim: { x: i => points[i][0], y: i => points[i][1] },
         _nx: i => points[i][0], _ny: i => points[i][1],

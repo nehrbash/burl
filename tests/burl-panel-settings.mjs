@@ -27,7 +27,7 @@ test('wallpaper limit controls the graph model and queues changes', () => {
         context.out = [];
         runInNewContext(`(function() {${build}})()`, context);
         assert.equal(context.out.length, expected);
-        assert.equal(context.wallpaperIndices.length, expected);
+
     }
     assert.equal(context.requests, 4);
 });

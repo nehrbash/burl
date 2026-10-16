@@ -9,6 +9,7 @@ import Burl.Sim
 import "GraphDrift.js" as GraphDrift
 import "GraphActions.js" as GraphActions
 import "SearchRanking.js" as SearchRanking
+import "SearchQuery.js" as SearchQuery
 import qs.components
 import qs.components.images
 import qs.services
@@ -35,6 +36,13 @@ Item {
     // When non-empty, each node is scored against the segment whose
     // kind matches it (max if multiple); kinds with no segment are out.
     property var scopeSegments: []
+    signal categorySelected(string category)
+    readonly property string visibilityPolicyKey: JSON.stringify([
+        GlobalConfig.launcher.onlyShowWhenFiltered,
+        scopeSegments.map(segment => [segment.kind, segment.category ?? ""]), pivotKind
+    ])
+    property string appliedVisibilityPolicyKey: ""
+    onVisibilityPolicyKeyChanged: requestRebuild()
 
     readonly property var fileQueries: (scopeSegments ?? []).filter(s => s.kind === "file").map(s => s.q ?? "")
     readonly property string fileSearchStatus: fileSearch.status
@@ -143,6 +151,10 @@ Item {
 
     // Coalesce keystrokes before reheating the full graph.
     function _applyFilter(): void {
+        if (appliedVisibilityPolicyKey !== visibilityPolicyKey) {
+            rebuildPending = false;
+            rebuild();
+        }
         rescore();
         sim.reheat(0.65);
         fitCamera();
@@ -648,13 +660,11 @@ Item {
         const selectionId = nodes[currentNode]?.id;
         const historyIds = navigationHistory.map(i => nodes[i]?.id);
         const wasBrowsing = browsing;
-        const out = [];
-        const idx = {};
+        let out = [];
 
         // Apps — Apps.list is sorted by frequency in AppDb.
         const apps = Apps.list ?? [];
-        const appIdx = [];
-        for (let i = 0; i < Math.min(apps.length, maxApps); ++i) {
+        for (let i = 0; i < (root.scopeSegments.some(segment => segment.category) ? apps.length : Math.min(apps.length, maxApps)); ++i) {
             const e = apps[i];
             const entry = e.entry ?? e;
             const id = `app:${entry?.id ?? i}`;
@@ -670,11 +680,7 @@ Item {
                 glyph: glyphFor("app"),
                 onClicked: vis => { Apps.launch(entry); vis.setVisible("launcher", false, "pointer"); }
             });
-            idx[id] = out.length - 1;
-            appIdx.push(out.length - 1);
         }
-        if (appIndices.length !== appIdx.length || appIndices.some((value, i) => value !== appIdx[i]))
-            appIndices = appIdx;
 
         // App categories — one node per distinct primary category
         // (first token of the .desktop Categories field). Apps link to
@@ -693,7 +699,7 @@ Item {
             // space-separated string we can split.
             return String(entry?.categories ?? "").replace(/,/g, " ").trim();
         }
-        for (let i = 0; i < Math.min(apps.length, maxApps); ++i) {
+        for (let i = 0; i < (root.scopeSegments.some(segment => segment.category) ? apps.length : Math.min(apps.length, maxApps)); ++i) {
             const e = apps[i];
             const entry = e.entry ?? e;
             const cats = catString(entry);
@@ -709,14 +715,12 @@ Item {
                 color: catColor,
                 onColor: catOnColor,
                 glyph: catGlyph,
-                onClicked: vis => { vis.setVisible("launcher", false, "pointer"); }
+                onClicked: () => root.categorySelected(primary)
             });
-            idx[id] = out.length - 1;
         }
 
         // Wallpapers — render the image itself as the node "icon".
         const walls = Wallpapers.list ?? [];
-        const wpIdx = [];
         const wpColor = colorFor("wallpaper");
         const wpOnColor = onColorFor("wallpaper");
         const wpGlyph = glyphFor("wallpaper");
@@ -734,11 +738,7 @@ Item {
                 glyph: wpGlyph,
                 onClicked: vis => { Wallpapers.setWallpaper(w.path); vis.setVisible("launcher", false, "pointer"); }
             });
-            idx[id] = out.length - 1;
-            wpIdx.push(out.length - 1);
         }
-        if (wallpaperIndices.length !== wpIdx.length || wallpaperIndices.some((value, i) => value !== wpIdx[i]))
-            wallpaperIndices = wpIdx;
 
         // Recent files.
         const recents = EmacsSources.recents.slice(0, maxRecents);
@@ -760,7 +760,6 @@ Item {
                 glyph: recentGlyph,
                 onClicked: vis => root.activateSource("recent", r, vis)
             });
-            idx[id] = out.length - 1;
         }
 
         // Bookmarks.
@@ -780,7 +779,6 @@ Item {
                 glyph: bmGlyph,
                 onClicked: vis => root.activateSource("bookmark", bm, vis)
             });
-            idx[id] = out.length - 1;
         }
 
         // Roam nodes — keyed by the org-roam id so edges resolve.
@@ -799,7 +797,6 @@ Item {
                 glyph: roamGlyph,
                 onClicked: vis => root.activateSource("roam", n, vis)
             });
-            idx[n.id] = out.length - 1;
         }
 
         // Projects (project.el, SQLite-backed). Keyed by root so recent
@@ -821,7 +818,6 @@ Item {
                 glyph: projGlyph,
                 onClicked: vis => root.activateSource("project", p, vis)
             });
-            idx[id] = out.length - 1;
         }
 
         // Unread / flagged mail (mu index). Keyed by message-id so
@@ -843,7 +839,6 @@ Item {
                 glyph: mailGlyph,
                 onClicked: vis => root.activateSource("mail", msg, vis)
             });
-            idx[id] = out.length - 1;
         }
 
         // Synthetic event IDs connect events through dayLinks.
@@ -863,7 +858,6 @@ Item {
                 glyph: evGlyph,
                 onClicked: vis => root.activateSource("event", ev, vis)
             });
-            idx[ev.id] = out.length - 1;
         }
 
         // Hyprland monitors. Each gets a node so clients can link to
@@ -892,7 +886,6 @@ Item {
                 glyph: monGlyph,
                 onClicked: vis => { vis.setVisible("launcher", false, "pointer"); }
             });
-            idx[id] = out.length - 1;
         }
 
         // Hyprland workspaces. Each becomes a node; clients on a
@@ -915,7 +908,6 @@ Item {
                 workspaceMonitor: o.monitor,    // monitor *name*
                 onClicked: () => ShellState.selectWorkspace([`workspace name:${o.name}`])
             });
-            idx[id] = out.length - 1;
         }
 
         // Hyprland window clients (open apps). Each top-level window is
@@ -953,7 +945,6 @@ Item {
                     Hypr.dispatch(`hl.dsp.focus({ window = "address:${o.address}" })`);
                 }
             });
-            idx[id] = out.length - 1;
         }
 
         // Web bookmarks (folders + leaves) — folders get their own kind
@@ -983,7 +974,6 @@ Item {
                     Quickshell.execDetached(["xdg-open", url]);
                 }
             });
-            idx[id] = out.length - 1;
         }
 
         // Web history — flat, no edges. Capped in C++ *and* here.
@@ -1007,7 +997,6 @@ Item {
                     Quickshell.execDetached(["xdg-open", url]);
                 }
             });
-            idx[id] = out.length - 1;
         }
 
         // Live Zen / Firefox tabs from sessionstore-backups.
@@ -1041,7 +1030,6 @@ Item {
                     }
                 }
             });
-            idx[id] = out.length - 1;
         }
 
         // Spotify playlists. Click → play on active device. URI is
@@ -1049,7 +1037,6 @@ Item {
         const spPlColor = colorFor("spotifyPlaylist");
         const spPlOnColor = onColorFor("spotifyPlaylist");
         const spPlGlyph = glyphFor("spotifyPlaylist");
-        const spImgIdx = [];
         for (const p of (SpotifySources.playlists ?? []).slice(0, maxSpotify)) {
             const uri = p.uri ?? "";
             if (!uri) continue;
@@ -1069,8 +1056,6 @@ Item {
                     SpotifySources.play(uri);
                 }
             });
-            idx[id] = out.length - 1;
-            if (p.image) spImgIdx.push(out.length - 1);
         }
 
         // Spotify recently-played tracks. Each track is its own node;
@@ -1098,11 +1083,7 @@ Item {
                     SpotifySources.play(uri);
                 }
             });
-            idx[id] = out.length - 1;
-            if (t.image) spImgIdx.push(out.length - 1);
         }
-        if (spotifyImageIndices.length !== spImgIdx.length || spotifyImageIndices.some((value, i) => value !== spImgIdx[i]))
-            spotifyImageIndices = spImgIdx;
 
         for (const file of (fileSearch.active ? fileSearch.entries : [])) {
             const id = `file:${file.path}`;
@@ -1117,15 +1098,16 @@ Item {
                 glyph: glyphFor("file"),
                 onClicked: vis => root.activateSource("file", file, vis)
             });
-            idx[id] = out.length - 1;
         }
 
+        const emojiIds = new Set();
         const emojiColor = colorFor("emoji");
         const emojiOnColor = onColorFor("emoji");
         for (const e of (root.emojiScoped ? Emoji.matches : [])) {
             const id = `emoji:${e.glyph}`;
-            if (idx[id] !== undefined)
+            if (emojiIds.has(id))
                 continue;
+            emojiIds.add(id);
             out.push({
                 id,
                 kind: "emoji",
@@ -1139,7 +1121,6 @@ Item {
                     Emoji.copy(e.glyph);
                 }
             });
-            idx[id] = out.length - 1;
         }
 
         // Clipboard history. Ephemeral by nature and never linked to anything,
@@ -1166,8 +1147,27 @@ Item {
                     Clipboard.copy(c.id);
                 }
             });
-            idx[id] = out.length - 1;
         }
+
+        out = out.filter(node => SearchQuery.nodeVisible(node, root.scopeSegments,
+            GlobalConfig.launcher.onlyShowWhenFiltered, root.pivotKind));
+        appliedVisibilityPolicyKey = visibilityPolicyKey;
+        const idx = {};
+        const appIdx = [];
+        const wpIdx = [];
+        const spImgIdx = [];
+        for (let i = 0; i < out.length; i++) {
+            idx[out[i].id] = i;
+            if (out[i].kind === "app") appIdx.push(i);
+            if (out[i].kind === "wallpaper") wpIdx.push(i);
+            if ((out[i].kind === "spotifyPlaylist" || out[i].kind === "spotifyTrack") && out[i].imageUrl) spImgIdx.push(i);
+        }
+        if (appIndices.length !== appIdx.length || appIndices.some((value, i) => value !== appIdx[i]))
+            appIndices = appIdx;
+        if (wallpaperIndices.length !== wpIdx.length || wallpaperIndices.some((value, i) => value !== wpIdx[i]))
+            wallpaperIndices = wpIdx;
+        if (spotifyImageIndices.length !== spImgIdx.length || spotifyImageIndices.some((value, i) => value !== spImgIdx[i]))
+            spotifyImageIndices = spImgIdx;
 
         // Skip the reassignment if nothing structural changed — same
         // length and same ids in the same order. Otherwise every burst
@@ -1188,6 +1188,8 @@ Item {
                 if (cur.kind === "file")
                     searchChanged = searchChanged || JSON.stringify(cur.source.queries) !== JSON.stringify(nxt.source.queries);
                 cur.source = nxt.source;
+                searchChanged = searchChanged || String(cur.entry?.categories) !== String(nxt.entry?.categories);
+                cur.entry = nxt.entry;
                 cur.onColor = nxt.onColor;
                 cur.glyph = nxt.glyph;
                 cur.onClicked = nxt.onClicked;
@@ -1409,11 +1411,7 @@ Item {
         for (let i = 0; i < nodes.length; ++i) {
             const n = nodes[i];
             if (n.kind !== "app") continue;
-            // appIndices were filled from apps[], but onClicked closes
-            // over `entry`. We need the category here — look it up by
-            // re-walking Apps.list for this index.
-            const e = (Apps.list ?? [])[appIndices.indexOf(i)];
-            const entry = e?.entry ?? e;
+            const entry = n.entry;
             const catsRaw = entry?.categories;
             const cats = String(catsRaw ?? "").replace(/,/g, " ").trim();
             if (!cats) continue;
@@ -1484,7 +1482,7 @@ Item {
             let s = 0;
             if (hasScope) {
                 for (const segment of segs) {
-                    if (segment.kind !== n.kind) continue;
+                    if (!SearchQuery.matchesSegment(n, segment)) continue;
                     const term = (segment.q ?? "").trim();
                     const score = n.kind === "file"
                         ? (n.source.queries.includes(term)
@@ -1700,7 +1698,7 @@ Item {
     readonly property bool searchActive: (query ?? "").trim() !== "" || scopeSegments.length > 0
 
     function flushSearch(): void {
-        if (!filterTimer.running) return;
+        if (!filterTimer.running && appliedVisibilityPolicyKey === visibilityPolicyKey) return;
         filterTimer.stop();
         _applyFilter();
     }
