@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
-import Burl
 import Burl.Config
 import qs.components
 import qs.components.containers
@@ -10,8 +9,6 @@ import qs.components.controls
 import qs.services
 import qs.modules.launcher.services
 
-// Action/calc overlay shown above the search bar when the user types the
-// launcher action prefix (e.g. ">").
 Item {
     id: root
 
@@ -22,9 +19,6 @@ Item {
     readonly property alias list: list
 
     readonly property string prefix: GlobalConfig.launcher.actionPrefix
-    readonly property bool calcMode: search.text.startsWith(`${prefix}calc `)
-    readonly property string calcExpr: calcMode ? search.text.slice(`${prefix}calc `.length) : ""
-
     // Kind-action (Embark-style) mode: when set, the overlay lists
     // per-node context actions instead of the global Actions.query().
     // Entries share the query result's shape ({name, desc, icon,
@@ -68,36 +62,19 @@ Item {
         return [];
     }
 
-    readonly property var matches: calcMode
-        ? []
-        : pickKind
+    readonly property var matches: pickKind
         ? pickMatches
         : inKindMode
         ? kindActions
         : Actions.query(search.text)
 
-    onCalcExprChanged: {
-        if (calcExpr.length > 0)
-            Qalculator.evalAsync(calcExpr);
-    }
-
     function activateTop(): void {
-        if (calcMode) {
-            if (Qalculator.rawResult)
-                Quickshell.execDetached(["wl-copy", Qalculator.rawResult]);
-            visibilities.setVisible("launcher", false, "pointer");
-            return;
-        }
         const m = matches[list.currentIndex] ?? matches[0];
         if (m)
             m.activate(search, visibilities);
     }
 
-    // Same width as the search bar so it stacks neatly. Collapse the
-    // popup entirely when there are no matches and we're not in calc
-    // mode — a zero-row list rendered just a sliver of background
-    // which looked bad.
-    readonly property bool hasContent: calcMode || inKindMode || matches.length > 0
+    readonly property bool hasContent: inKindMode || matches.length > 0
     visible: hasContent
     implicitWidth: 640
     implicitHeight: hasContent ? bg.implicitHeight : 0
@@ -125,47 +102,11 @@ Item {
         // height so it doesn't eat the whole launcher.
         readonly property int maxVisible: 8
 
-        implicitHeight: {
-            if (root.calcMode)
-                return calcRow.implicitHeight + Tokens.padding.large * 2;
-            return Math.min(maxVisible, root.matches.length) * (Tokens.sizes.launcher.itemHeight + Tokens.spacing.small) + Tokens.padding.medium;
-        }
-
-        Item {
-            id: calcRow
-
-            visible: root.calcMode
-            anchors.fill: parent
-            anchors.margins: Tokens.padding.large
-            implicitHeight: resultText.implicitHeight
-
-            MaterialIcon {
-                id: calcIcon
-
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                text: "calculate"
-                color: Colours.palette.m3primary
-            }
-
-            StyledText {
-                id: resultText
-
-                anchors.left: calcIcon.right
-                anchors.leftMargin: Tokens.spacing.medium
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-
-                text: Qalculator.result || qsTr("…")
-                font.pointSize: Tokens.font.body.medium.pointSize
-                elide: Text.ElideRight
-            }
-        }
+        implicitHeight: Math.min(maxVisible, root.matches.length) * (Tokens.sizes.launcher.itemHeight + Tokens.spacing.small) + Tokens.padding.medium
 
         StyledListView {
             id: list
 
-            visible: !root.calcMode
             anchors.fill: parent
             anchors.margins: Tokens.padding.medium
             clip: true

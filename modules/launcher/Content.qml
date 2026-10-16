@@ -274,7 +274,7 @@ Item {
         emoji: "emoji",
     })
 
-    // Actions / calc overlay shows for `>` alone or `>action…` — but not
+    // Actions overlay shows for `>` alone or `>action…` — but not
     // when in a scoped graph filter (those route through the graph itself).
     readonly property bool inActions: search.text.startsWith(prefix) && !scope
     // Entering the actions overlay kicks the background graph into
@@ -508,7 +508,7 @@ Item {
         }
     }
 
-    // Floating action/calc list shown above the search bar when prefix typed.
+    // Floating action list shown above the search bar when prefix typed.
     ActionsOverlay {
         id: actions
 

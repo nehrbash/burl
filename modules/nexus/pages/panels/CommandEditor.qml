@@ -59,8 +59,8 @@ ColumnLayout {
             return false;
         }
         const existingKey = editingIndex >= 0 ? CommandArguments.keywordFor(original).toLowerCase() : "";
-        if ((SearchQuery.kindsFor(key) || key === "calc") && !(internalCommand && key === existingKey)) {
-            error = qsTr("This keyword is reserved for a search filter or calculator.");
+        if (SearchQuery.kindsFor(key) && !(internalCommand && key === existingKey)) {
+            error = qsTr("This keyword is reserved for a search filter.");
             return false;
         }
         const actions = Array.from(GlobalConfig.launcher.actions);

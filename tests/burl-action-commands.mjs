@@ -92,8 +92,8 @@ test('runtime uses argv and preserves session handling and built-in actions', ()
     assert.equal(launch.visibility.dashboard, false);
     const session = activation({name: 'Shutdown', command: ['poweroff']}, '>poweroff', {IdleInhibitor: {execSessionAction: () => true}});
     assert.deepEqual(session.calls, []);
-    const complete = activation({name: 'Calculator', command: ['autocomplete', 'calc']}, '>calc');
-    assert.equal(complete.field.text, '>calc ');
+    const complete = activation({name: 'Scheme', command: ['autocomplete', 'scheme']}, '>scheme');
+    assert.equal(complete.field.text, '>scheme ');
     assert.equal(complete.visibility.launcher, true);
     const mode = activation({name: 'Light', command: ['setMode', 'light']}, '>light');
     assert.deepEqual(mode.calls, [['mode', 'light']]);

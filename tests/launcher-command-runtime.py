@@ -24,7 +24,7 @@ with tempfile.TemporaryDirectory(prefix='burl-command-runtime-') as directory:
          'command': [sys.executable, '-c', program, 'fixed'], 'acceptArgs': True},
         {'name': 'Closed', 'keyword': 'closed', 'command': ['/missing-not-executed'], 'acceptArgs': False},
         {'name': 'Danger', 'keyword': 'poweroff', 'command': ['/missing-not-executed'], 'dangerous': True},
-        {'name': 'Calculator', 'command': ['autocomplete', 'calc']},
+        {'name': 'Scheme', 'command': ['autocomplete', 'scheme']},
     ]
     (root / 'config/burl/shell.json').write_text(json.dumps({'launcher': {'actions': actions, 'enableDangerousActions': False}}))
     env.update(XDG_CONFIG_HOME=str(root / 'config'), XDG_DATA_HOME=str(root / 'data'),
@@ -40,7 +40,7 @@ import qs.modules.launcher.services
 Item {
     id: root
     property var field: ({text: ""})
-    property var visibility: ({launcher: true, dashboard: false})
+    property var visibility: ({launcher: true, dashboard: false, closeWorld: function() { this.launcher = false; this.dashboard = false; }})
     function require(value, label) { if (!value) throw new Error(label); }
     Timer {
         interval: 600; running: true
@@ -55,9 +55,9 @@ Item {
             root.field.text = '>closed ignored';
             Actions.query(root.field.text)[0].activate(root.field, root.visibility);
             require(root.visibility.launcher, "disabled args closed launcher");
-            root.field.text = '>calculator';
+            root.field.text = '>scheme';
             Actions.query(root.field.text)[0].activate(root.field, root.visibility);
-            require(root.field.text === '>calc ', "built-in autocomplete failed");
+            require(root.field.text === '>scheme ', "built-in autocomplete failed");
             root.field.text = QUERY;
             action.activate(root.field, root.visibility);
             require(!root.visibility.launcher, "command did not close launcher");
