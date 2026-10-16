@@ -14,8 +14,8 @@ Item {
     property real viewZoom: 1
     property real viewPanX: 0
     property real viewPanY: 0
-    // Animator opacity keeps its old QML value until the fade finishes.
-    readonly property bool moving: active && visible && (opacity > 0.001 || (cameraMotion?.cameraMoving ?? false)) && Ambience.sway && !GameMode.enabled
+    // Room changes hide the scenery without restarting its ambient clocks.
+    readonly property bool moving: active && visible && (cameraMotion ? cameraMotion.revealP > 0.001 : opacity > 0.001) && Ambience.sway && !GameMode.enabled
     readonly property bool dream: scene === "dream"
     readonly property bool sky: scene === "sky"
     clip: true

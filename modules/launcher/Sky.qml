@@ -94,8 +94,7 @@ Item {
         viewPanY: root.viewPanY
         camera: 1 - root.panP
         cameraMotion: root.cameraMotion
-        visible: root.panP > 0.001 || (root.cameraMotion?.cameraMoving ?? false)
-        active: root.onScreen && (root.panP > 0.001 || (root.cameraMotion?.cameraMoving ?? false))
+        active: root.onScreen
     }
 
     Item {

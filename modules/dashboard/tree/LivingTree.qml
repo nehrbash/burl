@@ -65,6 +65,7 @@ Item {
 
     readonly property var roomCamera: root.guest ? root.nav.guestCamera : null
     readonly property Item roomBackground: root.guest ? root.nav.guestBackground : null
+    readonly property bool atmosphereActive: root.roomCamera ? root.roomCamera.revealP > 0.001 : root.onScreen && root.roomP > 0.001
     readonly property bool cameraMoving: root.roomCamera?.cameraMoving ?? false
     readonly property real roomOffset: root.guest ? (root.nav.guestRoomOffset ?? 0) : 0
     readonly property real roomP: root.guest ? (root.nav.guestRoomP ?? 1) : root.openP
@@ -474,7 +475,7 @@ Item {
         scene: "tree"
         cameraMotion: root.roomCamera
         camera: 0
-        active: root.onScreen && (root.cameraMoving || root.roomP > 0.001)
+        active: root.atmosphereActive
         opacity: root.roomP * 0.72
         CameraOpacityBehavior on opacity {
             camera: root.roomCamera
@@ -592,6 +593,7 @@ Item {
         width: root.geomW
         height: root.geomH
         scene: "dream"
+        cameraMotion: root.roomCamera
         spilling: true
         density: 1.35
         period: 22000
@@ -599,7 +601,7 @@ Item {
         CameraOpacityBehavior on opacity {
             camera: root.roomCamera
         }
-        active: root.onScreen && (root.cameraMoving || root.roomP > 0.001)
+        active: root.atmosphereActive
         enabled: false
     }
 

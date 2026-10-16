@@ -29,6 +29,11 @@ function treeScenery(item) {
     }
     return null;
 }
+function atmospheres(item, found) {
+    if (item.cameraMotion && item.moving !== undefined && item.scene !== undefined) found.push(item);
+    for (const child of item.children ?? []) atmospheres(child, found);
+    return found;
+}
 function check(ok, message) {
     if (!ok) {
         host.controlPhase = -1;
@@ -60,6 +65,8 @@ Timer {
         const up = host.find(subject, 'treeAscend');
         const search = host.find(subject, 'skySearch');
         if (!host.check(down && up && search, 'navigation controls and search exist')) return;
+        if (host.controlPhase === 2 || host.controlPhase === 3)
+            host.check(host.atmospheres(subject, []).every(item => item.moving), 'ambient clocks remain active throughout room changes');
         if (subject.panP > 0.1 && subject.panP < 0.9) {
             host.check(!down.enabled && !up.enabled, 'camera travel disables navigation');
             if (host.controlPhase === 1) {
@@ -76,8 +83,10 @@ Timer {
             }
         }
         if (host.controlPhase === 1 && subject.panP > 0.999 && subject.atSky) {
+            if (host.atmospheres(subject, []).some(item => item.ready === false)) return;
             const d = host.bounds(down), u = host.bounds(up), s = host.bounds(search);
             host.check(host.checkedAscent, 'initial ascent was exercised');
+            host.check(host.treeScenery(subject)?.moving, 'tree atmosphere retains its clock while viewing sky');
             host.check(down.enabled && !up.enabled, 'sky enables only its navigation');
             const graph = host.find(subject, 'skyGraph');
             host.check(Math.abs(graph.parent.y) < 0.1, 'render-thread camera reaches sky endpoint');
@@ -98,6 +107,7 @@ Timer {
         } else if (host.controlPhase === 2 && subject.panP < 0.001 && subject.atTree) {
             host.check(host.checkedDescent, 'descent camera travel was exercised');
             host.check(up.enabled && !down.enabled, 'tree enables only ascent');
+            host.check(host.atmospheres(subject, []).every(item => item.moving), 'sky and tree atmosphere clocks survive tree arrival');
             const graph = host.find(subject, 'skyGraph');
             host.check(Math.abs(graph.parent.y + subject.height * 1.12) < 0.1, 'render-thread camera reaches tree endpoint');
             if (host.controlPhase < 0) return;
@@ -119,5 +129,9 @@ Timer {
 }
 Timer {
     interval: 16000; running: true
-    onTriggered: host.check(host.controlPhase === 4, 'navigation cycle completed before deadline')
+    onTriggered: {
+        host.check(host.controlPhase === 4, 'navigation cycle completed before deadline');
+        const scenery = host.atmospheres(subject, []);
+        host.check(scenery.length === 3 && scenery.every(item => !item.moving), 'closed overlay stops every ambient clock');
+    }
 }

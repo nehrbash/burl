@@ -52,7 +52,7 @@ Timer {
         Qt.callLater(() => host.check(body.x > x && body.scale > scale, "planets respond to pan and zoom"));
     }
 }
-property QtObject cameraProbe: QtObject { property bool cameraMoving: true }
+property QtObject cameraProbe: QtObject { property real revealP: 1 }
 Timer {
     interval: 1900; running: true
     onTriggered: {

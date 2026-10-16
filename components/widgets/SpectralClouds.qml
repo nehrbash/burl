@@ -7,13 +7,15 @@ Item {
     id: root
     property string scene: "dream"
     property bool active: true
+    property var cameraMotion: null
     property alias phase: cloudShader.phase
     readonly property bool animating: playback.running
     property bool spilling: false
     property real density: 1
     property int period: scene === "tree" ? 24000 : scene === "sky" ? 36000 : 28000
     readonly property bool ready: atlas.status === Image.Ready
-    readonly property bool moving: root.active && root.visible && root.opacity > 0.001
+    readonly property bool moving: root.active && root.visible
+        && (root.cameraMotion ? root.cameraMotion.revealP > 0.001 : root.opacity > 0.001)
         && root.ready && Ambience.sway && !GameMode.enabled
 
     Image {
