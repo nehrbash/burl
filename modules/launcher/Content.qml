@@ -51,6 +51,42 @@ Item {
         root.visibilities.openWorldRoom("dashboard");
     }
 
+    property var openedPlaylist: null
+    property var playlistReturn: null
+
+    function openPlaylist(playlist: var): void {
+        if (openedPlaylist?.uri === playlist.uri) {
+            SpotifySources.loadPlaylist(playlist.uri);
+            return;
+        }
+        playlistReturn = {query: search.text, selection: graph.nodes[graph.currentNode]?.id};
+        closeKindMenu();
+        openedPlaylist = playlist;
+        search.text = "";
+        graph.rebuild();
+        graph.flushSearch();
+        SpotifySources.loadPlaylist(playlist.uri);
+        search.forceActiveFocus();
+    }
+
+    function leavePlaylist(): void {
+        const previous = playlistReturn;
+        openedPlaylist = null;
+        playlistReturn = null;
+        search.text = previous?.query ?? "";
+        graph.rebuild();
+        graph.flushSearch();
+        const index = graph.indexById[previous?.selection];
+        if (index !== undefined) graph.selectNode(index);
+        search.forceActiveFocus();
+    }
+
+    function escape(): void {
+        if (root.atSky && kindMenuOpen) closeKindMenu();
+        else if (root.atSky && openedPlaylist) leavePlaylist();
+        else root.visibilities.closeWorld("escape");
+    }
+
     function dismiss(): void {
         root.visibilities.closeWorld("dismiss");
     }
@@ -314,6 +350,8 @@ Item {
         opacity: Math.min(1, root.panP * 3) * root.revealP
         enabled: root.arrivalP > 0.99
         visibilities: root.visibilities
+        openedPlaylist: root.openedPlaylist
+        onPlaylistSelected: playlist => root.openPlaylist(playlist)
         // When scope is active, GraphView does per-segment scoring and
         // ignores `query`. Otherwise the whole search text drives matching.
         // The `?` web-search prefix is stripped so the graph still scores
@@ -569,6 +607,33 @@ Item {
         anchors.bottom: parent.bottom
         anchors.bottomMargin: parent.height * 0.08
 
+        Rectangle {
+            anchors.bottom: parent.top
+            anchors.bottomMargin: 8
+            width: parent.width
+            height: playlistCaption.implicitHeight + 16
+            radius: 12
+            color: Woodland.barkShaded
+            visible: root.openedPlaylist !== null
+            Text {
+                id: playlistCaption
+                anchors.centerIn: parent
+                width: parent.width - 24
+                color: Woodland.parchment
+                elide: Text.ElideRight
+                readonly property var loadState: SpotifySources.playlistContents[root.openedPlaylist?.uri ?? ""]
+                text: "← " + (root.openedPlaylist?.name ?? "") + "  ·  "
+                    + (loadState?.status === "error" ? loadState.error + qsTr(" — select playlist to retry")
+                       : loadState?.status === "ready" ? qsTr("%1 tracks · Shift+Enter for Play").arg(loadState.tracks.length)
+                       : qsTr("Loading tracks…"))
+            }
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.leavePlaylist()
+            }
+        }
+
         // Subtle paper grain inside the pill (clipped to the pill radius).
         WoodPanel {
             anchors.fill: parent
@@ -813,9 +878,7 @@ Item {
                 }
             }
 
-            // Escape closes, always — no stepping back through the kind menu or
-            // out of the tree into the sky first. One key, one meaning.
-            Keys.onEscapePressed: root.dismiss()
+            Keys.onEscapePressed: root.escape()
             Keys.onReleased: event => {
                 if (!event.isAutoRepeat && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter))
                     treeGuest.item?.releaseKeyboardAction();
@@ -833,6 +896,8 @@ Item {
 
             function syncOpen(): void {
                 if (!root.visibilities.worldOpen) {
+                    root.openedPlaylist = null;
+                    root.playlistReturn = null;
                     search.text = "";
                     graph.pivotKind = "";
                     search.grewThisOpen = false;

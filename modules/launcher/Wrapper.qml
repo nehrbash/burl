@@ -25,7 +25,10 @@ Item {
         sequence: "Escape"
         context: Qt.WindowShortcut
         enabled: root.shouldBeActive
-        onActivated: root.visibilities.closeWorld("escape")
+        onActivated: {
+            if (sceneLoader.item) sceneLoader.item.escape();
+            else root.visibilities.closeWorld("escape");
+        }
     }
 
     // Retain the warm scene between opens outside Performance mode.

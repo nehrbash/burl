@@ -66,6 +66,24 @@ ShellRoot {
             navigation.openRoom("dashboard", "key");
             return "armed";
         }
+        function armPlaylist(): void {
+            navigation.openRoom("launcher", "key");
+        }
+        function playlistReady(): bool {
+            return (root.sceneLoader().item?.revealP ?? 0) > 0.99 && root.sceneLoader().item.atSky;
+        }
+        function openPlaylist(): bool {
+            const content = root.sceneLoader().item;
+            content.openPlaylist({uri: "fixture", name: "Fixture playlist"});
+            content.playlistReturn = {query: ">spotify", selection: null};
+            return content.openedPlaylist !== null;
+        }
+        function playlistReturned(): bool {
+            const content = root.sceneLoader().item;
+            return navigation.launcher && content.openedPlaylist === null
+                && content.scope?.length === 2 && content.scope[0].kind === "spotifyPlaylist";
+        }
+        function worldClosed(): bool { return !navigation.worldOpen; }
         function armEditor(): void {
             root.editorPending = true;
             navigation.openRoom("dashboard", "key");

@@ -36,6 +36,10 @@ installations change; cached artwork supplies covers. Steam support runtimes are
 excluded, but other installed tools may appear. Source and category visibility
 rules in Settings → Panels → Launcher also apply to Steam games.
 
+Select a Spotify playlist with Enter or a click to browse its tracks. Tracks load
+on demand and connect to their playlist node. Escape returns to the prior search;
+Shift+Enter opens the Play action. Selecting a track starts playback.
+
 Use `report >file` to find files, or `>file|roam report` to include notes.
 File search starts after three nonspace characters and a short typing pause.
 It searches under your home directory, skipping hidden files, symlinks and common

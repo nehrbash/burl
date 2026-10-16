@@ -17,6 +17,8 @@ function primary(kind, source, context) {
     const quote = JSON.stringify;
     let expression = "";
     switch (kind) {
+    case "spotifyTrack":
+        return source.uri ? {name: "Play", icon: "play_arrow", desc: source.name, spotifyUri: source.uri} : null;
     case "steam":
         return /^[1-9][0-9]*$/.test(String(source.appId ?? ""))
             ? {name: "Play", icon: "sports_esports", desc: source.name, command: ["steam", "-applaunch", String(source.appId)]} : null;
@@ -54,6 +56,10 @@ function secondary(node, context) {
     const copy = (name, value) => value ? { name, icon: "content_copy", desc: value, command: ["wl-copy", value] } : null;
     let actions = [];
     switch (node.kind) {
+    case "spotifyPlaylist":
+    case "spotifyTrack":
+        if (source.uri) actions = [{name: "Play", icon: "play_arrow", desc: source.name, spotifyUri: source.uri}];
+        break;
     case "file":
         if (!source.path) break;
         actions = [
@@ -109,7 +115,9 @@ function secondary(node, context) {
 function execute(action, context, visibility) {
     if (!action)
         return false;
-    if (action.command)
+    if (action.spotifyUri)
+        context.playSpotify(action.spotifyUri);
+    else if (action.command)
         context.execute(action.command);
     else if (action.entry)
         context.launch(action.entry);

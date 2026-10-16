@@ -176,3 +176,16 @@ test('Steam launch uses a validated app ID as a literal argument', () => {
     for (const appId of ['', '0', '-1', '570;touch /tmp/x', '570 extra', '5.7'])
         assert.equal(actions.primary('steam', {appId}, h.context), null);
 });
+
+test('Spotify playlist playback is an explicit secondary action', () => {
+    const played=[];
+    const h=harness({playSpotify: uri=>played.push(uri)});
+    const source={uri:'spotify:playlist:abc',name:'Playlist'};
+    assert.equal(actions.primary('spotifyPlaylist',source,h.context),null);
+    const menu=actions.secondary({kind:'spotifyPlaylist',source},h.context);
+    assert.equal(menu[0].name,'Play');
+    actions.execute(menu[0],h.context,h.visibility);
+    assert.deepEqual(played,[source.uri]);
+    assert.equal(h.visibility.launcher,false);
+    assert.equal(actions.primary('spotifyTrack',{uri:'spotify:track:abc'},h.context).spotifyUri,'spotify:track:abc');
+});

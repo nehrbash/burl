@@ -9,6 +9,7 @@ import Burl.Sim
 import Burl.Services
 import "GraphDrift.js" as GraphDrift
 import "GraphActions.js" as GraphActions
+import "SpotifyGraph.js" as SpotifyGraph
 import "SearchRanking.js" as SearchRanking
 import "SearchQuery.js" as SearchQuery
 import qs.components
@@ -38,6 +39,9 @@ Item {
     // kind matches it (max if multiple); kinds with no segment are out.
     property var scopeSegments: []
     signal categorySelected(string category)
+    signal playlistSelected(var playlist)
+    property var openedPlaylist: null
+    onOpenedPlaylistChanged: requestRebuild()
     readonly property string visibilityPolicyKey: JSON.stringify([
         GlobalConfig.launcher.onlyShowWhenFiltered,
         scopeSegments.map(segment => [segment.kind, segment.category ?? ""]), pivotKind
@@ -418,6 +422,7 @@ Item {
     Connections {
         target: SpotifySources
         function onPlaylistsChanged() { root.requestRebuild(); }
+        function onPlaylistContentsChanged() { if (root.openedPlaylist) root.requestRebuild(); }
         function onRecentsChanged() { root.requestRebuild(); }
     }
 
@@ -645,7 +650,8 @@ Item {
             agendaFile: CalendarSources.agendaFile,
             execute: command => Quickshell.execDetached(command),
             launch: entry => Apps.launch(entry),
-            dispatch: command => Hypr.dispatch(command)
+            dispatch: command => Hypr.dispatch(command),
+            playSpotify: uri => SpotifySources.play(uri)
         };
     }
 
@@ -1044,57 +1050,16 @@ Item {
             });
         }
 
-        // Spotify playlists. Click → play on active device. URI is
-        // the playlist's spotify:playlist:XYZ.
-        const spPlColor = colorFor("spotifyPlaylist");
-        const spPlOnColor = onColorFor("spotifyPlaylist");
-        const spPlGlyph = glyphFor("spotifyPlaylist");
-        for (const p of (SpotifySources.playlists ?? []).slice(0, maxSpotify)) {
-            const uri = p.uri ?? "";
-            if (!uri) continue;
-            const id = `spotify:pl:${uri}`;
-            const tipBits = [p.owner, p.trackCount ? `${p.trackCount} tracks` : ""].filter(Boolean);
-            out.push({
-                id,
-                kind: "spotifyPlaylist",
-                label: p.name ?? "(playlist)",
-                tooltip: tipBits.join("  •  "),
-                imageUrl: p.image ?? "",
-                color: spPlColor,
-                onColor: spPlOnColor,
-                glyph: spPlGlyph,
-                onClicked: vis => {
-                    vis.setVisible("launcher", false, "pointer");
-                    SpotifySources.play(uri);
-                }
-            });
-        }
-
-        // Spotify recently-played tracks. Each track is its own node;
-        // grouping by album as edges happens in relayout().
-        const spTrColor = colorFor("spotifyTrack");
-        const spTrOnColor = onColorFor("spotifyTrack");
-        const spTrGlyph = glyphFor("spotifyTrack");
-        for (const t of (SpotifySources.recents ?? []).slice(0, maxSpotify)) {
-            const uri = t.uri ?? "";
-            if (!uri) continue;
-            const id = `spotify:tr:${uri}`;
-            out.push({
-                id,
-                kind: "spotifyTrack",
-                label: t.name ?? "(track)",
-                tooltip: [t.artist, t.album].filter(Boolean).join("  •  "),
-                imageUrl: t.image ?? "",
-                color: spTrColor,
-                onColor: spTrOnColor,
-                glyph: spTrGlyph,
-                spotifyAlbum: t.album ?? "",
-                uri: uri,            // payload for now-playing accent
-                onClicked: vis => {
-                    vis.setVisible("launcher", false, "pointer");
-                    SpotifySources.play(uri);
-                }
-            });
+        const spotifyNodes = SpotifyGraph.nodes(SpotifySources.playlists ?? [],
+            SpotifySources.recents ?? [], root.openedPlaylist, SpotifySources.playlistContents, maxSpotify);
+        for (const node of spotifyNodes) {
+            node.color = colorFor(node.kind);
+            node.onColor = onColorFor(node.kind);
+            node.glyph = glyphFor(node.kind);
+            node.onClicked = node.kind === "spotifyPlaylist"
+                ? () => root.playlistSelected(node.source)
+                : vis => root.activateSource("spotifyTrack", node.source, vis);
+            out.push(node);
         }
 
         for (const file of (fileSearch.active ? fileSearch.entries : [])) {
@@ -1161,7 +1126,7 @@ Item {
             });
         }
 
-        out = out.filter(node => SearchQuery.nodeVisible(node, root.scopeSegments,
+        out = root.openedPlaylist ? spotifyNodes : out.filter(node => SearchQuery.nodeVisible(node, root.scopeSegments,
             GlobalConfig.launcher.onlyShowWhenFiltered, root.pivotKind));
         appliedVisibilityPolicyKey = visibilityPolicyKey;
         const idx = {};
@@ -1187,7 +1152,8 @@ Item {
         // EmacsSources scan) destroys + recreates every Repeater
         // delegate, which flashes icons + resets label fade timing.
         const sameShape = nodes.length === out.length
-            && nodes.every((n, i) => n.id === out[i]?.id && n.imageUrl === out[i]?.imageUrl);
+            && nodes.every((n, i) => n.id === out[i]?.id && n.imageUrl === out[i]?.imageUrl
+                && n.playlistUri === out[i]?.playlistUri);
         if (sameShape) {
             let searchChanged = false;
             // Refresh callbacks / colour references in place but keep
@@ -1370,13 +1336,16 @@ Item {
             if (i !== undefined && j !== undefined && i !== j)
                 pairs.push(Qt.point(i, j));
         }
+        for (const pair of SpotifyGraph.links(nodes, indexById))
+            pairs.push(Qt.point(pair[0], pair[1]));
+
         // Spotify: link tracks that share an album. First-seen track
         // per album becomes the hub.
         {
             const albumHub = ({});
             for (let i = 0; i < nodes.length; ++i) {
                 const n = nodes[i];
-                if (n.kind !== "spotifyTrack") continue;
+                if (n.kind !== "spotifyTrack" || n.playlistUri) continue;
                 const a = n.spotifyAlbum ?? "";
                 if (!a) continue;
                 if (albumHub[a] === undefined) { albumHub[a] = i; continue; }

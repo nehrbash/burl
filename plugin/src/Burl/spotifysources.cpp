@@ -10,6 +10,7 @@
 #include <qloggingcategory.h>
 #include <qnetworkreply.h>
 #include <qprocess.h>
+#include <qregularexpression.h>
 #include <QtCore/QProcessEnvironment>
 #include <qstandardpaths.h>
 #include <qurl.h>
@@ -20,6 +21,57 @@ Q_LOGGING_CATEGORY(lcSpotify, "burl.spotify", QtInfoMsg)
 using Qt::StringLiterals::operator""_s;
 
 namespace burl {
+
+namespace spotify {
+QString playlistId(const QString& uri) {
+    static const QRegularExpression pattern(u"^spotify:playlist:([A-Za-z0-9]{22})$"_s);
+    return pattern.match(uri).captured(1);
+}
+
+bool allowedPlaylistUrl(const QUrl& url, const QString& id, bool legacy) {
+    return url.isValid() && url.scheme() == u"https"_s && url.host() == u"api.spotify.com"_s
+        && url.port(-1) == -1 && url.userInfo().isEmpty() && !url.hasFragment()
+        && url.path(QUrl::FullyEncoded) == u"/v1/playlists/"_s + id + (legacy ? u"/tracks"_s : u"/items"_s);
+}
+
+QVariantMap track(const QJsonObject& object) {
+    const auto uri = object.value(u"uri"_s).toString();
+    static const QRegularExpression pattern(u"^spotify:track:[A-Za-z0-9]{22}$"_s);
+    if (!pattern.match(uri).hasMatch() || object.value(u"is_local"_s).toBool()
+        || (object.contains(u"is_playable"_s) && !object.value(u"is_playable"_s).toBool())
+        || !object.value(u"restrictions"_s).toObject().isEmpty()
+        || (!object.value(u"type"_s).toString().isEmpty() && object.value(u"type"_s).toString() != u"track"_s))
+        return {};
+    const auto name = object.value(u"name"_s).toString();
+    if (name.isEmpty()) return {};
+    QStringList artists;
+    for (const auto& artist : object.value(u"artists"_s).toArray())
+        artists.append(artist.toObject().value(u"name"_s).toString());
+    const auto album = object.value(u"album"_s).toObject();
+    const auto images = album.value(u"images"_s).toArray();
+    return {{u"uri"_s, uri}, {u"name"_s, name}, {u"artist"_s, artists.join(u", "_s)},
+        {u"album"_s, album.value(u"name"_s).toString()},
+        {u"image"_s, images.isEmpty() ? QString{} : images.first().toObject().value(u"url"_s).toString()}};
+}
+
+bool PlaylistLoad::append(const QJsonObject& page) {
+    if (!page.value(u"items"_s).isArray()) return false;
+    const auto items = page.value(u"items"_s).toArray();
+    if (items.size() > 100) return false;
+    for (const auto& value : items) {
+        const auto wrapper = value.toObject();
+        if (wrapper.value(u"is_local"_s).toBool()) continue;
+        const auto object = wrapper.contains(u"item"_s) ? wrapper.value(u"item"_s).toObject()
+                                                       : wrapper.value(u"track"_s).toObject();
+        const auto parsed = track(object);
+        const auto uri = parsed.value(u"uri"_s).toString();
+        if (parsed.isEmpty() || trackUris.contains(uri)) continue;
+        trackUris.insert(uri);
+        tracks.append(parsed);
+    }
+    return tracks.size() <= 10000;
+}
+}
 
 SpotifySources::SpotifySources(QObject* parent) : QObject(parent) {
     // Credentials live in `pass` under `burl/spotify`. The
@@ -77,6 +129,15 @@ SpotifySources::SpotifySources(QObject* parent) : QObject(parent) {
 }
 
 void SpotifySources::loadCreds(std::function<void(bool)> done) {
+    const auto generation = ++m_authGeneration;
+    m_playlistLoads.clear();
+    m_playlistSnapshots.clear();
+    if (!m_playlistContents.isEmpty()) {
+        m_playlistContents.clear();
+        emit playlistContentsChanged();
+    }
+    m_accessToken.clear();
+    m_accessExpiry = {};
     const bool wasAuthed = !m_refreshToken.isEmpty();
     m_clientId.clear();
     m_clientSecret.clear();
@@ -101,8 +162,9 @@ void SpotifySources::loadCreds(std::function<void(bool)> done) {
     penv.insert(u"PASSWORD_STORE_GPG_OPTS"_s, u"--pinentry-mode=cancel"_s);
     p->setProcessEnvironment(penv);
     QObject::connect(p, &QProcess::finished, this,
-        [this, p, wasAuthed, done](int code, QProcess::ExitStatus) {
+        [this, p, wasAuthed, done, generation](int code, QProcess::ExitStatus) {
             p->deleteLater();
+            if (generation != m_authGeneration) { if (done) done(false); return; }
             if (code != 0) {
                 qCWarning(lcSpotify) << "pass show failed:" << code
                                      << p->readAllStandardError();
@@ -124,6 +186,8 @@ QNetworkRequest SpotifySources::authed(const QString& url) const {
     QNetworkRequest req((QUrl(url)));
     req.setRawHeader("Authorization", ("Bearer " + m_accessToken).toUtf8());
     req.setRawHeader("Accept", "application/json");
+    req.setTransferTimeout(15000);
+    req.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);
     return req;
 }
 
@@ -136,7 +200,10 @@ void SpotifySources::refreshAccessToken(std::function<void(bool)> done) {
         done(true);
         return;
     }
+    const auto generation = m_authGeneration;
     QNetworkRequest req((QUrl(u"https://accounts.spotify.com/api/token"_s)));
+    req.setTransferTimeout(15000);
+    req.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);
     req.setHeader(QNetworkRequest::ContentTypeHeader, u"application/x-www-form-urlencoded"_s);
     const QByteArray basic = (m_clientId + u":"_s + m_clientSecret).toUtf8().toBase64();
     req.setRawHeader("Authorization", "Basic " + basic);
@@ -147,8 +214,10 @@ void SpotifySources::refreshAccessToken(std::function<void(bool)> done) {
     const QByteArray payload = body.toString(QUrl::FullyEncoded).toUtf8();
 
     auto* reply = m_nam.post(req, payload);
-    QObject::connect(reply, &QNetworkReply::finished, this, [this, reply, done]() {
+    QTimer::singleShot(15000, reply, &QNetworkReply::abort);
+    QObject::connect(reply, &QNetworkReply::finished, this, [this, reply, done, generation]() {
         reply->deleteLater();
+        if (generation != m_authGeneration) { done(false); return; }
         if (reply->error() != QNetworkReply::NoError) {
             qCWarning(lcSpotify) << "token refresh failed:" << reply->errorString();
             done(false);
@@ -188,19 +257,33 @@ void SpotifySources::reload() {
 }
 
 void SpotifySources::fetchPlaylists() {
+    const auto generation = m_authGeneration;
     auto* reply = m_nam.get(authed(u"https://api.spotify.com/v1/me/playlists?limit=50"_s));
-    QObject::connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+    QObject::connect(reply, &QNetworkReply::finished, this, [this, reply, generation]() {
         reply->deleteLater();
+        if (generation != m_authGeneration) return;
         if (reply->error() != QNetworkReply::NoError) {
             qCWarning(lcSpotify) << "playlists fetch failed:" << reply->errorString();
             return;
         }
         const auto obj = QJsonDocument::fromJson(reply->readAll()).object();
         QVariantList out;
+        QStringList changedPlaylists;
         for (const auto& v : obj.value(u"items"_s).toArray()) {
             const auto p = v.toObject();
             QVariantMap m;
-            m[u"uri"_s] = p.value(u"uri"_s).toString();
+            const auto uri = p.value(u"uri"_s).toString();
+            const auto snapshot = p.value(u"snapshot_id"_s).toString();
+            if (!snapshot.isEmpty()) {
+                if (m_playlistSnapshots.contains(uri) && m_playlistSnapshots.value(uri) != snapshot
+                    && m_playlistContents.contains(uri)) {
+                    m_playlistLoads.remove(uri);
+                    m_playlistContents.remove(uri);
+                    changedPlaylists.append(uri);
+                }
+                m_playlistSnapshots.insert(uri, snapshot);
+            }
+            m[u"uri"_s] = uri;
             m[u"name"_s] = p.value(u"name"_s).toString();
             m[u"owner"_s] = p.value(u"owner"_s).toObject().value(u"display_name"_s).toString();
             const auto images = p.value(u"images"_s).toArray();
@@ -211,13 +294,16 @@ void SpotifySources::fetchPlaylists() {
         }
         m_playlists = std::move(out);
         emit playlistsChanged();
+        for (const auto& uri : changedPlaylists) loadPlaylist(uri);
     });
 }
 
 void SpotifySources::fetchRecents() {
+    const auto generation = m_authGeneration;
     auto* reply = m_nam.get(authed(u"https://api.spotify.com/v1/me/player/recently-played?limit=50"_s));
-    QObject::connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+    QObject::connect(reply, &QNetworkReply::finished, this, [this, reply, generation]() {
         reply->deleteLater();
+        if (generation != m_authGeneration) return;
         if (reply->error() != QNetworkReply::NoError) {
             qCWarning(lcSpotify) << "recents fetch failed:" << reply->errorString();
             return;
@@ -242,6 +328,93 @@ void SpotifySources::fetchRecents() {
         }
         m_recents = std::move(out);
         emit recentsChanged();
+    });
+}
+
+bool SpotifySources::currentPlaylistLoad(const std::shared_ptr<spotify::PlaylistLoad>& load) const {
+    return load->authGeneration == m_authGeneration && m_playlistLoads.value(load->uri) == load;
+}
+
+void SpotifySources::finishPlaylist(const std::shared_ptr<spotify::PlaylistLoad>& load, const QString& error) {
+    if (!currentPlaylistLoad(load)) return;
+    m_playlistLoads.remove(load->uri);
+    m_playlistContents.insert(load->uri, QVariantMap{
+        {u"status"_s, error.isEmpty() ? u"ready"_s : u"error"_s},
+        {u"error"_s, error}, {u"tracks"_s, error.isEmpty() ? load->tracks : QVariantList{}}});
+    emit playlistContentsChanged();
+}
+
+void SpotifySources::loadPlaylist(const QString& uri) {
+    const auto id = spotify::playlistId(uri);
+    if (id.isEmpty()) return;
+    const auto status = m_playlistContents.value(uri).toMap().value(u"status"_s).toString();
+    if (status == u"ready"_s || status == u"loading"_s) return;
+    auto load = std::make_shared<spotify::PlaylistLoad>();
+    load->uri = uri;
+    load->id = id;
+    load->authGeneration = m_authGeneration;
+    load->elapsed.start();
+    m_playlistLoads.insert(uri, load);
+    m_playlistContents.insert(uri, QVariantMap{{u"tracks"_s, QVariantList{}},
+        {u"status"_s, u"loading"_s}, {u"error"_s, QString{}}});
+    emit playlistContentsChanged();
+    refreshAccessToken([this, load](bool ok) {
+        if (!currentPlaylistLoad(load)) return;
+        if (!ok) { finishPlaylist(load, tr("Spotify authentication failed. Try reloading.")); return; }
+        fetchPlaylistPage(load, QUrl(u"https://api.spotify.com/v1/playlists/"_s + load->id + u"/items?limit=50"_s));
+    });
+}
+
+void SpotifySources::fetchPlaylistPage(const std::shared_ptr<spotify::PlaylistLoad>& load, const QUrl& url) {
+    if (!currentPlaylistLoad(load)) return;
+    const auto encoded = url.toString(QUrl::FullyEncoded);
+    if (!spotify::allowedPlaylistUrl(url, load->id, load->legacy) || load->pages.contains(encoded)) {
+        finishPlaylist(load, tr("Spotify returned an invalid pagination link."));
+        return;
+    }
+    if (load->pages.size() >= 200 || load->elapsed.elapsed() >= 120000) {
+        finishPlaylist(load, tr("Playlist loading exceeded its limit. Try again."));
+        return;
+    }
+    load->pages.insert(encoded);
+    auto* reply = m_nam.get(authed(encoded));
+    reply->setReadBufferSize(4 * 1024 * 1024 + 1);
+    connect(reply, &QIODevice::readyRead, reply, [reply] {
+        if (reply->bytesAvailable() > 4 * 1024 * 1024) reply->abort();
+    });
+    QTimer::singleShot(15000, reply, &QNetworkReply::abort);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, load]() {
+        reply->deleteLater();
+        if (!currentPlaylistLoad(load)) return;
+        const auto code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        // Legacy applications can retain /tracks while Dev Mode uses /items.
+        if (!load->legacy && load->pages.size() == 1 && (code == 403 || code == 404 || code == 405)) {
+            load->legacy = true;
+            load->pages.clear();
+            fetchPlaylistPage(load, QUrl(u"https://api.spotify.com/v1/playlists/"_s + load->id + u"/tracks?limit=50"_s));
+            return;
+        }
+        if (reply->error() != QNetworkReply::NoError || code != 200) {
+            const auto error = code == 403 ? tr("Spotify does not permit access to this playlist.")
+                : code == 429 ? tr("Spotify rate limit reached. Try again later.")
+                : tr("Could not load playlist (HTTP %1). Try again.").arg(code);
+            finishPlaylist(load, error);
+            return;
+        }
+        QJsonParseError parseError;
+        const auto document = QJsonDocument::fromJson(reply->readAll(), &parseError);
+        const auto page = document.object();
+        if (parseError.error != QJsonParseError::NoError || !document.isObject() || !load->append(page)) {
+            finishPlaylist(load, tr("Spotify returned invalid playlist data."));
+            return;
+        }
+        const auto next = page.value(u"next"_s);
+        if (!next.isUndefined() && !next.isNull() && !next.isString()) {
+            finishPlaylist(load, tr("Spotify returned an invalid pagination link."));
+            return;
+        }
+        if (next.toString().isEmpty()) finishPlaylist(load);
+        else fetchPlaylistPage(load, QUrl(next.toString()));
     });
 }
 

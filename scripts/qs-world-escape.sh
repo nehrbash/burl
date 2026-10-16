@@ -59,7 +59,22 @@ done
 [[ $(quickshell ipc --pid "$probe_pid" call worldEscape focusEditor) == true ]]
 send_escape
 wait_marker WORLD-ESCAPE-EDITOR-PASS
+quickshell ipc --pid "$probe_pid" call worldEscape armPlaylist
+ready=false
+for ((attempt = 0; attempt < 150; attempt++)); do
+    if [[ $(quickshell ipc --pid "$probe_pid" call worldEscape playlistReady) == true ]]; then
+        ready=true
+        break
+    fi
+    sleep 0.05
+done
+[[ $ready == true ]]
+[[ $(quickshell ipc --pid "$probe_pid" call worldEscape openPlaylist) == true ]]
+send_escape
+[[ $(quickshell ipc --pid "$probe_pid" call worldEscape playlistReturned) == true ]]
+send_escape
+[[ $(quickshell ipc --pid "$probe_pid" call worldEscape worldClosed) == true ]]
 if grep -qE 'WORLD-ESCAPE-FAIL|TypeError|ReferenceError|SyntaxError|Cannot assign|Binding loop' "$WORK/runtime.log"; then
     exit 1
 fi
-echo 'PASS: Escape before scene readiness and with a focused child editor'
+echo 'PASS: Escape before readiness, in a child editor, and returning from a playlist'
