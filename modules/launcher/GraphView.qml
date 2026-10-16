@@ -6,6 +6,7 @@ import Quickshell
 import Burl
 import Burl.Config
 import Burl.Sim
+import Burl.Services
 import "GraphDrift.js" as GraphDrift
 import "GraphActions.js" as GraphActions
 import "SearchRanking.js" as SearchRanking
@@ -253,8 +254,7 @@ Item {
     property var appIndices: []
     // Indices into nodes[] of kind=wallpaper — drives the thumbnail overlay.
     property var wallpaperIndices: []
-    // Indices of Spotify nodes that have a remote cover image URL.
-    property var spotifyImageIndices: []
+    property var coverImageIndices: []
     // Cover URLs that failed to load/decode. Rebuilds recreate the
     // cover delegates, and Qt only caches successful decodes — without
     // this a bad URL is re-fetched and re-logged on every rebuild.
@@ -411,6 +411,11 @@ Item {
     }
 
     Connections {
+        target: SteamLibrary
+        function onGamesChanged() { root.requestRebuild(); }
+    }
+
+    Connections {
         target: SpotifySources
         function onPlaylistsChanged() { root.requestRebuild(); }
         function onRecentsChanged() { root.requestRebuild(); }
@@ -556,6 +561,7 @@ Item {
 
     function colorFor(kind: string): color {
         switch (kind) {
+        case "steam":
         case "app":         return Colours.palette.m3primary;
         case "file":
         case "recent":      return Colours.palette.m3secondary;
@@ -582,6 +588,7 @@ Item {
 
     function glyphFor(kind: string): string {
         switch (kind) {
+        case "steam": return "sports_esports";
         case "file":
         case "recent":      return "description";
         case "bookmark":    return "bookmark";
@@ -607,6 +614,7 @@ Item {
 
     function onColorFor(kind: string): color {
         switch (kind) {
+        case "steam":
         case "app":         return Colours.palette.m3onPrimary;
         case "file":
         case "recent":      return Colours.palette.m3onSecondary;
@@ -664,9 +672,13 @@ Item {
 
         // Apps — Apps.list is sorted by frequency in AppDb.
         const apps = Apps.list ?? [];
+        const steamGames = SteamLibrary.games;
+        const steamIds = new Set(steamGames.map(game => String(game.appId)));
         for (let i = 0; i < (root.scopeSegments.some(segment => segment.category) ? apps.length : Math.min(apps.length, maxApps)); ++i) {
             const e = apps[i];
             const entry = e.entry ?? e;
+            const steamShortcut = /^steam_app_(\d+)(?:\.desktop)?$/.exec(entry?.id ?? "");
+            if (steamShortcut && steamIds.has(steamShortcut[1])) continue;
             const id = `app:${entry?.id ?? i}`;
             out.push({
                 id,
@@ -690,21 +702,10 @@ Item {
         const catOnColor = onColorFor("category");
         const catGlyph = glyphFor("category");
         const seenCats = new Set();
-        // categories can come back as either a string (the C++ wrapper
-        // joins with " ") or a QStringList depending on the Apps
-        // backend. Normalise to string.
-        function catString(entry) {
-            // categories may be a QStringList (renders as "a,b,c" via
-            // String coercion) or a plain string. Normalise to a
-            // space-separated string we can split.
-            return String(entry?.categories ?? "").replace(/,/g, " ").trim();
-        }
         for (let i = 0; i < (root.scopeSegments.some(segment => segment.category) ? apps.length : Math.min(apps.length, maxApps)); ++i) {
             const e = apps[i];
             const entry = e.entry ?? e;
-            const cats = catString(entry);
-            if (!cats) continue;
-            const primary = cats.split(/[ ;,]+/).find(c => c.length > 0);
+            const primary = SearchQuery.categoriesFor(entry)[0];
             if (!primary || seenCats.has(primary)) continue;
             seenCats.add(primary);
             const id = `category:${primary}`;
@@ -717,6 +718,17 @@ Item {
                 glyph: catGlyph,
                 onClicked: () => root.categorySelected(primary)
             });
+        }
+
+        if (steamGames.length && !seenCats.has("Game")) {
+            out.push({id: "category:Game", kind: "category", label: "Game", color: catColor,
+                onColor: catOnColor, glyph: catGlyph, onClicked: () => root.categorySelected("Game")});
+        }
+        for (const game of steamGames) {
+            out.push({id: `steam:${game.appId}`, kind: "steam", label: game.name,
+                source: game, imageUrl: game.imageUrl ?? "", searchMetadata: [String(game.appId)],
+                color: colorFor("steam"), onColor: onColorFor("steam"), glyph: glyphFor("steam"),
+                onClicked: vis => root.activateSource("steam", game, vis)});
         }
 
         // Wallpapers — render the image itself as the node "icon".
@@ -1155,19 +1167,19 @@ Item {
         const idx = {};
         const appIdx = [];
         const wpIdx = [];
-        const spImgIdx = [];
+        const coverIdx = [];
         for (let i = 0; i < out.length; i++) {
             idx[out[i].id] = i;
             if (out[i].kind === "app") appIdx.push(i);
             if (out[i].kind === "wallpaper") wpIdx.push(i);
-            if ((out[i].kind === "spotifyPlaylist" || out[i].kind === "spotifyTrack") && out[i].imageUrl) spImgIdx.push(i);
+            if (out[i].imageUrl) coverIdx.push(i);
         }
         if (appIndices.length !== appIdx.length || appIndices.some((value, i) => value !== appIdx[i]))
             appIndices = appIdx;
         if (wallpaperIndices.length !== wpIdx.length || wallpaperIndices.some((value, i) => value !== wpIdx[i]))
             wallpaperIndices = wpIdx;
-        if (spotifyImageIndices.length !== spImgIdx.length || spotifyImageIndices.some((value, i) => value !== spImgIdx[i]))
-            spotifyImageIndices = spImgIdx;
+        if (coverImageIndices.length !== coverIdx.length || coverImageIndices.some((value, i) => value !== coverIdx[i]))
+            coverImageIndices = coverIdx;
 
         // Skip the reassignment if nothing structural changed — same
         // length and same ids in the same order. Otherwise every burst
@@ -1175,7 +1187,7 @@ Item {
         // EmacsSources scan) destroys + recreates every Repeater
         // delegate, which flashes icons + resets label fade timing.
         const sameShape = nodes.length === out.length
-            && nodes.every((n, i) => n.id === out[i]?.id);
+            && nodes.every((n, i) => n.id === out[i]?.id && n.imageUrl === out[i]?.imageUrl);
         if (sameShape) {
             let searchChanged = false;
             // Refresh callbacks / colour references in place but keep
@@ -1410,12 +1422,8 @@ Item {
         // Apps → primary category hub.
         for (let i = 0; i < nodes.length; ++i) {
             const n = nodes[i];
-            if (n.kind !== "app") continue;
-            const entry = n.entry;
-            const catsRaw = entry?.categories;
-            const cats = String(catsRaw ?? "").replace(/,/g, " ").trim();
-            if (!cats) continue;
-            const primary = cats.split(/[ ;,]+/).find(c => c.length > 0);
+            if (n.kind !== "app" && n.kind !== "steam") continue;
+            const primary = n.kind === "steam" ? "Game" : SearchQuery.categoriesFor(n.entry)[0];
             if (!primary) continue;
             const catI = indexById[`category:${primary}`];
             if (catI !== undefined && catI !== i) pairs.push(Qt.point(i, catI));
@@ -2472,14 +2480,12 @@ Item {
             }
         }
 
-        // Spotify cover art (playlists + recently-played track albums).
-        // Qt fetches the HTTPS image and caches per-source.
         Instantiator {
             asynchronous: true
-            model: root.spotifyImageIndices
+            model: root.coverImageIndices
 
             delegate: Item {
-                id: spDelegate
+                id: coverDelegate
                 parent: { void root.orbitRevision; return root.currentNode === modelData ? selectedMotion : nodeOrbits.itemAt(modelData % root.orbitCount); }
                 required property int modelData
                 readonly property var node: root.nodes[modelData]
@@ -2514,7 +2520,7 @@ Item {
 
                     Image {
                         anchors.fill: parent
-                        readonly property string coverUrl: spDelegate.node?.imageUrl ?? ""
+                        readonly property string coverUrl: coverDelegate.node?.imageUrl ?? ""
                         source: root.failedImageUrls[coverUrl] ? "" : coverUrl
                         asynchronous: true
                         cache: true

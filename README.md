@@ -30,6 +30,12 @@ Use `>app|roam steam` to search both types, or `>app steam >roam notes` for
 independent queries. Text before the first filter applies to every branch.
 Singular and plural type names work; Tab completes filter names.
 
+Use `>steam` for installed Steam games, or `>games` for Steam games and game
+applications. Local Steam, Flatpak, and Guix sandbox libraries refresh when
+installations change; cached artwork supplies covers. Steam support runtimes are
+excluded, but other installed tools may appear. Source and category visibility
+rules in Settings → Panels → Launcher also apply to Steam games.
+
 Use `report >file` to find files, or `>file|roam report` to include notes.
 File search starts after three nonspace characters and a short typing pause.
 It searches under your home directory, skipping hidden files, symlinks and common

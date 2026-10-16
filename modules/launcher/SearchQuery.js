@@ -1,5 +1,5 @@
 const scopes = {
-    games: ['app', 'category'], apps: ['app'], files: ['file'], roam: ['roam'], recents: ['recent'], bookmarks: ['bookmark'],
+    games: ['app', 'category', 'steam'], steam: ['steam'], apps: ['app'], files: ['file'], roam: ['roam'], recents: ['recent'], bookmarks: ['bookmark'],
     wallpaper: ['wallpaper'], web: ['webBookmark', 'webFolder', 'webHistory', 'webTab'],
     webbm: ['webBookmark'], webfolder: ['webFolder'], webhist: ['webHistory'], tabs: ['webTab'],
     spotify: ['spotifyPlaylist', 'spotifyTrack'], playlists: ['spotifyPlaylist'], tracks: ['spotifyTrack'],
@@ -19,10 +19,13 @@ function sourceKeywords() {
 
 function selectorsFor(keyword) {
     const key = keyword.trim().toLowerCase();
+    if (key === 'steam') return [{kind: 'steam', category: 'game'}];
     const category = /^(?:apps?|categor(?:y|ies)):([a-z0-9_-]+)$/.exec(key);
     if (category || key === 'games' || key === 'game') {
         const name = category ? category[1] : 'game';
-        return [{kind: 'app', category: name}, {kind: 'category', category: name}];
+        const selectors = [{kind: 'app', category: name}, {kind: 'category', category: name}];
+        if (!category) selectors.push({kind: 'steam', category: 'game'});
+        return selectors;
     }
     const kinds = Object.prototype.hasOwnProperty.call(scopes, key) ? scopes[key]
         : Object.prototype.hasOwnProperty.call(aliases, key) ? scopes[aliases[key]] : null;
@@ -57,6 +60,7 @@ function categoriesFor(entry) {
 }
 
 function nodeCategories(node) {
+    if (node.kind === 'steam') return ['game'];
     if (node.kind === 'app') return categoriesFor(node.entry).map(category => category.toLowerCase());
     if (node.kind === 'category') return [String(node.label ?? '').toLowerCase()];
     return [];
@@ -74,7 +78,7 @@ function nodeVisible(node, filters, preferences, pivotKind) {
     const active = filters ?? [];
     const rules = preferences ?? [];
     const categories = nodeCategories(node);
-    const categoryGated = node.kind === 'app' && rules.some(rule =>
+    const categoryGated = ['app', 'steam'].includes(node.kind) && rules.some(rule =>
         rule.startsWith('category:') && categories.includes(rule.slice(9).toLowerCase()));
     // Keep hubs discoverable; any explicit matching category reveals its members.
     if (categoryGated && !active.some(filter => filter.category && matchesSegment(node, filter)))

@@ -18,8 +18,10 @@ qml_module(burl-services
         lyriccandidate.cpp
         lyrics.cpp
         sessionmanager.cpp
+        steamlibrary.cpp
     LIBRARIES
         Qt::DBus
+        Qt::Concurrent
         PkgConfig::Pipewire
         PkgConfig::Aubio
         PkgConfig::Cava

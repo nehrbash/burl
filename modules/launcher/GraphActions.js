@@ -17,6 +17,9 @@ function primary(kind, source, context) {
     const quote = JSON.stringify;
     let expression = "";
     switch (kind) {
+    case "steam":
+        return /^[1-9][0-9]*$/.test(String(source.appId ?? ""))
+            ? {name: "Play", icon: "sports_esports", desc: source.name, command: ["steam", "-applaunch", String(source.appId)]} : null;
     case "file":
         return source.path ? { name: "Open", icon: "open_in_new", desc: source.path, command: ["xdg-open", source.path] } : null;
     case "recent":

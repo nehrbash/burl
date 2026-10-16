@@ -36,7 +36,7 @@ test('category policy keeps hubs discoverable and requires an explicit matching 
 test('category selectors accept aliases, unions, suffix placement and configured prefixes', () => {
     for (const scope of ['games', 'game', 'apps:Game', 'app:Game', 'category:Game', 'categories:Game']) {
         const segments = search.parse(`chess >${scope}`, '>');
-        assert.equal(segments.length, 2, scope);
+        assert.equal(segments.length, ['games', 'game'].includes(scope) ? 3 : 2, scope);
         assert.equal(segments[0].q, 'chess');
         assert.equal(search.matchesSegment(game, segments[0]), true);
         assert.equal(search.matchesSegment(editor, segments[0]), false);
@@ -74,10 +74,21 @@ test('filtered candidates own all delegate indices and category edges use the re
     const start = graph.indexOf('        const idx = {};', graph.indexOf('out = out.filter'));
     const end = graph.indexOf('        // Skip the reassignment', start);
     const state = {out: [{id: 'wall', kind: 'wallpaper'}, {id: 'game', kind: 'app'},
-        {id: 'track', kind: 'spotifyTrack', imageUrl: 'cover'}], appIndices: [0, 1], wallpaperIndices: [2], spotifyImageIndices: [3]};
+        {id: 'track', kind: 'spotifyTrack', imageUrl: 'cover'}], appIndices: [0, 1], wallpaperIndices: [2], coverImageIndices: [3]};
     runInNewContext(graph.slice(start, end), state);
     assert.deepEqual(Array.from(state.appIndices), [1]);
     assert.deepEqual(Array.from(state.wallpaperIndices), [0]);
-    assert.deepEqual(Array.from(state.spotifyImageIndices), [2]);
+    assert.deepEqual(Array.from(state.coverImageIndices), [2]);
     assert.doesNotMatch(graph, /Apps\.list[^\n]*appIndices\.indexOf/);
+});
+
+ test('Steam participates in game filters and shares category visibility rules', () => {
+    const steam = {kind: 'steam', source: {appId: '570'}};
+    assert.equal(visible(steam, ['category:game']), false);
+    assert.equal(visible(steam, ['category:game'], '>steam'), true);
+    assert.equal(visible(steam, ['steam'], '>games'), true);
+    assert.equal(visible(steam, ['category:game'], '>apps'), false);
+    assert.equal(visible(steam, ['steam'], '>apps:Game'), false);
+    const segments = search.parse('>games chess', '>');
+    assert.equal(segments.some(segment => search.matchesSegment(steam, segment)), true);
 });

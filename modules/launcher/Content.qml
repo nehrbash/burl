@@ -263,6 +263,7 @@ Item {
         webTab: "tabs",
         spotifyPlaylist: "playlists",
         spotifyTrack: "tracks",
+        steam: "steam",
         client: "clients",
         monitor: "monitors",
         workspace: "workspaces",

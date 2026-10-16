@@ -168,3 +168,11 @@ test('file actions open default handlers with literal paths and optional Emacs',
     assert.deepEqual(Array.from(secondary[1].command), ['wl-copy', path]);
     assert.equal(actions.primary('file', {}, h.context), null);
 });
+
+test('Steam launch uses a validated app ID as a literal argument', () => {
+    const h = harness();
+    actions.execute(actions.primary('steam', {appId: '570', name: 'Game'}, h.context), h.context, h.visibility);
+    assert.deepEqual(h.commands[0], ['steam', '-applaunch', '570']);
+    for (const appId of ['', '0', '-1', '570;touch /tmp/x', '570 extra', '5.7'])
+        assert.equal(actions.primary('steam', {appId}, h.context), null);
+});

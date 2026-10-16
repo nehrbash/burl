@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Burl.Config
+import Burl.Services
 import qs.modules.nexus.common
 import qs.components
 import qs.components.controls
@@ -17,7 +18,7 @@ PageBase {
     isSubPage: true
 
     readonly property var sourceLabels: ({
-        apps: qsTr("Applications"), files: qsTr("Files"), roam: qsTr("Notes"),
+        apps: qsTr("Applications"), steam: qsTr("Steam games"), files: qsTr("Files"), roam: qsTr("Notes"),
         recents: qsTr("Recent files"), bookmarks: qsTr("Bookmarks"), wallpaper: qsTr("Wallpapers"),
         web: qsTr("All browser sources"), webbm: qsTr("Browser bookmarks"), webfolder: qsTr("Browser folders"),
         webhist: qsTr("Browser history"), tabs: qsTr("Browser tabs"), spotify: qsTr("All Spotify sources"),
@@ -28,6 +29,7 @@ PageBase {
     readonly property var sourceKeywords: SearchQuery.sourceKeywords()
     readonly property var appCategories: {
         const categories = new Set();
+        if (SteamLibrary.games.length) categories.add("game");
         for (const app of Apps.list ?? [])
             for (const category of SearchQuery.categoriesFor(app.entry ?? app))
                 categories.add(category.toLowerCase());
