@@ -81,7 +81,7 @@ Item {
         search.forceActiveFocus();
     }
 
-    function escape(): void {
+    function handleEscape(): void {
         if (root.atSky && kindMenuOpen) closeKindMenu();
         else if (root.atSky && openedPlaylist) leavePlaylist();
         else root.visibilities.closeWorld("escape");
@@ -878,7 +878,7 @@ Item {
                 }
             }
 
-            Keys.onEscapePressed: root.escape()
+            Keys.onEscapePressed: root.handleEscape()
             Keys.onReleased: event => {
                 if (!event.isAutoRepeat && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter))
                     treeGuest.item?.releaseKeyboardAction();

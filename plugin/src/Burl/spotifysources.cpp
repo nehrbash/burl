@@ -34,6 +34,12 @@ bool allowedPlaylistUrl(const QUrl& url, const QString& id, bool legacy) {
         && url.path(QUrl::FullyEncoded) == u"/v1/playlists/"_s + id + (legacy ? u"/tracks"_s : u"/items"_s);
 }
 
+int playlistTrackCount(const QJsonObject& object) {
+    const auto items = object.value(u"items"_s).toObject();
+    const auto tracks = object.value(u"tracks"_s).toObject();
+    return items.contains(u"total"_s) ? items.value(u"total"_s).toInt() : tracks.value(u"total"_s).toInt();
+}
+
 QVariantMap track(const QJsonObject& object) {
     const auto uri = object.value(u"uri"_s).toString();
     static const QRegularExpression pattern(u"^spotify:track:[A-Za-z0-9]{22}$"_s);
@@ -288,8 +294,7 @@ void SpotifySources::fetchPlaylists() {
             m[u"owner"_s] = p.value(u"owner"_s).toObject().value(u"display_name"_s).toString();
             const auto images = p.value(u"images"_s).toArray();
             m[u"image"_s] = images.isEmpty() ? QString() : images.first().toObject().value(u"url"_s).toString();
-            const auto tracks = p.value(u"tracks"_s).toObject();
-            m[u"trackCount"_s] = tracks.value(u"total"_s).toInt();
+            m[u"trackCount"_s] = spotify::playlistTrackCount(p);
             out.append(m);
         }
         m_playlists = std::move(out);
@@ -311,20 +316,8 @@ void SpotifySources::fetchRecents() {
         const auto obj = QJsonDocument::fromJson(reply->readAll()).object();
         QVariantList out;
         for (const auto& v : obj.value(u"items"_s).toArray()) {
-            const auto t = v.toObject().value(u"track"_s).toObject();
-            QVariantMap m;
-            m[u"uri"_s] = t.value(u"uri"_s).toString();
-            m[u"name"_s] = t.value(u"name"_s).toString();
-            const auto artists = t.value(u"artists"_s).toArray();
-            QStringList names;
-            for (const auto& a : artists)
-                names << a.toObject().value(u"name"_s).toString();
-            m[u"artist"_s] = names.join(u", "_s);
-            const auto album = t.value(u"album"_s).toObject();
-            m[u"album"_s] = album.value(u"name"_s).toString();
-            const auto images = album.value(u"images"_s).toArray();
-            m[u"image"_s] = images.isEmpty() ? QString() : images.first().toObject().value(u"url"_s).toString();
-            out.append(m);
+            const auto parsed = spotify::track(v.toObject().value(u"track"_s).toObject());
+            if (!parsed.isEmpty()) out.append(parsed);
         }
         m_recents = std::move(out);
         emit recentsChanged();

@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import {test} from 'node:test';
 const source = path => readFileSync(new URL('../modules/launcher/' + path, import.meta.url), 'utf8');
-const spotify = runInNewContext(source('SpotifyGraph.js') + '\n({nodes, links})');
+const spotify = runInNewContext('Array.prototype.flatMap = undefined;\n' + source('SpotifyGraph.js') + '\n({nodes, links})');
 const playlist = {uri:'spotify:playlist:test', name:'Playlist'};
 const tracks = Array.from({length:120}, (_,i) => ({uri:`spotify:track:${i}`,name:`Track ${i}`, artist:'Artist'}));
 
@@ -34,7 +34,7 @@ function navigation() {
     const loads=[];
     const root={atSky:true,openedPlaylist:null,playlistReturn:null,kindMenuOpen:false,
         closeKindMenu(){root.kindMenuOpen=false;},visibilities:{closeWorld(){root.closed=true;}}};
-    for (const name of ['openPlaylist','leavePlaylist','escape']) {
+    for (const name of ['openPlaylist','leavePlaylist','handleEscape']) {
         const match=content.match(new RegExp('    function '+name+'\\(([^)]*)\\): void \\{([\\s\\S]*?)\\n    \\}'));
         assert.ok(match,name);
         root[name]=runInNewContext(`(function(${match[1].replace(/:\s*\w+/g,'')}) {${match[2]}})`,
@@ -53,12 +53,12 @@ test('playlist entry preserves the query and Escape restores it before closing t
     assert.equal(root.openedPlaylist,playlist);
     assert.deepEqual(loads,[playlist.uri]);
     root.openPlaylist(playlist);
-    root.escape();
+    root.handleEscape();
     assert.equal(root.openedPlaylist,null);
     assert.equal(search.text,'>spotify mix');
     assert.equal(graph.selected,3);
     assert.equal(root.closed,undefined);
-    root.escape();
+    root.handleEscape();
     assert.equal(root.closed,true);
 });
 
@@ -66,10 +66,10 @@ test('Escape closes the playlist action menu before leaving its playlist', () =>
     const {root}=navigation();
     root.openPlaylist(playlist);
     root.kindMenuOpen=true;
-    root.escape();
+    root.handleEscape();
     assert.equal(root.kindMenuOpen,false);
     assert.equal(root.openedPlaylist,playlist);
     root.atSky=false;
-    root.escape();
+    root.handleEscape();
     assert.equal(root.closed,true);
 });

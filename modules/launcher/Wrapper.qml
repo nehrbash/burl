@@ -26,7 +26,7 @@ Item {
         context: Qt.WindowShortcut
         enabled: root.shouldBeActive
         onActivated: {
-            if (sceneLoader.item) sceneLoader.item.escape();
+            if (sceneLoader.item) sceneLoader.item.handleEscape();
             else root.visibilities.closeWorld("escape");
         }
     }

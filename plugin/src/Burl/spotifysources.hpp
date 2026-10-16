@@ -33,6 +33,7 @@ struct PlaylistLoad {
 QString playlistId(const QString& uri);
 bool allowedPlaylistUrl(const QUrl& url, const QString& id, bool legacy);
 QVariantMap track(const QJsonObject& object);
+int playlistTrackCount(const QJsonObject& object);
 }
 
 

@@ -10,6 +10,11 @@ void check(bool result, const char* message) {
 }
 int main(int argc, char** argv) {
     QCoreApplication app(argc, argv);
+    check(playlistTrackCount(QJsonObject{{"items", QJsonObject{{"total", 42}}}}) == 42, "current playlist count");
+    check(playlistTrackCount(QJsonObject{{"tracks", QJsonObject{{"total", 17}}}}) == 17, "legacy playlist count");
+    check(playlistTrackCount(QJsonObject{{"items", QJsonObject{{"total", 0}}},
+        {"tracks", QJsonObject{{"total", 17}}}}) == 0, "current zero overrides legacy count");
+    check(playlistTrackCount({}) == 0, "unavailable count");
     const QString id = "0123456789ABCDEFGHIJKL";
     check(playlistId("spotify:playlist:" + id) == id, "valid playlist URI");
     for (const auto& invalid : {"spotify:track:", "https://spotify.com/playlist/", "spotify:playlist:../"})

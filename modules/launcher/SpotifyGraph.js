@@ -20,8 +20,11 @@ function nodes(playlists, recents, opened, contents, limit) {
 }
 
 function links(nodes, indexById) {
-    return nodes.flatMap((node, i) => {
+    const result = [];
+    for (let i = 0; i < nodes.length; ++i) {
+        const node = nodes[i];
         const parent = indexById[`spotify:pl:${node.playlistUri}`];
-        return node.playlistUri && parent !== undefined ? [[parent, i]] : [];
-    });
+        if (node.playlistUri && parent !== undefined) result.push([parent, i]);
+    }
+    return result;
 }
