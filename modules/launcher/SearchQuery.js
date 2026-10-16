@@ -123,7 +123,7 @@ function parse(text, prefix) {
         const q = [shared, local].filter(Boolean).join(' ');
         for (const selector of marker.selectors)
             if (!segments.some(segment => segment.kind === selector.kind && segment.category === selector.category && segment.q === q))
-                segments.push({...selector, q});
+                segments.push(Object.assign({}, selector, {q}));
     }
     return segments;
 }
