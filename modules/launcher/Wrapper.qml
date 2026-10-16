@@ -87,6 +87,12 @@ Item {
         active: root.loaderActive && (!GameMode.enabled || root.shouldBeActive || root.offsetScale < 1)
         // Parsing the scene must not block the opening animation.
         asynchronous: true
+        onStatusChanged: {
+            if (status === Loader.Error && root.shouldBeActive) {
+                console.warn("World scene failed to load");
+                root.visibilities.closeWorld("load-error");
+            }
+        }
 
         sourceComponent: Content {
             visibilities: root.visibilities

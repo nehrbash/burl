@@ -101,6 +101,22 @@ Timer {
                 return;
             if (!host.worldCheck(!scene.surfaceOpen && !scene.wasOpen, "final close settles without stale reopen"))
                 return;
+            host.cycleState.openRoom("launcher", "key");
+            host.worldPhase = 8;
+            break;
+        case 8:
+            if (!scene || scene.revealP < 0.99 || !subject.visible)
+                return;
+            loader.sourceComponent = undefined;
+            loader.source = Qt.resolvedUrl("missing-world-lifecycle-scene.qml");
+            host.worldPhase = 9;
+            break;
+        case 9:
+            if (loader.status !== Loader.Error || subject.visible)
+                return;
+            if (!host.worldCheck(!host.cycleState.worldOpen && !subject.shouldBeActive,
+                                 "failed scene closes world and removes surface eligibility"))
+                return;
             console.log("WORLD-LIFECYCLE-PASS");
             host.worldPassed = true;
             break;
