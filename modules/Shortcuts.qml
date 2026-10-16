@@ -30,7 +30,7 @@ Scope {
     }
 
     function toggleRoom(screenState: var, room: string): void {
-        if (GlobalConfig.dashboard.navStyle === "living")
+        if (screenState.dashboardConfig.navStyle === "living")
             screenState.toggleWorldRoom(room);
         else
             screenState[room] = !screenState[room];
@@ -68,7 +68,7 @@ Scope {
             // navStyle "living" drops the dashboard from this bundle: it is
             // bottom-centre full-screen, same as the launcher, so growing it
             // behind an open launcher makes no sense.
-            const includeDashboard = GlobalConfig.dashboard.navStyle !== "living";
+            const includeDashboard = v.dashboardConfig.navStyle !== "living";
             const anyOpen = v.launcher || (includeDashboard && v.dashboard) || v.osd || v.utilities;
             const next = !anyOpen;
             v.launcher = next;
@@ -172,7 +172,7 @@ Scope {
                 return;
             ShellState.pendingLauncherQuery = q;
             const state = ShellState.forActive();
-            if (GlobalConfig.dashboard.navStyle === "living")
+            if (state.dashboardConfig.navStyle === "living")
                 state.openWorldRoom("launcher");
             else
                 state.launcher = true;
@@ -228,7 +228,7 @@ Scope {
             const screenState = ShellState.forActive();
             if (!screenState)
                 return "no active screen";
-            screenState.dashboardTab = Math.max(0, index);
+            screenState.selectDashboardTab(index);
             return `dashboardTab=${screenState.dashboardTab}`;
         }
 
@@ -268,7 +268,7 @@ Scope {
             if (!screenState)
                 return "no active screen";
             if (screenState.growDashboardSection(id)) {
-                if (GlobalConfig.dashboard.navStyle === "living")
+                if (screenState.dashboardConfig.navStyle === "living")
                     screenState.openWorldRoom("dashboard");
                 else
                     screenState.dashboard = true;
@@ -315,8 +315,6 @@ Scope {
             if (!screenState)
                 return "no active screen";
             const ids = screenState.dashboardSectionIds ?? [];
-            if (ids.length === 0)
-                return "unknown (dashboard has not been opened yet)";
             const enabled = screenState.dashboardEnabledIds ?? [];
             const open = screenState.dashboardOpenSections ?? [];
             return ids.map(id => {

@@ -17,6 +17,7 @@ Item {
     required property var tabs
 
     readonly property alias count: bar.count
+    onTabsChanged: Qt.callLater(function () { bar.setCurrentIndex(root.screenState.dashboardTab); })
 
     // Woodland chrome: olive marks the active tab; groove divider reads as carved wood
     readonly property color activeAccent: Colours.light ? Woodland.olive : Woodland.oliveLight
@@ -33,7 +34,6 @@ Item {
         anchors.topMargin: Tokens.sizes.dashboard.tabIndicatorSpacing
 
         currentIndex: root.screenState.dashboardTab
-        onCurrentIndexChanged: root.screenState.dashboardTab = currentIndex
 
         implicitHeight: contentHeight
         background: null
@@ -118,6 +118,15 @@ Item {
 
         required property string iconName
         readonly property bool current: TabBar.tabBar.currentItem === this
+        onClicked: root.screenState.selectDashboardTab(TabBar.index)
+        Keys.onLeftPressed: {
+            root.screenState.selectDashboardTab((root.screenState.dashboardTab + bar.count - 1) % bar.count);
+            bar.currentItem.forceActiveFocus();
+        }
+        Keys.onRightPressed: {
+            root.screenState.selectDashboardTab((root.screenState.dashboardTab + 1) % bar.count);
+            bar.currentItem.forceActiveFocus();
+        }
 
         Layout.fillWidth: true
         Layout.preferredWidth: 1 // Uniform width across all tabs
@@ -130,9 +139,9 @@ Item {
 
             function onWheel(event: WheelEvent): void {
                 if (event.angleDelta.y < 0)
-                    root.screenState.dashboardTab = Math.min(root.screenState.dashboardTab + 1, bar.count - 1);
+                    root.screenState.selectDashboardTab(root.screenState.dashboardTab + 1);
                 else if (event.angleDelta.y > 0)
-                    root.screenState.dashboardTab = Math.max(root.screenState.dashboardTab - 1, 0);
+                    root.screenState.selectDashboardTab(root.screenState.dashboardTab - 1);
             }
 
             implicitWidth: Math.max(icon.width, label.width)
@@ -141,7 +150,7 @@ Item {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
 
-            onPressed: root.screenState.dashboardTab = tab.TabBar.index
+            onPressed: root.screenState.selectDashboardTab(tab.TabBar.index)
 
             StateLayer {
                 id: stateLayer
@@ -154,7 +163,7 @@ Item {
 
                 radius: Tokens.rounding.medium
                 color: tab.current ? root.activeAccent : Colours.palette.m3onSurface
-                onClicked: root.screenState.dashboardTab = tab.TabBar.index
+                onClicked: root.screenState.selectDashboardTab(tab.TabBar.index)
             }
 
             MaterialIcon {

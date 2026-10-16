@@ -29,50 +29,21 @@ FocusScope {
     required property ScreenState screenState
     required property FileDialog facePicker
 
-    // Every section, ALWAYS unfiltered, each with a stable string id. Selection
-    // is by id (screenState.dashboardSection); the enabled subset exists only
-    // for layout and for the legacy index-based IPC. Ids are chosen so the
-    // config flag derives from them — "media" -> Config.dashboard.showMedia —
-    // so nothing needs a second id-to-flag table (see
-    // ScreenState.dashboardSectionFlag).
-    readonly property var sections: [
-        {
-            id: "dashboard",
-            component: dashComponent,
-            iconName: "dashboard",
-            text: qsTr("Dashboard"),
-            enabled: Config.dashboard.showDashboard
-        },
-        {
-            id: "media",
-            component: mediaComponent,
-            iconName: "queue_music",
-            text: qsTr("Media"),
-            enabled: Config.dashboard.showMedia
-        },
-        {
-            id: "performance",
-            component: performanceComponent,
-            iconName: "speed",
-            text: qsTr("Performance"),
-            enabled: Config.dashboard.showPerformance
-        },
-        {
-            id: "weather",
-            component: weatherComponent,
-            iconName: "cloud",
-            text: qsTr("Weather"),
-            enabled: Config.dashboard.showWeather
-        },
-        {
-            id: "tasks",
-            component: tasksComponent,
-            iconName: "checklist",
-            text: qsTr("Tasks"),
-            enabled: true
-        }
-    ]
-    readonly property var enabledSections: sections.filter(s => s.enabled)
+    readonly property var sectionFactories: ({
+        dashboard: dashComponent,
+        media: mediaComponent,
+        performance: performanceComponent,
+        weather: weatherComponent,
+        tasks: tasksComponent
+    })
+    readonly property var sections: screenState.dashboardSections.map(section => ({
+        id: section.id,
+        component: root.sectionFactories[section.id],
+        iconName: section.iconName,
+        text: qsTranslate("Content", section.labelKey),
+        enabled: root.screenState.dashboardEnabledIds.includes(section.id)
+    }))
+    readonly property var enabledSections: sections.filter(section => section.enabled)
     readonly property var treeActions: [{
         id: "settings",
         iconName: "settings",
@@ -245,15 +216,9 @@ FocusScope {
             root.forceActiveFocus();
     }
 
-    function publishSections(): void {
-        root.screenState.dashboardSectionIds = root.sections.map(s => s.id);
-        root.screenState.dashboardEnabledIds = root.enabledSections.map(s => s.id);
-    }
-
     implicitWidth: nonAnimWidth
     implicitHeight: nonAnimHeight
 
-    onSectionsChanged: root.publishSections()
     // Guests never touch it: two instances writing one shell-global property
     // means the guest's `false` can land on top of the drawer's `true`.
     onWantsKeyboardChanged: if (!root.guest)
@@ -321,7 +286,6 @@ FocusScope {
     }
 
     Component.onCompleted: {
-        root.publishSections();
         if (!root.guest)
             root.screenState.dashboardWantsKeyboard = root.wantsKeyboard;
         root.grabKeyboard();

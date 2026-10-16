@@ -6,6 +6,7 @@ check:
 	ctest --test-dir build/cli-check --output-on-failure
 	@for file in tests/hyprland-*.lua; do lua "$$file" || exit 1; done
 check-lifecycle:
+	./scripts/qs-navigation-state.sh
 	./scripts/qs-launcher-cycle.sh
 	./scripts/qs-file-search-cycle.sh
 	./scripts/qs-atmosphere-cycle.sh

@@ -1,0 +1,51 @@
+property var navigation: Qt.createQmlObject('import Quickshell; import qs.components; ScreenState { modelData: Quickshell.screens[0] }', host)
+property int navigationStage: 0
+property bool navigationPassed: false
+property var navigationTabs: navigation.dashboardSections.filter(section => navigation.dashboardEnabledIds.includes(section.id)).map(section => ({iconName: section.iconName, text: section.labelKey}))
+
+function navigationCheck() {
+    const config = navigation.dashboardConfig;
+    const bar = subject.children.find(child => child.currentIndex !== undefined);
+    const expected = navigationStage === 5 ? "dashboard" : "tasks";
+    if (navigationStage > 0 && (navigation.dashboardSection !== expected || bar.currentIndex !== navigation.dashboardTab)) {
+        console.error("NAVIGATION-TABS-FAIL", navigationStage, navigation.dashboardSection, bar.currentIndex, navigation.dashboardTab);
+        Qt.quit();
+        return;
+    }
+    switch (navigationStage++) {
+    case 0:
+        config.showDashboard = true;
+        config.showMedia = false;
+        config.showPerformance = true;
+        config.showWeather = true;
+        navigation.selectDashboardSection("tasks");
+        break;
+    case 1:
+        config.showMedia = true;
+        config.showDashboard = false;
+        break;
+    case 2:
+        config.showPerformance = false;
+        config.showWeather = false;
+        break;
+    case 3:
+        config.showDashboard = true;
+        config.showPerformance = true;
+        config.showWeather = true;
+        break;
+    case 4:
+        bar.itemAt(0).clicked();
+        break;
+    case 5:
+        console.log("NAVIGATION-TABS-PASS");
+        navigationPassed = true;
+        break;
+    }
+}
+
+Timer {
+    interval: 150
+    repeat: true
+    running: !host.navigationPassed
+    onTriggered: host.navigationCheck()
+}

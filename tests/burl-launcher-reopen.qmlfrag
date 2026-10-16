@@ -41,9 +41,14 @@
                     case 0:
                         host.cycleState.openWorldRoom("dashboard");
                         break;
-                    case 1:
+                    case 1: {
+                        const dashboard = host.findCycleItem(subject, item => item.sectionFactories !== undefined);
+                        const ids = host.cycleState.dashboardSectionIds;
+                        host.cycleCheck(dashboard && Object.keys(dashboard.sectionFactories).sort().join() === ids.slice().sort().join()
+                            && ids.every(id => dashboard.sectionFactories[id]), "catalog has exactly one factory per section");
                         host.checkCycleRoom(false, "first tree open").ascend();
                         break;
+                    }
                     case 2:
                         host.checkCycleRoom(true, "sky arrival").dismiss();
                         break;

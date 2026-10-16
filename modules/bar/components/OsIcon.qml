@@ -28,7 +28,7 @@ Item {
         onPressed: root.acknowledge()
         onClicked: {
             const screenState = ShellState.forActive();
-            if (GlobalConfig.dashboard.navStyle === "living")
+            if (screenState.dashboardConfig.navStyle === "living")
                 screenState.toggleWorldRoom("launcher");
             else
                 screenState.launcher = !screenState.launcher;
