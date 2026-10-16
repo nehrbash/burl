@@ -23,6 +23,8 @@ import qs.services
 ShellRoot {
     id: root
 
+    readonly property var mouseSettings: MouseSettings
+
     settings.watchFiles: true
 
     Binding {

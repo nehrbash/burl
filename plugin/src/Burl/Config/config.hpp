@@ -51,6 +51,7 @@ class GlobalConfig : public RootConfig {
     Q_MOC_INCLUDE("winfoconfig.hpp")
 
     CONFIG_PROPERTY(bool, enabled, true)
+    CONFIG_GLOBAL_PROPERTY(QVariantMap, mouse, {})
     CONFIG_SUBOBJECT(AppearanceConfig, appearance)
     CONFIG_SUBOBJECT(GeneralConfig, general)
     CONFIG_SUBOBJECT(GuixConfig, guix)

@@ -138,6 +138,20 @@ StyledRect {
                     }
                 }
                 DelegateChoice {
+                    roleValue: "mouseAcceleration"
+                    delegate: Toggle {
+                        label: qsTr("Mouse acceleration")
+                        icon: "mouse"
+                        checked: MouseSettings.accelerationEnabled
+                        enabled: MouseSettings.ready && !MouseSettings.busy
+                        ToolTip.text: MouseSettings.error || (checked ? qsTr("Adaptive pointer speed") : qsTr("Flat pointer speed"))
+                        onClicked: {
+                            MouseSettings.toggleAcceleration();
+                            internalChecked = checked;
+                        }
+                    }
+                }
+                DelegateChoice {
                     roleValue: "gameMode"
                     delegate: Toggle {
                         label: qsTr("Performance mode")

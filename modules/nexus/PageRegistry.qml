@@ -43,6 +43,14 @@ QtObject {
             category: "connectivity"
         },
         {
+            id: "mouse",
+            component: root.mousePage,
+            label: qsTr("Mouse"),
+            icon: "mouse",
+            description: qsTr("Acceleration, sensitivity, scrolling, buttons"),
+            category: "connectivity"
+        },
+        {
             id: "network",
             component: root.networkPage,
             label: qsTr("Network"),
@@ -175,6 +183,10 @@ QtObject {
                 AppVolumes {}
             }
         }
+    }
+
+    readonly property Component mousePage: Component {
+        MousePage {}
     }
 
     readonly property Component guixPage: Component {
