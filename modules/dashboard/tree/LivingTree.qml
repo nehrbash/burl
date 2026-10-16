@@ -1506,7 +1506,8 @@ Item {
                 node.cancelHold();
                 if (root.hoveredRoot === node.nodeIndex) root.hoveredRoot = -1;
             }
-            onPressed: node.beginHold(false)
+            // MouseArea settles its pressed state after delivering the press signal.
+            onPressed: Qt.callLater(node.beginHold, false)
             onReleased: node.cancelHold()
             onCanceled: node.cancelHold()
             onClicked: node.activateClick()

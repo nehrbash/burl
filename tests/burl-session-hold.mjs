@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { spawnSync } from "node:child_process";
 import { test } from "node:test";
 import { runInNewContext } from "node:vm";
 
@@ -116,4 +119,74 @@ test("keyboard activation preserves the hold and releasing cancels it", () => {
     f.node.completeHold();
     assert.deepEqual(f.calls, ["reboot"]);
     assert.equal(f.node.keyboardHeld, false);
+});
+
+
+test("native presses start holds only after MouseArea state settles", { skip: !process.env.QMLTESTRUNNER }, () => {
+    const dir = mkdtempSync(join(tmpdir(), "burl-session-hold-"));
+    const logic = component.slice(0, component.indexOf("        readonly property var anchor:"))
+        .replace("component RootNode: Item", "Item");
+    const pointer = component.slice(component.indexOf("        MouseArea {"));
+    const qml = `import QtQuick
+import QtTest
+Item {
+    id: root
+    width: 300; height: 300
+    property var screenState: ({dashboard:true})
+    property real roomP: 1
+    property real openP: 1
+    property string focusedId: ""
+    property int hoveredRoot: -1
+    property int calls: 0
+    function runSessionAction(action) { calls++; }
+    ${logic}
+        width: 120; height: 120
+        readonly property real revealP: 1
+        Component.onCompleted: action = ({id:"reboot"})
+    ${pointer}
+    TestCase {
+        name: "SessionHold"; when: windowShown
+        function init() { node.cancelHold(); root.calls = 0; mouseMove(node, 60, 60); }
+        function test_full_hold() {
+            mousePress(node, 60, 60, Qt.LeftButton);
+            wait(200);
+            compare(node.heldActionId, "reboot");
+            compare(root.calls, 0);
+            tryCompare(root, "calls", 1, 1600);
+            mouseRelease(node, 60, 60, Qt.LeftButton);
+            wait(100);
+            compare(root.calls, 1);
+        }
+        function test_short_hold() {
+            mousePress(node, 60, 60, Qt.LeftButton);
+            wait(200);
+            mouseRelease(node, 60, 60, Qt.LeftButton);
+            wait(1250);
+            compare(root.calls, 0);
+        }
+        function test_drag_away() {
+            mousePress(node, 60, 60, Qt.LeftButton);
+            wait(200);
+            mouseMove(root, 250, 250);
+            wait(1250);
+            compare(root.calls, 0);
+            mouseRelease(root, 250, 250, Qt.LeftButton);
+        }
+        function test_keyboard() {
+            node.pressKeyboard();
+            tryCompare(root, "calls", 1, 1600);
+            compare(node.keyboardHeld, false);
+        }
+    }
+}`;
+    try {
+        writeFileSync(join(dir, "tst_hold.qml"), qml);
+        const result = spawnSync(process.env.QMLTESTRUNNER, ["-input", dir], {
+            encoding: "utf8", timeout: 15000,
+            env: { ...process.env, QT_QPA_PLATFORM: "offscreen", QSG_RHI_BACKEND: "software" },
+        });
+        assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    } finally {
+        rmSync(dir, { recursive: true, force: true });
+    }
 });
