@@ -96,12 +96,14 @@ test('same-shape refresh updates action payload and primary callback without rep
     const oldSource = { id: 'mail-id', fromEmail: 'old@example.org' };
     const newSource = { id: 'mail-id', fromEmail: 'new@example.org' };
     const node = { id: 'mail:mail-id', kind: 'mail', label: 'Old', source: oldSource };
-    const refreshed = { ...node, label: 'New', source: newSource,
+    const refreshed = { ...node, label: 'New', source: newSource, preview: {details: ['New detail']},
         onClicked: visibility => actions.execute(actions.primary('mail', newSource, h.context), h.context, visibility) };
-    const context = { nodes: [node], out: [refreshed], browsing: false, rescore() {} };
+    const context = { nodeRevision: 0, nodes: [node], out: [refreshed], browsing: false, rescore() {} };
     runInNewContext(`(function() {${graph.slice(begin, end)}})()`, context);
     assert.equal(context.nodes[0], node);
     assert.equal(node.source, newSource);
+    assert.equal(node.preview, refreshed.preview);
+    assert.equal(context.nodeRevision, 1);
     assert.equal(node.onClicked, refreshed.onClicked);
     actions.execute(actions.secondary(node, h.context)[1], h.context, h.visibility);
     assert.deepEqual(h.commands[0], ['wl-copy', 'new@example.org']);
@@ -115,7 +117,7 @@ test('same-shape metadata refresh rescores search without rebuilding nodes', () 
     const end = graph.indexOf('        const positions = {};', begin);
     const node = { id: 'app:firefox', label: 'Firefox', searchMetadata: ['Browser'] };
     let rescored = 0;
-    const context = { nodes: [node], out: [{ ...node, searchMetadata: ['Web Browser'] }],
+    const context = { nodeRevision: 0, nodes: [node], out: [{ ...node, searchMetadata: ['Web Browser'] }],
         browsing: false, rescore() { ++rescored; } };
     const refresh = () => runInNewContext(`(function() {${graph.slice(begin, end)}})()`, context);
     refresh();

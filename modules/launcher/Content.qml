@@ -179,7 +179,7 @@ Item {
     // `panP: launcher ? 1 : 0` binding would land in the sky with no pan.
     // This is the first open after every shell restart, exactly when someone
     // is looking for the animation.
-    Component.onCompleted: { root.syncCamera(); root.restoreContext(); }
+    Component.onCompleted: { root.syncCamera(); root.restoreContext(); search.syncOpen(); }
 
     // Keep search focused at the tree while its invisible hit targets sit below it.
     readonly property int chromeZ: root.arrivalP > 0.6 ? 5 : 1

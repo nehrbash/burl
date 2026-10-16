@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import Burl.Config
 import qs.components
+import qs.services
 import qs.modules.launcher
 
 ShellRoot {
@@ -10,6 +11,8 @@ ShellRoot {
     settings.watchFiles: false
     property int sceneCount: 0
     property string expectedSelection: ""
+    property var previewNode: null
+    property int previewRevision: 0
 
     ScreenState { id: navigation; modelData: Quickshell.screens[0] }
 
@@ -75,6 +78,29 @@ ShellRoot {
             root.graph().selectNode(root.graph().indexById["spotify:pl:fixture"]);
         }
         function close(): void { navigation.closeWorld("fixture"); }
+        function refreshPreview(): void {
+            root.search().text = "";
+            const graph = root.graph();
+            graph.flushSearch();
+            graph.selectNode(graph.indexById["spotify:pl:fixture"]);
+            root.previewNode = graph.nodes[graph.currentNode];
+            root.previewRevision = graph.nodeRevision;
+            root.loader().item.openedPlaylist = {uri: "fixture", name: "Updated fixture title", owner: "Updated owner"};
+            graph.rebuild();
+        }
+        function previewUpdated(): bool {
+            const graph = root.graph();
+            const pill = root.findChild(graph, item => item.cnode !== undefined);
+            return graph.nodes[graph.currentNode] === root.previewNode
+                && graph.nodeRevision > root.previewRevision
+                && pill?.cnode?.label === "Updated fixture title"
+                && pill.cnode.tooltip === "Updated owner";
+        }
+        function queueQuery(): bool {
+            if (root.loader().item !== null) return false;
+            ShellState.pendingLauncherQuery = "cold IPC override";
+            return true;
+        }
         function selectSecondApplication(): bool {
             if (root.loader().item.openedPlaylist) root.loader().item.leavePlaylist();
             root.search().text = "";

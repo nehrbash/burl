@@ -260,6 +260,7 @@ Item {
 
     // [{id, kind, label, iconName?, imagePath?, color, onColor, glyph, onClicked}]
     property var nodes: []
+    property int nodeRevision: 0
     // id -> nodes index (for edge lookup by roam id).
     property var indexById: ({})
     // Indices into nodes[] of kind=app — drives the IconImage overlay.
@@ -1174,6 +1175,7 @@ Item {
                 if (cur.kind === "file")
                     searchChanged = searchChanged || JSON.stringify(cur.source.queries) !== JSON.stringify(nxt.source.queries);
                 cur.source = nxt.source;
+                cur.preview = nxt.preview;
                 searchChanged = searchChanged || String(cur.entry?.categories) !== String(nxt.entry?.categories);
                 cur.entry = nxt.entry;
                 cur.onColor = nxt.onColor;
@@ -1190,6 +1192,7 @@ Item {
                 cur.imagePath = nxt.imagePath;
                 cur.iconName = nxt.iconName;
             }
+            nodeRevision++;
             if (searchChanged && (!browsing || searchActive)) rescore();
             return;
         }
@@ -2245,7 +2248,10 @@ Item {
             parent: selectedMotion
 
             readonly property int ci: root.currentNode
-            readonly property var cnode: (ci >= 0 && ci < root.nodes.length) ? root.nodes[ci] : null
+            readonly property var cnode: {
+                void root.nodeRevision;
+                return ci >= 0 && ci < root.nodes.length ? Object.assign({}, root.nodes[ci]) : null;
+            }
             readonly property real cnr: { return ci >= 0 ? root._nr(ci) : 0; }
             readonly property real cnx: { return ci >= 0 ? root._px(ci) : 0; }
             readonly property real cny: { return ci >= 0 ? root._py(ci) : 0; }

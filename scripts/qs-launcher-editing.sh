@@ -113,5 +113,17 @@ wait_for selectionRetained
 sleep 0.3
 [[ $(ipc selectionRetained) == true ]]
 expect ".scenes > $selected_scene and .text == \"\" and .playlist == \"\""
+ipc playlist
+sleep 0.2
+ipc refreshPreview
+wait_for previewUpdated
+ipc close
+wait_for hidden
+[[ $(ipc destroyScene) == true ]]
+[[ $(ipc queueQuery) == true ]]
+ipc recreate
+wait_for ready
+sleep 0.3
+expect '.text == "cold IPC override" and .playlist == "" and .returnQuery == ""'
 if grep -qE 'TypeError|ReferenceError|SyntaxError|Cannot assign|Binding loop|Failed to load configuration' "$WORK/runtime.log"; then exit 1; fi
-echo 'PASS: Emacs editing, query retention, playlist context and nonfirst selection across scene recreation'
+echo 'PASS: editing, retained query/playlist/selection, cold IPC override and same-shape preview refresh'
