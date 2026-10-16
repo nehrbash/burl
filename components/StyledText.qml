@@ -8,15 +8,7 @@ Text {
     id: root
 
     property bool animate: false
-    readonly property bool folio: {
-        let ancestor = parent;
-        while (ancestor) {
-            if (ancestor.bookSurface !== undefined)
-                return ancestor.bookSurface;
-            ancestor = ancestor.parent;
-        }
-        return false;
-    }
+    readonly property bool folio: SurfaceContext.folio
 
     // Distance fields preserve glyph edges when the book scales its contents.
     renderType: root.folio || style !== Text.Normal ? Text.QtRendering : Text.NativeRendering

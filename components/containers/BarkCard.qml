@@ -10,15 +10,7 @@ import qs.services
 StyledRect {
     id: root
 
-    readonly property bool folio: {
-        let ancestor = parent;
-        while (ancestor) {
-            if (ancestor.bookSurface !== undefined)
-                return ancestor.bookSurface;
-            ancestor = ancestor.parent;
-        }
-        return false;
-    }
+    readonly property bool folio: SurfaceContext.folio
 
     Binding {
         target: root

@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import Burl.Config
 import qs.components
 import qs.services
 
@@ -14,7 +15,7 @@ Item {
     property string coverId: "dashboard"
     readonly property string assetDirectory: "assets/images/book/" + (["media", "performance", "weather", "tasks"].includes(coverId) ? coverId + "/" : "")
     property color accent: Colours.palette.m3primary
-    readonly property bool bookSurface: true
+    SurfaceContext.folio: true
     readonly property real reserveWidth: 0.18
     readonly property real spine: width * reserveWidth
     readonly property real pageWidth: width - spine

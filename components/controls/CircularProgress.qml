@@ -10,15 +10,7 @@ import qs.services
 Item {
     id: root
 
-    readonly property bool folio: {
-        let ancestor = parent;
-        while (ancestor) {
-            if (ancestor.bookSurface !== undefined)
-                return ancestor.bookSurface;
-            ancestor = ancestor.parent;
-        }
-        return false;
-    }
+    readonly property bool folio: SurfaceContext.folio
 
     property real value
     property int startAngle: -90

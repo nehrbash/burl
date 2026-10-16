@@ -10,6 +10,7 @@ qml_module(burl-config
         fontbuilder.cpp
         tokens.cpp
         tokensattached.cpp
+        surfacecontext.cpp
         anim.cpp
         monitorconfigmanager.cpp
         backgroundconfig.hpp
