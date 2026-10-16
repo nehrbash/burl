@@ -4,6 +4,8 @@ import { test } from "node:test";
 import { runInNewContext } from "node:vm";
 
 const source = readFileSync(new URL("../services/GameMode.qml", import.meta.url), "utf8");
+const policy = {};
+runInNewContext(readFileSync(new URL("../services/CompositorEffectPolicy.js", import.meta.url), "utf8").replace(/^\.pragma library\s*/, ""), policy);
 const PowerProfile = { PowerSaver: 0, Balanced: 1, Performance: 2 };
 
 function harness(profile = PowerProfile.Balanced, manageLlama = true) {
@@ -14,10 +16,21 @@ function harness(profile = PowerProfile.Balanced, manageLlama = true) {
     const stopLlama = { running: false };
     const PowerProfiles = { profile, hasPerformanceProfile: true };
     const root = { ready: true };
+    let state = policy.initialState();
+    function apply(change) {
+        state = change.state;
+        if (change.options !== null && Object.keys(change.options).length)
+            options.push(change.options);
+        if (change.reload) {
+            reloads.push("reload");
+            apply(policy.reloaded(state));
+            apply(policy.finished(state, true));
+        }
+    }
+    root.compositorEffects = { setMode: (mode, enabled) => apply(policy.request(state, mode, enabled)) };
     const context = {
         root, props, stopLlama, PowerProfiles, PowerProfile,
         Quickshell: { env: key => key === "BURL_MANAGE_LLAMA" && manageLlama ? "1" : "", execDetached: args => commands.push(Array.from(args)) },
-        Hypr: { extras: { applyOptions: opts => options.push(opts), message: msg => reloads.push(msg) } },
         GlobalConfig: { utilities: { toasts: { gameModeChanged: false } } },
     };
     Object.defineProperties(context, {
@@ -25,7 +38,7 @@ function harness(profile = PowerProfile.Balanced, manageLlama = true) {
         enabled: { get: () => PowerProfiles.profile === PowerProfile.Performance },
         available: { get: () => PowerProfiles.hasPerformanceProfile },
     });
-    for (const name of ["setProfile", "setEnabled", "toggle", "setDynamicConfs", "restoreLlama", "syncEffects", "llamaStopped"]) {
+    for (const name of ["setProfile", "setEnabled", "toggle", "restoreLlama", "syncEffects", "llamaStopped"]) {
         const match = source.match(new RegExp(`^    function ${name}\\(([^)]*)\\): \\w+ \\{([\\s\\S]*?)\\n    \\}`, "m"));
         assert.ok(match, `QML function ${name} exists`);
         const args = match[1].replace(/:\s*\w+/g, "");
@@ -129,7 +142,7 @@ test("hot reload waits for restored ownership before applying effects", () => {
     h.root.ready = true;
     h.root.syncEffects();
     assert.equal(h.stopLlama.running, false);
-    assert.equal(h.options.length, 0);
+    assert.equal(h.options.length, 1);
     h.root.setEnabled(false);
     h.root.syncEffects();
     assert.deepEqual(h.commands, [["herd", "start", "llama-server"]]);

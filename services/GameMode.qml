@@ -11,6 +11,9 @@ import qs.services
 Singleton {
     id: root
 
+    // Create the owner before PersistentProperties restores the reload graph.
+    readonly property var compositorEffects: CompositorEffects
+
     readonly property bool enabled: PowerProfiles.profile === PowerProfile.Performance
     readonly property bool available: PowerProfiles.hasPerformanceProfile
     property bool ready: false
@@ -28,21 +31,6 @@ Singleton {
         setEnabled(!enabled);
     }
 
-    function setDynamicConfs(): void {
-        Hypr.extras.applyOptions({
-            "animations:enabled": 0,
-            "decoration:shadow:enabled": 0,
-            "decoration:blur:enabled": 0,
-            "general:gaps_in": 0,
-            "general:gaps_out": 0,
-            "general:border_size": 1,
-            "decoration:rounding": 0,
-            "decoration:active_opacity": 1,
-            "decoration:inactive_opacity": 1,
-            "general:allow_tearing": 1
-        });
-    }
-
     function restoreLlama(): void {
         if (Quickshell.env("BURL_MANAGE_LLAMA") === "1" && !enabled && props.llamaStopped) {
             props.llamaStopped = false;
@@ -51,15 +39,16 @@ Singleton {
     }
 
     function syncEffects(): void {
-        if (!ready || enabled === props.effectsApplied)
+        if (!ready)
+            return;
+        root.compositorEffects.setMode("performance", enabled);
+        if (enabled === props.effectsApplied)
             return;
         props.effectsApplied = enabled;
         if (enabled) {
-            setDynamicConfs();
             if (Quickshell.env("BURL_MANAGE_LLAMA") === "1" && !props.llamaStopped && !stopLlama.running)
                 stopLlama.running = true;
         } else {
-            Hypr.extras.message("reload");
             restoreLlama();
         }
         if (GlobalConfig.utilities.toasts.gameModeChanged)
@@ -95,15 +84,6 @@ Singleton {
         stdout: StdioCollector {
             onStreamFinished: root.llamaStopped(text)
         }
-    }
-
-    Connections {
-        function onConfigReloaded(): void {
-            if (root.enabled)
-                root.setDynamicConfs();
-        }
-
-        target: Hypr
     }
 
     IpcHandler {
