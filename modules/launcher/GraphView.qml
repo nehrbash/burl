@@ -146,8 +146,16 @@ Item {
         id: growAnim
     }
 
-    // Called by Content.qml when the launcher opens, so the graph grows in
-    // rather than snapping straight into view.
+    property string pendingSelectionId: ""
+    function restorePendingSelection(): void {
+        const index = indexById[pendingSelectionId];
+        if (pendingSelectionId && index !== undefined && isNavigationCandidate(index)) {
+            selectNode(index);
+            pendingSelectionId = "";
+        }
+    }
+    onNodesChanged: Qt.callLater(root.restorePendingSelection)
+
     function growIn(): void {
         growAnim.grow();
     }
@@ -1522,6 +1530,7 @@ Item {
             sim.setInteractive(i, !filtering || scores[i] > 0);
         }
         retargetMatches();
+        Qt.callLater(root.restorePendingSelection);
     }
 
     // Push targets for the current match set into the sim. The match at
@@ -2230,11 +2239,7 @@ Item {
             }
         }
 
-        // Single preview-pill overlay that follows the current pick, instead
-        // of a pill + label column embedded in every node delegate (those
-        // re-laid-out for all ~300 nodes every frame even though only one is
-        // ever current). z=99 sits just under the current disc (z=100) so the
-        // disc still draws over the pill's rounded left end.
+        // One shared preview avoids laying out hidden cards for every node.
         Item {
             id: previewPill
             parent: selectedMotion
@@ -2244,60 +2249,22 @@ Item {
             readonly property real cnr: { return ci >= 0 ? root._nr(ci) : 0; }
             readonly property real cnx: { return ci >= 0 ? root._px(ci) : 0; }
             readonly property real cny: { return ci >= 0 ? root._py(ci) : 0; }
-            readonly property bool showChrome: {
-                const q = (root.query ?? "").trim();
-                return cnode !== null;
-            }
-
-            visible: ci >= 0
+            visible: cnode !== null
             z: 99
             width: { return cnr * 2; }
             height: Math.max(64, width)
             x: { return cnx - width / 2; }
             y: { return cny - height / 2; }
 
-            Rectangle {
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.left: parent.left
-                height: parent.height
-                width: parent.width + root.previewPillWidth
-                radius: height / 2
-                // Parchment-warmed pill fill; the border stays m3primary —
-                // it marks the current *selection* (interactive state).
-                color: Woodland.velvet
-                border.color: Colours.palette.m3primary
-                border.width: 2
-                opacity: previewPill.showChrome ? 0.92 : 0
-                Behavior on opacity { NumberAnimation { duration: 260; easing.type: Easing.InOutCubic } }
-            }
-
-            Column {
+            NodePreview {
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.left: parent.right
-                anchors.leftMargin: 16
-                width: root.previewPillWidth - 32
-                spacing: 4
-                opacity: previewPill.showChrome ? 1.0 : 0
-                Behavior on opacity { NumberAnimation { duration: 260; easing.type: Easing.InOutCubic } }
-
-                Text {
-                    width: parent.width
-                    text: previewPill.cnode?.label ?? ""
-                    color: Colours.palette.m3onSurface
-                    font.pixelSize: 18
-                    font.bold: true
-                    elide: Text.ElideRight
-                    wrapMode: Text.NoWrap
-                }
-                Text {
-                    width: parent.width
-                    visible: text !== ""
-                    text: previewPill.cnode?.tooltip ?? ""
-                    color: Colours.palette.m3onSurfaceVariant
-                    font.pixelSize: 12
-                    elide: Text.ElideRight
-                    wrapMode: Text.NoWrap
-                }
+                anchors.leftMargin: 12
+                width: root.previewPillWidth
+                height: implicitHeight
+                node: previewPill.cnode
+                actionsAvailable: root.kindActions(node).length > 0
+                emacsEnabled: Quickshell.env("BURL_EMACS_INTEGRATION") === "1"
             }
         }
 

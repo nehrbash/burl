@@ -40,6 +40,7 @@ Item {
             refreshPending = true;
             Qt.callLater(root.reloadWhenReady);
         } else {
+            sceneLoader.item?.saveContext();
             refreshPending = false;
         }
     }

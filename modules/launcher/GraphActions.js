@@ -18,7 +18,7 @@ function primary(kind, source, context) {
     let expression = "";
     switch (kind) {
     case "spotifyTrack":
-        return source.uri ? {name: "Play", icon: "play_arrow", desc: source.name, spotifyUri: source.uri} : null;
+        return source.uri ? {name: "Play", icon: "play_arrow", desc: source.name, spotifyUri: source.uri, keepOpen: true} : null;
     case "steam":
         return /^[1-9][0-9]*$/.test(String(source.appId ?? ""))
             ? {name: "Play", icon: "sports_esports", desc: source.name, command: ["steam", "-applaunch", String(source.appId)]} : null;
@@ -58,7 +58,7 @@ function secondary(node, context) {
     switch (node.kind) {
     case "spotifyPlaylist":
     case "spotifyTrack":
-        if (source.uri) actions = [{name: "Play", icon: "play_arrow", desc: source.name, spotifyUri: source.uri}];
+        if (source.uri) actions = [{name: "Play", icon: "play_arrow", desc: source.name, spotifyUri: source.uri, keepOpen: true}];
         break;
     case "file":
         if (!source.path) break;
@@ -125,7 +125,7 @@ function execute(action, context, visibility) {
         context.dispatch(action.dispatch);
     else
         return false;
-    if (visibility)
+    if (visibility && !action.keepOpen)
         visibility.closeRoom("launcher", "action");
     return true;
 }

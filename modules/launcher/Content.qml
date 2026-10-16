@@ -12,6 +12,7 @@ import qs.modules.dashboard as Dashboard
 import qs.modules.launcher
 import qs.modules.launcher.services
 import "SearchQuery.js" as SearchQuery
+import "SearchEditing.js" as SearchEditing
 
 Item {
     id: root
@@ -87,6 +88,30 @@ Item {
         else root.visibilities.closeWorld("escape");
     }
 
+    property var editingState: ({kill: ""})
+
+    function saveContext(): void {
+        visibilities.rememberLauncher({query: search.text, cursor: search.cursorPosition,
+            playlist: openedPlaylist, playlistReturn: playlistReturn, pivotKind: graph.pivotKind,
+            selection: graph.pendingSelectionId || graph.nodes[graph.currentNode]?.id || "",
+            kill: editingState.kill});
+    }
+
+    function restoreContext(): void {
+        const saved = visibilities.launcherContext;
+        if (saved.query === undefined) return;
+        openedPlaylist = saved.playlist ?? null;
+        playlistReturn = saved.playlistReturn ?? null;
+        editingState = {kill: saved.kill ?? ""};
+        search.text = saved.query;
+        search.cursorPosition = Math.min(saved.cursor ?? search.text.length, search.text.length);
+        graph.pivotKind = saved.pivotKind ?? "";
+        graph.flushSearch();
+        graph.pendingSelectionId = saved.selection ?? "";
+        graph.restorePendingSelection();
+        if (openedPlaylist) SpotifySources.loadPlaylist(openedPlaylist.uri);
+    }
+
     function dismiss(): void {
         root.visibilities.closeWorld("dismiss");
     }
@@ -154,7 +179,7 @@ Item {
     // `panP: launcher ? 1 : 0` binding would land in the sky with no pan.
     // This is the first open after every shell restart, exactly when someone
     // is looking for the animation.
-    Component.onCompleted: root.syncCamera()
+    Component.onCompleted: { root.syncCamera(); root.restoreContext(); }
 
     // Keep search focused at the tree while its invisible hit targets sit below it.
     readonly property int chromeZ: root.arrivalP > 0.6 ? 5 : 1
@@ -422,7 +447,7 @@ Item {
         readonly property int count: neighbors.length
         readonly property int pages: Math.max(1, Math.ceil(count/8))
         readonly property var choices: neighbors.slice(page*8, page*8+8)
-        readonly property string letters: "arstgmne"
+        readonly property string letters: "12345678"
         onCurIdxChanged: page = 0
         onPagesChanged: page = Math.min(page, pages-1)
         function nodeIndexForKey(k: int): int {
@@ -510,7 +535,7 @@ Item {
                 Text {
                     x: 12
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "⌃" + quickGrid.letters[twig.index].toUpperCase()
+                    text: "Alt+" + quickGrid.letters[twig.index]
                     color: Colours.palette.m3primary
                     font.pixelSize: 11
                 }
@@ -668,6 +693,8 @@ Item {
 
         StyledTextField {
             id: search
+            objectName: "launcherSearch"
+            onTextEdited: graph.pendingSelectionId = ""
 
             // searchWrapper already draws the pill + accent ring; suppress
             // the new StyledTextField's own Material outline background so
@@ -745,6 +772,15 @@ Item {
             // matches / scope / actions overlay state. Matches the URL
             // bar convention so it's instantly familiar.
             Keys.onPressed: ev => {
+                const prefix = ev.modifiers === Qt.ControlModifier ? "C-"
+                    : ev.modifiers === Qt.AltModifier ? "M-" : "";
+                const key = ev.key === Qt.Key_Backspace ? "Backspace" : String.fromCharCode(ev.key).toLowerCase();
+                if (prefix && SearchEditing.apply(search, prefix + key, root.editingState)) {
+                    graph.pendingSelectionId = "";
+                    ev.accepted = true;
+                    return;
+                }
+
                 if (root.atTree && Config.dashboard.keyboardNav && ev.modifiers === Qt.NoModifier) {
                     const directions = ({});
                     directions[Qt.Key_Left] = [-1, 0];
@@ -807,23 +843,6 @@ Item {
                     ev.accepted = true;
                     return;
                 }
-                // Vim navigation, opt-in. Ctrl-prefixed because the field is a
-                // text input, and h/j/k/l are free — the compass grid claims
-                // Ctrl+[arstgmne] and nothing else.
-                if (GlobalConfig.launcher.vimKeybinds && (ev.modifiers & Qt.ControlModifier)
-                        && !root.inActions && !root.kindMenuOpen && root.panP > 0.5) {
-                    const vim = ({});
-                    vim[Qt.Key_H] = [-1, 0];
-                    vim[Qt.Key_L] = [1, 0];
-                    vim[Qt.Key_K] = [0, -1];
-                    vim[Qt.Key_J] = [0, 1];
-                    const dir = vim[ev.key];
-                    if (dir) {
-                        graph.navDirection(dir[0], dir[1]);
-                        ev.accepted = true;
-                        return;
-                    }
-                }
                 // Typing means the user came here to search, not to watch the
                 // opening shot. Printable text only: a bare Ctrl press (on the
                 // way to Ctrl+Down) must not count as "get me to the sky".
@@ -860,17 +879,10 @@ Item {
                     ev.accepted = true;
                     return;
                 }
-                // Ctrl+[arstgmne] fires one of the eight surrounding compass
-                // cells, in reading order — resolved through quickGrid, not
-                // match order, so the letter always fires the cell the letter
-                // is drawn on. Only intercepts while the grid is showing, so
-                // standard Ctrl+A (select-all) etc. still work with no matches.
-                if ((ev.modifiers & Qt.ControlModifier) && quickGrid.count > 0
+                if (ev.modifiers === Qt.AltModifier && quickGrid.count > 0
                         && !root.inActions && !root.kindMenuOpen) {
-                    const qkeys = [Qt.Key_A, Qt.Key_R, Qt.Key_S, Qt.Key_T,
-                                   Qt.Key_G, Qt.Key_M, Qt.Key_N, Qt.Key_E];
-                    const ni = quickGrid.nodeIndexForKey(qkeys.indexOf(ev.key));
-                    if (ni >= 0 && ni < graph.nodes.length) {
+                    const ni = quickGrid.nodeIndexForKey(ev.key - Qt.Key_1);
+                    if (ev.key >= Qt.Key_1 && ev.key <= Qt.Key_8 && ni >= 0) {
                         quickGrid.select(ni);
                         ev.accepted = true;
                         return;
@@ -896,10 +908,7 @@ Item {
 
             function syncOpen(): void {
                 if (!root.visibilities.worldOpen) {
-                    root.openedPlaylist = null;
-                    root.playlistReturn = null;
-                    search.text = "";
-                    graph.pivotKind = "";
+                    root.closeKindMenu();
                     search.grewThisOpen = false;
                     return;
                 }
@@ -916,6 +925,10 @@ Item {
                 if (!q)
                     return;
                 ShellState.pendingLauncherQuery = "";
+                root.openedPlaylist = null;
+                root.playlistReturn = null;
+                graph.pivotKind = "";
+                graph.pendingSelectionId = "";
                 search.text = q;
                 search.cursorPosition = search.text.length;
             }

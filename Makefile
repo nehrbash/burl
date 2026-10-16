@@ -11,6 +11,7 @@ check-lifecycle:
 	./scripts/qs-navigation-state.sh
 	./scripts/qs-world-lifecycle.sh
 	./scripts/qs-world-escape.sh
+	./scripts/qs-launcher-editing.sh
 	./scripts/qs-launcher-cycle.sh
 	./scripts/qs-file-search-cycle.sh
 	./scripts/qs-atmosphere-cycle.sh

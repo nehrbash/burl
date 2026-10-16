@@ -186,6 +186,6 @@ test('Spotify playlist playback is an explicit secondary action', () => {
     assert.equal(menu[0].name,'Play');
     actions.execute(menu[0],h.context,h.visibility);
     assert.deepEqual(played,[source.uri]);
-    assert.equal(h.visibility.launcher,false);
+    assert.equal(h.visibility.launcher,true);
     assert.equal(actions.primary('spotifyTrack',{uri:'spotify:track:abc'},h.context).spotifyUri,'spotify:track:abc');
 });

@@ -28,12 +28,19 @@ Scope {
 
     readonly property bool dashboardOpenedByKey: session.openedByKey
     readonly property bool dashboardTreePinned: session.pinned
+    readonly property var launcherContext: session.launcherContext
+
+    function rememberLauncher(context: var): void {
+        session.launcherContext = context;
+    }
+
     property bool initialized
 
     QtObject {
         id: session
         property bool openedByKey
         property bool pinned
+        property var launcherContext: ({})
     }
 
     PersistentProperties {

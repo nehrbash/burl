@@ -85,13 +85,6 @@ PageBase {
 
         ToggleRow {
             first: true
-            text: qsTr("Vim keybinds")
-            subtext: qsTr("Navigate results with Ctrl+hjkl")
-            checked: GlobalConfig.launcher.vimKeybinds
-            onToggled: GlobalConfig.launcher.vimKeybinds = checked
-        }
-
-        ToggleRow {
             last: true
             text: qsTr("Enable dangerous actions")
             subtext: qsTr("Allow actions that shut down or log out")

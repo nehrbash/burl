@@ -38,7 +38,7 @@ rules in Settings → Panels → Launcher also apply to Steam games.
 
 Select a Spotify playlist with Enter or a click to browse its tracks. Tracks load
 on demand and connect to their playlist node. Escape returns to the prior search;
-Shift+Enter opens the Play action. Selecting a track starts playback.
+Shift+Enter opens the Play action. Selecting a track starts playback without closing the playlist.
 
 Use `report >file` to find files, or `>file|roam report` to include notes.
 File search starts after three nonspace characters and a short typing pause.
@@ -55,7 +55,16 @@ Exact names rank first, followed by prefixes, whole-word starts, substrings,
 and fuzzy matches. Every query word must match; app descriptions and keywords
 can contribute lower-ranked results. Long words tolerate one typing error.
 Arrows navigate spatially within matching nodes; Tab and Shift+Tab cycle by
-rank. Clearing the search restores unrestricted graph browsing.
+rank. Search, playlist, and selection survive closing and reopening the launcher.
+Ctrl+A/E move to the start/end; Ctrl+K kills to the end and Ctrl+Y yanks.
+Alt+Backspace/D delete the previous/next word; Alt+B/F move by word.
+Alt+1…8 select nearby graph nodes. Clearing text keeps an open playlist;
+Escape returns to the search outside it.
+
+Selected-node previews share `NodePreview.qml`. Source adapters in
+`NodePreview.js` return `{kind, title, details, action}` descriptors; a source
+can supply `node.preview` with that shape directly. The shared renderer owns
+layout, colours, and key hints; absent detail rows take no space.
 
 In Settings → Panels → Launcher → Commands, add or edit a command's name,
 keyword, description, executable and default arguments. Enable “Allow extra
