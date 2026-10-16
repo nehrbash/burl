@@ -2264,10 +2264,10 @@ Item {
 
             NodePreview {
                 anchors.verticalCenter: parent.verticalCenter
-                anchors.left: parent.right
-                anchors.leftMargin: 12
-                width: root.previewPillWidth
-                height: implicitHeight
+                anchors.left: parent.left
+                width: parent.width + root.previewPillWidth
+                height: Math.max(parent.height, implicitHeight)
+                discDiameter: parent.width
                 node: previewPill.cnode
                 actionsAvailable: root.kindActions(node).length > 0
                 emacsEnabled: Quickshell.env("BURL_EMACS_INTEGRATION") === "1"

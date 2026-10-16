@@ -533,6 +533,7 @@ Item {
                     opacity: 0.96
                 }
                 Text {
+                    id: shortcutLabel
                     x: 12
                     anchors.verticalCenter: parent.verticalCenter
                     text: "Alt+" + quickGrid.letters[twig.index]
@@ -540,9 +541,11 @@ Item {
                     font.pixelSize: 11
                 }
                 Text {
-                    x: 43
+                    anchors.left: shortcutLabel.right
+                    anchors.leftMargin: 10
+                    anchors.right: parent.right
+                    anchors.rightMargin: 12
                     anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width-55
                     text: twig.node?.label ?? ""
                     elide: Text.ElideRight
                     color: Colours.palette.m3onSurface
