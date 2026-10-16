@@ -24,14 +24,19 @@ Item {
 
     // Both rooms share one camera so an interrupted pan reverses coherently.
     property real panP: 0
+    property real cameraTarget: 0
+    readonly property bool cameraAnimated: Ambience.grow && !GameMode.enabled
+    readonly property bool cameraMoving: panAnimation.running
 
     property int panMs: 480
     property int panEase: Easing.OutCubic
 
     function flyTo(target: real, ms: int, ease: int): void {
+        if (root.cameraMoving && target === root.cameraTarget) return;
         root.panMs = ms;
         root.panEase = ease;
         root.panP = target;
+        root.cameraTarget = target;
     }
 
     // ---- one surface, two rooms -------------------------------------------
@@ -152,9 +157,10 @@ Item {
     }
 
     Behavior on panP {
-        enabled: Ambience.grow && !GameMode.enabled
+        enabled: root.cameraAnimated
 
         NumberAnimation {
+            id: panAnimation
             duration: root.panMs
             easing.type: root.panEase
         }
@@ -205,7 +211,9 @@ Item {
         id: sky
 
         anchors.fill: parent
-        panP: root.panP
+        panP: root.cameraTarget
+        cameraMotion: root
+        logicalPanP: root.panP
         viewZoom: graph.zoom
         viewPanX: graph.panX
         viewPanY: graph.panY
@@ -213,26 +221,24 @@ Item {
         opacity: root.revealP
     }
 
-    // The world tree at the bottom of the pan is the DASHBOARD's living tree,
-    // mounted here as a guest (see Dashboard.Content's `guest` block) rather
-    // than a second painting of the same art. Sky owns the camera, so the
-    // host just rides `sky.hostY` — flush with the
-    // frame at panP 0, which is the layout the tree measures its orbs against.
-    //
-    // z, not declaration order: the search chrome below fades to opacity 0 down
-    // here but stays hit-testable, and the graph fills the surface. Lifting the
-    // host above both is what lets a click reach an orb. Both of them are
-    // `enabled: false` at this end of the pan anyway; the scenery bands (z 2)
-    // are not, so they stay under the tree and catch only what it does not cover.
+    // The backdrop stays screen-fixed while the dashboard guest moves with the camera.
+    Item {
+        id: treeBackground
+        anchors.fill: parent
+        visible: root.revealP > 0.001
+        opacity: root.revealP
+    }
+
     Item {
         id: treeHost
 
         x: 0
         y: sky.hostY
+        CameraYBehavior on y { camera: root }
         width: root.width
         height: root.height
         z: 3
-        enabled: root.panP < 0.5
+        enabled: root.atTree
         visible: root.revealP > 0.001
         opacity: root.revealP
 
@@ -247,16 +253,14 @@ Item {
                 screenState: root.visibilities
                 facePicker: launcherFacePicker
                 guest: true
-                guestOnScreen: root.revealP > 0.001 && sky.hostY < root.height
+                guestOnScreen: root.revealP > 0.001 && (root.cameraMoving || root.cameraTarget === 0)
+                guestCamera: root
+                guestBackground: treeBackground
                 // Grown for as long as the surface is up, whichever room the
                 // camera is in — the unveil is the surface arriving, not the
                 // camera reaching the ground, or the two reveals fight.
                 guestOpenP: root.surfaceOpen ? 1 : 0
-                // The tree's own brown, leafy room, lifted back out of the
-                // host's camera offset so it covers the frame, and faded out as
-                // the camera climbs into the sky that replaces it.
-                guestRoomOffset: sky.hostY
-                guestRoomP: CUtils.clamp(1 - root.panP / 0.55, 0, 1)
+                guestRoomP: 1 - root.cameraTarget
                 guestArtSource: Quickshell.shellPath("assets/images/tree/worldtree-night.png")
                 onGuestDismissRequested: root.ascend()
                 onGuestCloseRequested: root.dismiss()
@@ -365,15 +369,25 @@ Item {
         actions.kindActions = [];
     }
 
+    Item {
+        id: graphCamera
+        width: root.width
+        height: root.height
+        y: -sky.travel
+        CameraYBehavior on y { camera: root }
+        opacity: root.revealP
+    }
+
     GraphView {
         id: graph
+        parent: graphCamera
 
         objectName: "skyGraph"
         width: root.width
         height: root.height
-        y: -sky.travel
-        opacity: Math.min(1, root.panP * 3) * root.revealP
-        enabled: root.arrivalP > 0.99
+        opacity: root.cameraTarget
+        CameraOpacityBehavior on opacity { camera: root }
+        enabled: root.atSky
         visibilities: root.visibilities
         openedPlaylist: root.openedPlaylist
         onPlaylistSelected: playlist => root.openPlaylist(playlist)
@@ -393,10 +407,9 @@ Item {
             search.text = root.prefix + SearchQuery.categoryKeyword(category) + " ";
             search.forceActiveFocus();
         }
-        // Camera motion and graph settling share the GUI thread.
-        paused: !root.surfaceOpen || root.arrivalP < 0.999
-        transitioning: root.revealP > 0 && (!root.surfaceOpen || root.revealP < 0.999
-            || (root.visibilities.launcher ? root.panP < 0.999 : root.panP > 0.001))
+        // Defer graph layout until camera arrival to keep transition startup light.
+        paused: !root.atSky
+        transitioning: root.cameraMoving || (root.revealP > 0 && (!root.surfaceOpen || root.revealP < 0.999))
     }
 
     MouseArea {
@@ -1003,8 +1016,8 @@ Item {
     }
 
     // Keep navigation inactive during the opening dwell and camera movement.
-    readonly property bool atTree: root.surfaceOpen && root.panP < 0.02
-    readonly property bool atSky: root.surfaceOpen && root.panP > 0.98
+    readonly property bool atTree: root.surfaceOpen && !root.cameraMoving && root.cameraTarget === 0
+    readonly property bool atSky: root.surfaceOpen && !root.cameraMoving && root.cameraTarget === 1
 
     MouseArea {
         id: ascendBand

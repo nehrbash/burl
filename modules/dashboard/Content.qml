@@ -94,6 +94,8 @@ FocusScope {
     property bool sproutOnly
 
     property bool guest
+    property var guestCamera: null
+    property Item guestBackground: null
     property bool guestOnScreen: true
     property real guestOpenP: 1
     // How far the tree host has been pushed down the frame by the host's

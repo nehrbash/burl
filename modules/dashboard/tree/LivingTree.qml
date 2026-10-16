@@ -63,13 +63,9 @@ Item {
     // seed and the hover strip at the bottom edge are live here.
     readonly property bool sproutOnly: root.nav.sproutOnly ?? false
 
-    // The room the tree stands in — the night gradient, the warm
-    // trunk bloom and the vignette. It is full-SURFACE, and a guest's surface
-    // is pushed down the frame by its host's camera, so the room has to be
-    // lifted back by that offset and sized to the screen: left riding with the
-    // tree it cut a hard-edged band across the host's top edge instead of
-    // covering the frame. `roomP` fades it against the host's own background
-    // (the launcher's night sky) as the camera leaves.
+    readonly property var roomCamera: root.guest ? root.nav.guestCamera : null
+    readonly property Item roomBackground: root.guest ? root.nav.guestBackground : null
+    readonly property bool cameraMoving: root.roomCamera?.cameraMoving ?? false
     readonly property real roomOffset: root.guest ? (root.nav.guestRoomOffset ?? 0) : 0
     readonly property real roomP: root.guest ? (root.nav.guestRoomP ?? 1) : root.openP
 
@@ -444,11 +440,15 @@ Item {
 
     Rectangle {
         x: 0
-        y: -root.roomOffset
+        parent: root.roomBackground ?? root
+        y: root.roomBackground ? 0 : -root.roomOffset
         width: root.geomW
         height: root.geomH
-        visible: root.roomP > 0.004
+        visible: root.cameraMoving || root.roomP > 0.004
         opacity: root.roomP
+        CameraOpacityBehavior on opacity {
+            camera: root.roomCamera
+        }
 
         gradient: Gradient {
             GradientStop {
@@ -473,8 +473,11 @@ Item {
         height: root.geomH
         scene: "tree"
         camera: 0
-        active: root.onScreen && root.roomP > 0.001
+        active: root.onScreen && (root.cameraMoving || root.roomP > 0.001)
         opacity: root.roomP * 0.72
+        CameraOpacityBehavior on opacity {
+            camera: root.roomCamera
+        }
     }
 
     // 0b — a warm bloom behind the trunk. RadialGradient on a Shape, NOT a
@@ -482,13 +485,17 @@ Item {
     // disc across the screen.
     Shape {
         x: 0
-        y: -root.roomOffset
+        parent: root.roomBackground ?? root
+        y: root.roomBackground ? 0 : -root.roomOffset
         width: root.geomW
         height: root.geomH
         preferredRendererType: Shape.CurveRenderer
         asynchronous: true
-        visible: root.roomP > 0.01
+        visible: root.cameraMoving || root.roomP > 0.01
         opacity: root.roomP
+        CameraOpacityBehavior on opacity {
+            camera: root.roomCamera
+        }
 
         ShapePath {
             strokeWidth: 0
@@ -546,6 +553,9 @@ Item {
         tone: Woodland.brass
         intensity: 0.32
         opacity: root.roomP
+        CameraOpacityBehavior on opacity {
+            camera: root.roomCamera
+        }
     }
 
     property int hoveredOrb: -1
@@ -566,7 +576,7 @@ Item {
         selectedRoot: root.sessionActions.findIndex(a => "session:" + a.id === root.focusedId)
         hovered: root.hoveredOrb
         visible: root.onScreen
-        animated: root.roomP > 0.01
+        animated: root.cameraMoving || root.roomP > 0.01
     }
 
     Connections {
@@ -585,7 +595,10 @@ Item {
         density: 1.35
         period: 22000
         opacity: root.roomP * 0.95
-        active: root.onScreen && root.roomP > 0.001
+        CameraOpacityBehavior on opacity {
+            camera: root.roomCamera
+        }
+        active: root.onScreen && (root.cameraMoving || root.roomP > 0.001)
         enabled: false
     }
 
@@ -766,7 +779,7 @@ Item {
     Image {
         visible: false
         asynchronous: true
-        source: root.onScreen && root.openP > 0.999 && root.roomP > 0.999
+        source: root.onScreen && !root.cameraMoving && root.openP > 0.999 && root.roomP > 0.999
             && root.sections.some(s => s.id === "tasks" && s.enabled)
             ? Quickshell.shellPath("assets/images/book/tasks/opening-sheet.png") : ""
     }
@@ -801,13 +814,17 @@ Item {
 
     Shape {
         x: 0
-        y: -root.roomOffset
+        parent: root.roomBackground ?? root
+        y: root.roomBackground ? 0 : -root.roomOffset
         width: root.geomW
         height: root.geomH
         preferredRendererType: Shape.CurveRenderer
         asynchronous: true
-        visible: root.roomP > 0.02
+        visible: root.cameraMoving || root.roomP > 0.02
         opacity: root.roomP
+        CameraOpacityBehavior on opacity {
+            camera: root.roomCamera
+        }
 
         ShapePath {
             strokeWidth: 0
@@ -1255,7 +1272,7 @@ Item {
             hovered: hoverArea.containsMouse
             glyph: orb.section?.iconName ?? "circle"
             phase: orb.orbIndex+1
-            animate: root.roomP > 0.01
+            animate: root.cameraMoving || root.roomP > 0.01
         }
 
         StyledText {
@@ -1430,7 +1447,7 @@ Item {
             selectedEnergy: 1.45
             glyph: node.action?.icon ?? "circle"
             phase: 40+node.nodeIndex
-            animate: root.roomP > 0.01
+            animate: root.cameraMoving || root.roomP > 0.01
         }
 
         Shape {

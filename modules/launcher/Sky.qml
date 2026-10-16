@@ -12,6 +12,8 @@ Item {
 
     // 0 = looking at the tree, 1 = up in the sky. Driven by Content.
     required property real panP
+    property var cameraMotion: null
+    property real logicalPanP: panP
     property real viewZoom: 1
     property real viewPanX: 0
     property real viewPanY: 0
@@ -91,18 +93,23 @@ Item {
         viewPanX: root.viewPanX
         viewPanY: root.viewPanY
         camera: 1 - root.panP
-        visible: root.panP > 0.001
-        active: root.onScreen && root.panP > 0.001
+        cameraMotion: root.cameraMotion
+        visible: root.panP > 0.001 || (root.cameraMotion?.cameraMoving ?? false)
+        active: root.onScreen && (root.panP > 0.001 || (root.cameraMotion?.cameraMoving ?? false))
     }
 
-    LunarMoon {
-        active: root.onScreen && root.panP > 0.001
-        readonly property real depth: 0.8
-        x: root.width * 0.72 - width * 0.5 + root.viewPanX * 0.09
-        y: root.height * 0.13 - depth * root.travel + root.viewPanY * 0.09
-        scale: Math.pow(root.viewZoom, 0.16)
-        width: Math.max(180, root.height * 0.36)
-        height: width
+    Item {
+        y: -0.8 * root.travel
+        CameraYBehavior on y { camera: root.cameraMotion }
+
+        LunarMoon {
+            active: root.onScreen && (root.panP > 0.001 || (root.cameraMotion?.cameraMoving ?? false))
+            x: root.width * 0.72 - width * 0.5 + root.viewPanX * 0.09
+            y: root.height * 0.13 + root.viewPanY * 0.09
+            scale: Math.pow(root.viewZoom, 0.16)
+            width: Math.max(180, root.height * 0.36)
+            height: width
+        }
     }
 
     // ---- 4. one meteor ----------------------------------------------------
@@ -220,10 +227,10 @@ Item {
         property bool armed: true
 
         Connections {
-            function onPanPChanged(): void {
-                if (root.panP < 0.05)
+            function onLogicalPanPChanged(): void {
+                if (root.logicalPanP < 0.05)
                     meteor.armed = true;
-                else if (meteor.armed && root.panP > 0.45 && meteor.visible) {
+                else if (meteor.armed && root.logicalPanP > 0.45 && meteor.visible) {
                     meteor.armed = false;
                     streak.restart();
                 }
@@ -239,6 +246,7 @@ Item {
     Rectangle {
         x: 0
         y: root.hostY + root.treeH * 0.80
+        CameraYBehavior on y { camera: root.cameraMotion }
         width: root.width
         height: root.height * 0.55
 

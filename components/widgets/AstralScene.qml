@@ -10,6 +10,7 @@ Item {
     property string scene: "sky"
     property bool active: true
     property real camera: 0
+    property var cameraMotion: null
     property real viewZoom: 1
     property real viewPanX: 0
     property real viewPanY: 0
@@ -116,23 +117,28 @@ Item {
         anchors.fill: parent
         Repeater {
             model: group.fragments
-            AstralFragment {
+            Item {
+                id: fragmentCamera
                 required property var modelData
                 required property int index
-                readonly property real parallax: root.sky ? 0.1 + group.depth * 0.3 : 0
-                scale: Math.pow(root.viewZoom, parallax)
-                cell: modelData.cell
-                width: root.width * modelData.size
-                height: width
-                x: root.width * modelData.x + root.viewPanX * parallax
-                y: root.height * modelData.y - root.camera * root.height * (root.sky ? 0.8 + group.depth : group.depth)
-                    + root.viewPanY * parallax
-                rotation: modelData.angle
-                drifting: root.moving
-                driftX: (index % 2 ? -1 : 1) * (root.sky ? root.width * 0.014 : group.depth * 80)
-                driftY: root.sky ? root.height * 0.02 : group.depth * 65
-                tilt: group.depth * 9
-                period: 90000 + index * 17000 + group.depth * 50000
+                y: -root.camera * root.height * (root.sky ? 0.8 + group.depth : group.depth)
+                CameraYBehavior on y { camera: root.cameraMotion }
+
+                AstralFragment {
+                    readonly property real parallax: root.sky ? 0.1 + group.depth * 0.3 : 0
+                    scale: Math.pow(root.viewZoom, parallax)
+                    cell: fragmentCamera.modelData.cell
+                    width: root.width * fragmentCamera.modelData.size
+                    height: width
+                    x: root.width * fragmentCamera.modelData.x + root.viewPanX * parallax
+                    y: root.height * fragmentCamera.modelData.y + root.viewPanY * parallax
+                    rotation: fragmentCamera.modelData.angle
+                    drifting: root.moving
+                    driftX: (fragmentCamera.index % 2 ? -1 : 1) * (root.sky ? root.width * 0.014 : group.depth * 80)
+                    driftY: root.sky ? root.height * 0.02 : group.depth * 65
+                    tilt: group.depth * 9
+                    period: 90000 + fragmentCamera.index * 17000 + group.depth * 50000
+                }
             }
         }
     }
@@ -150,6 +156,7 @@ Item {
         height: width
         x: root.width * baseX
         y: root.height * baseY - root.camera * root.height * (root.sky ? 0.7 + depth : depth)
+        CameraYBehavior on y { camera: root.cameraMotion }
         Image {
             id: cloud
             width: bank.width

@@ -56,8 +56,8 @@ Timer {
             host.check(!down.enabled && !up.enabled, 'camera travel disables navigation');
             if (host.controlPhase === 1) {
                 const graph = host.find(subject, 'skyGraph');
-                host.check(graph && Math.abs(graph.y + subject.height * 1.12 * (1 - subject.panP)) < 0.1,
-                    'nodes enter with the sky camera');
+                host.check(graph && subject.cameraMoving && !graph.enabled && graph.transitioning,
+                    'graph interaction and rebuilds wait for camera arrival');
                 host.checkedAscent = true;
             } else if (host.controlPhase === 2) {
                 host.checkedDescent = true;
@@ -69,6 +69,8 @@ Timer {
             const d = host.bounds(down), u = host.bounds(up), s = host.bounds(search);
             host.check(host.checkedAscent, 'initial ascent was exercised');
             host.check(down.enabled && !up.enabled, 'sky enables only its navigation');
+            const graph = host.find(subject, 'skyGraph');
+            host.check(Math.abs(graph.parent.y) < 0.1, 'render-thread camera reaches sky endpoint');
             host.check(Math.abs(d.x) < 0.1 && Math.abs(d.right - subject.width) < 0.1,
                 'return target spans the full bottom edge');
             host.check(down.height <= 64 && down.height <= subject.height * 0.08 + 0.1,
@@ -86,6 +88,8 @@ Timer {
         } else if (host.controlPhase === 2 && subject.panP < 0.001 && subject.atTree) {
             host.check(host.checkedDescent, 'descent camera travel was exercised');
             host.check(up.enabled && !down.enabled, 'tree enables only ascent');
+            const graph = host.find(subject, 'skyGraph');
+            host.check(Math.abs(graph.parent.y + subject.height * 1.12) < 0.1, 'render-thread camera reaches tree endpoint');
             if (host.controlPhase < 0) return;
             host.controlPhase = 3;
             up.clicked(null);

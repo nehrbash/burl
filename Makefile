@@ -8,6 +8,7 @@ check:
 check-lifecycle:
 	RUN_QML_MOUSE=1 node --test tests/burl-mouse-settings-runtime.mjs
 	RUN_QML_EFFECTS=1 node --test tests/burl-compositor-effects-runtime.mjs
+	./scripts/qs-camera-motion.sh
 	./scripts/qs-navigation-state.sh
 	./scripts/qs-world-lifecycle.sh
 	./scripts/qs-world-escape.sh
