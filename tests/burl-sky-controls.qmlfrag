@@ -21,6 +21,14 @@ function find(item, name) {
     }
     return null;
 }
+function treeScenery(item) {
+    if (item.scene === "tree" && item.cameraMotion !== undefined) return item;
+    for (const child of item.children ?? []) {
+        const found = treeScenery(child);
+        if (found) return found;
+    }
+    return null;
+}
 function check(ok, message) {
     if (!ok) {
         host.controlPhase = -1;
@@ -60,6 +68,8 @@ Timer {
                     'graph interaction and rebuilds wait for camera arrival');
                 host.checkedAscent = true;
             } else if (host.controlPhase === 2) {
+                const scenery = host.treeScenery(subject);
+                host.check(scenery && scenery.moving, 'tree scenery resumes during descent rather than at arrival');
                 host.checkedDescent = true;
             } else if (host.controlPhase === 3) {
                 host.checkedReturnAscent = true;

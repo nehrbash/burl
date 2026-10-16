@@ -26,3 +26,16 @@ Timer {
         subject.active = true;
     }
 }
+
+Timer {
+    interval: 3400; running: true
+    onTriggered: {
+        if (host.capturePrefix) CUtils.saveItem(subject, Qt.resolvedUrl("file://"+host.capturePrefix+"-hidden-a.png"), () => {}, () => host.check(false, "first paused capture"));
+    }
+}
+Timer {
+    interval: 3600; running: true
+    onTriggered: {
+        if (host.capturePrefix) CUtils.saveItem(subject, Qt.resolvedUrl("file://"+host.capturePrefix+"-hidden-b.png"), () => {}, () => host.check(false, "second paused capture"));
+    }
+}

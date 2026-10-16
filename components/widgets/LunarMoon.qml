@@ -77,6 +77,7 @@ Item {
         to: Math.PI * 2
         duration: 48000
         loops: Animation.Infinite
-        running: root.moving
+        running: true
+        paused: !root.moving
     }
 }

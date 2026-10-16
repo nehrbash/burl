@@ -14,7 +14,8 @@ Item {
     property real viewZoom: 1
     property real viewPanX: 0
     property real viewPanY: 0
-    readonly property bool moving: active && visible && opacity > 0.001 && Ambience.sway && !GameMode.enabled
+    // Animator opacity keeps its old QML value until the fade finishes.
+    readonly property bool moving: active && visible && (opacity > 0.001 || (cameraMotion?.cameraMoving ?? false)) && Ambience.sway && !GameMode.enabled
     readonly property bool dream: scene === "dream"
     readonly property bool sky: scene === "sky"
     clip: true

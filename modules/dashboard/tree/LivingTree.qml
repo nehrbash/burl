@@ -472,6 +472,7 @@ Item {
         width: root.geomW
         height: root.geomH
         scene: "tree"
+        cameraMotion: root.roomCamera
         camera: 0
         active: root.onScreen && (root.cameraMoving || root.roomP > 0.001)
         opacity: root.roomP * 0.72

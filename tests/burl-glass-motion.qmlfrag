@@ -31,3 +31,12 @@ Timer {
     interval: 1800; running: true
     onTriggered: host.check(!subject.moving && subject.phase === host.initialPhase, 'inactive glass stays stopped')
 }
+Timer {
+    interval: 1850; running: true
+    onTriggered: subject.active = true
+}
+Timer {
+    interval: 2000; running: true
+    onTriggered: host.check(host.reduced ? subject.phase === host.initialPhase : subject.phase > host.initialPhase,
+        'returning glass resumes its retained phase')
+}

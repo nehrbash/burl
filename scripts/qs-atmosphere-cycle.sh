@@ -26,6 +26,7 @@ for scene in dream tree sky; do
         --root "$ROOT" --size 1280x720 --settle 4200 \
         --decl "$REPO/tests/burl-atmosphere.qmlfrag" --set "scene: \"$scene\"" \
         components/widgets/SpectralClouds.qml "$WORK/$scene.png"
+    cmp "$WORK/$scene-motion-hidden-a.png" "$WORK/$scene-motion-hidden-b.png"
     if cmp -s "$WORK/$scene-motion-a.png" "$WORK/$scene-motion-b.png"; then
         echo "FAIL: $scene clouds did not visibly move" >&2
         exit 1

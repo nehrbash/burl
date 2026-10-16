@@ -38,7 +38,8 @@ Item {
     }
 
     SequentialAnimation on breath {
-        running: root.visible && root.animate && Ambience.sway && !GameMode.enabled
+        running: true
+        paused: !(root.visible && root.animate && Ambience.sway && !GameMode.enabled)
         loops: Animation.Infinite
 
         PauseAnimation { duration: root.phase*130 }
@@ -86,7 +87,8 @@ Item {
         rotation: root.phase*37
 
         RotationAnimation on rotation {
-            running: root.visible && root.animate && Ambience.sway && !GameMode.enabled
+            running: true
+            paused: !(root.visible && root.animate && Ambience.sway && !GameMode.enabled)
             from: root.phase*37
             to: root.phase*37+360
             duration: 22000+root.phase*1700
