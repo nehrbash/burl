@@ -13,6 +13,7 @@ class ServiceConfig : public ConfigObject {
     Q_OBJECT
     QML_ANONYMOUS
 
+    CONFIG_GLOBAL_PROPERTY(bool, bluetoothAutoEnable, true)
     CONFIG_GLOBAL_PROPERTY(QString, weatherLocation)
     CONFIG_GLOBAL_PROPERTY(bool, useFahrenheit,
         QLocale().measurementSystem() == QLocale::ImperialUSSystem ||

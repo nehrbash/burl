@@ -24,6 +24,7 @@ ShellRoot {
     id: root
 
     readonly property var mouseSettings: MouseSettings
+    readonly property var bluetoothSettings: BluetoothSettings
 
     settings.watchFiles: true
 

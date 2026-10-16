@@ -66,6 +66,12 @@ Selected-node previews share `NodePreview.qml`. Source adapters in
 can supply `node.preview` with that shape directly. The shared renderer owns
 layout, colours, and key hints; absent detail rows take no space.
 
+Settings → Bluetooth → Enable Bluetooth at startup controls
+`services.bluetoothAutoEnable` (default: true). Burl enables adapters when the
+desktop starts or an adapter appears. Turning Bluetooth off manually lasts
+until Burl restarts or the adapter is reconnected; disabling the startup
+preference leaves the current power state unchanged.
+
 In Settings → Panels → Launcher → Commands, add or edit a command's name,
 keyword, description, executable and default arguments. Enable “Allow extra
 arguments” to append arguments typed after its exact keyword, such as

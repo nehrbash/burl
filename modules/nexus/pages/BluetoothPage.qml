@@ -37,6 +37,14 @@ PageBase {
             }
         }
 
+        ToggleRow {
+            text: qsTr("Enable Bluetooth at startup")
+            subtext: qsTr("Turn on adapters when Burl starts or an adapter is connected. Manual off lasts until the next start.")
+            horizontalPadding: Tokens.padding.largeIncreased
+            checked: GlobalConfig.services.bluetoothAutoEnable
+            onToggled: GlobalConfig.services.bluetoothAutoEnable = checked
+        }
+
         ItemList {
             id: savedList
 
