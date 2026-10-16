@@ -562,7 +562,8 @@ Item {
         rootAnchorsData: root.rootAnchors.map(a => ({ u:a.u,v:a.v,ru:root.rootNodeR,rv:root.rootNodeR*root.artWidth/root.artHeight }))
         hoveredRoot: root.hoveredRoot
         growth: root.openP
-        selected: root.openIds.length ? root.sections.findIndex(s => s.id === root.emphasisId) : -1
+        selected: root.sections.findIndex(s => s.id === (root.focusedId || root.emphasisId))
+        selectedRoot: root.sessionActions.findIndex(a => "session:" + a.id === root.focusedId)
         hovered: root.hoveredOrb
         visible: root.onScreen
         animated: root.roomP > 0.01
@@ -1249,7 +1250,8 @@ Item {
 
             anchors.fill: parent
             accent: orb.accent
-            selected: orb.isOpen || orb.isFocused
+            selected: orb.isFocused || (!root.focusedId && orb.isEmphasis)
+            selectedEnergy: 1.45
             hovered: hoverArea.containsMouse
             glyph: orb.section?.iconName ?? "circle"
             phase: orb.orbIndex+1
@@ -1425,6 +1427,7 @@ Item {
             accent: node.accent
             hovered: nodeHover.containsMouse
             selected: node.keyboardSelected
+            selectedEnergy: 1.45
             glyph: node.action?.icon ?? "circle"
             phase: 40+node.nodeIndex
             animate: root.roomP > 0.01

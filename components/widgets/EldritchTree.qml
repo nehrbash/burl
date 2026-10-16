@@ -15,6 +15,7 @@ Item {
     property var rootLimbs: []
     property var rootCradles: []
     property int hoveredRoot: -1
+    property int selectedRoot: -1
     property real growth: 1
     property int selected: -1
     property int hovered: -1
@@ -158,6 +159,7 @@ Item {
     onRootAnchorsDataChanged: rebuild()
     onHoveredRootChanged: wood.requestPaint()
     onSelectedChanged: wood.requestPaint()
+    onSelectedRootChanged: wood.requestPaint()
     onHoveredChanged: wood.requestPaint()
     onRevealChanged: wood.requestPaint()
     onWoodDarkChanged: wood.requestPaint()
@@ -196,12 +198,16 @@ Item {
                 }
             }
             if (root.renderedTrunk) {
-                const routes = [root.paintedRoute(false,root.selected),root.paintedRoute(false,root.hovered),
-                    root.paintedRoute(true,root.hoveredRoot)];
-                ctx.lineWidth = 0.0008;
-                ctx.strokeStyle = Qt.alpha(Colours.palette.m3primary,0.30);
-                for (let r = 0; r < routes.length; ++r) {
-                    const route = routes[r];
+                const routes = [
+                    { route: root.paintedRoute(false,root.hovered), selected: false },
+                    { route: root.paintedRoute(true,root.hoveredRoot), selected: false },
+                    { route: root.paintedRoute(false,root.selected), selected: true },
+                    { route: root.paintedRoute(true,root.selectedRoot), selected: true }
+                ];
+                ctx.lineCap = "round";
+                ctx.lineJoin = "round";
+                for (const entry of routes) {
+                    const route = entry.route;
                     if (!route) continue;
                     const progress = Math.min(1,root.reveal/route.arrival), points = route.points;
                     ctx.beginPath();
@@ -212,6 +218,16 @@ Item {
                     }
                     const tip = root.routePoint(route,progress);
                     ctx.lineTo(tip.x,tip.y);
+                    if (entry.selected) {
+                        ctx.lineWidth = 0.009;
+                        ctx.strokeStyle = Qt.alpha(Colours.palette.m3primary,0.10);
+                        ctx.stroke();
+                        ctx.lineWidth = 0.004;
+                        ctx.strokeStyle = Qt.alpha(Colours.palette.m3primary,0.25);
+                        ctx.stroke();
+                    }
+                    ctx.lineWidth = entry.selected ? 0.0016 : 0.0008;
+                    ctx.strokeStyle = Qt.alpha(Colours.palette.m3primary,entry.selected ? 0.85 : 0.25);
                     ctx.stroke();
                 }
             }

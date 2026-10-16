@@ -16,13 +16,14 @@ Item {
     property bool selected: false
     property bool hovered: false
     property bool animate: true
+    property real selectedEnergy: 0.85
     property real glowStrength: 1
     property real pulse: 0
     property real breath: 0
     property int phase: 0
 
     readonly property color ivory: Woodland.mix(Woodland.parchment, root.accent, 0.25)
-    readonly property real energy: (selected || hovered ? 0.85 : prominent ? 0.65 : 0.20) + pulse*0.5
+    readonly property real energy: (selected ? selectedEnergy : hovered ? 0.85 : prominent ? 0.65 : 0.20) + pulse*0.5
 
     function ignite(): void {
         if (animate && Ambience.grow && !GameMode.enabled)
