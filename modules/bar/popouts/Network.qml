@@ -25,6 +25,20 @@ ColumnLayout {
     spacing: Tokens.spacing.small
     width: Tokens.sizes.bar.networkWidth
 
+    RowLayout {
+        Layout.fillWidth: true
+        TextButton {
+            text: qsTr("Wi-Fi")
+            enabled: root.view !== "wireless"
+            onClicked: root.view = "wireless"
+        }
+        TextButton {
+            text: qsTr("Ethernet")
+            enabled: root.view !== "ethernet"
+            onClicked: root.view = "ethernet"
+        }
+    }
+
     StyledText {
         visible: root.view === "wireless"
         Layout.preferredHeight: visible ? implicitHeight : 0

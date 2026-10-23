@@ -106,7 +106,8 @@ StyledRect {
                     roleValue: "wifi"
                     delegate: Toggle {
                         label: qsTr("Wi-Fi")
-                        icon: "wifi"
+                        activeIcon: "wifi"
+                        inactiveIcon: "wifi_off"
                         checked: Nmcli.wifiEnabled
                         onClicked: Nmcli.toggleWifi()
                     }
@@ -115,7 +116,8 @@ StyledRect {
                     roleValue: "bluetooth"
                     delegate: Toggle {
                         label: qsTr("Bluetooth")
-                        icon: "bluetooth"
+                        activeIcon: "bluetooth"
+                        inactiveIcon: "bluetooth_disabled"
                         checked: Bluetooth.defaultAdapter?.enabled ?? false // qmllint disable unresolved-type
                         onClicked: {
                             const adapter = Bluetooth.defaultAdapter; // qmllint disable unresolved-type
@@ -128,7 +130,8 @@ StyledRect {
                     roleValue: "mic"
                     delegate: Toggle {
                         label: qsTr("Microphone")
-                        icon: "mic"
+                        activeIcon: "mic"
+                        inactiveIcon: "mic_off"
                         checked: !Audio.sourceMuted
                         onClicked: {
                             const audio = Audio.source?.audio;
@@ -141,7 +144,7 @@ StyledRect {
                     roleValue: "mouseAcceleration"
                     delegate: Toggle {
                         label: qsTr("Mouse acceleration")
-                        icon: "mouse"
+                        activeIcon: "mouse"
                         checked: MouseSettings.accelerationEnabled
                         enabled: MouseSettings.ready && !MouseSettings.busy
                         ToolTip.text: MouseSettings.error || (checked ? qsTr("Adaptive pointer speed") : qsTr("Flat pointer speed"))
@@ -155,7 +158,7 @@ StyledRect {
                     roleValue: "gameMode"
                     delegate: Toggle {
                         label: qsTr("Performance mode")
-                        icon: "rocket_launch"
+                        activeIcon: "rocket_launch"
                         checked: GameMode.enabled
                         enabled: GameMode.available
                         onClicked: GameMode.toggle()
@@ -165,7 +168,8 @@ StyledRect {
                     roleValue: "breakReminders"
                     delegate: Toggle {
                         label: qsTr("Break reminders")
-                        icon: "hourglass_top"
+                        activeIcon: "timer"
+                        inactiveIcon: "timer_off"
                         checked: Tasks.pomodoro.enabled ?? false
                         enabled: Tasks.integrationEnabled
                         onClicked: Tasks.toggleBreakReminders()
@@ -175,7 +179,8 @@ StyledRect {
                     roleValue: "clockInReminders"
                     delegate: Toggle {
                         label: qsTr("Clock-in reminders")
-                        icon: "work_history"
+                        activeIcon: "work"
+                        inactiveIcon: "work_off"
                         checked: Tasks.clockInReminders
                         enabled: Tasks.integrationEnabled
                         onClicked: Tasks.toggleClockInReminders()
@@ -185,7 +190,8 @@ StyledRect {
                     roleValue: "dnd"
                     delegate: Toggle {
                         label: qsTr("Do not disturb")
-                        icon: "notifications_off"
+                        activeIcon: "do_not_disturb_on"
+                        inactiveIcon: "do_not_disturb_off"
                         checked: Notifs.dnd
                         onClicked: Notifs.dnd = !Notifs.dnd
                     }
@@ -194,7 +200,8 @@ StyledRect {
                     roleValue: "vpn"
                     delegate: Toggle {
                         label: qsTr("VPN")
-                        icon: "vpn_key"
+                        activeIcon: "vpn_key"
+                        inactiveIcon: "vpn_key_off"
                         checked: VPN.connected && VPN.status.state !== "needs-auth" && VPN.status.state !== "error"
                         enabled: !VPN.connecting
                         isToggle: VPN.status.state !== "needs-auth" && VPN.status.state !== "error"
@@ -207,6 +214,25 @@ StyledRect {
     }
 
     component Toggle: IconButton {
+        id: toggle
+        required property string activeIcon
+        property string inactiveIcon: activeIcon
+        icon: checked ? activeIcon : inactiveIcon
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: 25
+            height: 4
+            rotation: 45
+            visible: !toggle.checked && toggle.activeIcon === toggle.inactiveIcon
+            color: toggle.color
+            Rectangle {
+                anchors.centerIn: parent
+                width: parent.width
+                height: 2
+                color: toggle.onColour
+            }
+        }
         required property string label
         Accessible.name: label
         ToolTip.text: checked ? qsTr("%1 on").arg(label) : qsTr("%1 off").arg(label)

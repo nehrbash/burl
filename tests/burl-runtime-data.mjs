@@ -111,3 +111,18 @@ test("stopping clock-in nudges leaves break reminders alone and never enables nu
     stop();
     assert.equal(toggles, 1);
 });
+
+test("one network indicator distinguishes wired, wireless, disabled and disconnected", () => {
+    const bar = source("modules/bar/components/StatusIcons.qml");
+    assert.equal((bar.match(/name: "network"/g) ?? []).length, 1);
+    assert.equal((bar.match(/name: "ethernet"/g) ?? []).length, 0);
+    const binding = bar.match(/text: (Nmcli\.activeEthernet[\s\S]*?)\n                color:/)[1];
+    const Icons = {getNetworkIcon: strength => `signal-${strength}`};
+    for (const [Nmcli, expected] of [
+        [{activeEthernet: {}, wifiEnabled: true, active: {strength: 80}}, "cable"],
+        [{activeEthernet: {}, wifiEnabled: false}, "cable"],
+        [{wifiEnabled: true, active: {strength: 80}}, "signal-80"],
+        [{wifiEnabled: true}, "wifi_find"],
+        [{wifiEnabled: false}, "wifi_off"],
+    ]) assert.equal(runInNewContext(binding, {Nmcli, Icons}), expected);
+});

@@ -1,0 +1,34 @@
+function findToggles(item, result = []) {
+    if (item.activeIcon !== undefined) result.push(item);
+    for (const child of item.children ?? []) findToggles(child, result);
+    return result;
+}
+Timer {
+    interval: 600
+    running: true
+    onTriggered: {
+        const toggles = host.findToggles(subject);
+        if (toggles.length < 5) { console.error("TOGGLE-STATES-FAIL: missing toggles", toggles.length); Qt.exit(1); return; }
+        for (const toggle of toggles) toggle.checked = true;
+    }
+}
+Timer {
+    interval: 900
+    running: true
+    onTriggered: {
+        for (const toggle of host.findToggles(subject)) {
+            if (toggle.icon !== toggle.activeIcon) { console.error("TOGGLE-STATES-FAIL: enabled", toggle.label); Qt.exit(1); return; }
+            toggle.checked = false;
+        }
+    }
+}
+Timer {
+    interval: 1200
+    running: true
+    onTriggered: {
+        for (const toggle of host.findToggles(subject)) {
+            if (toggle.icon !== toggle.inactiveIcon) { console.error("TOGGLE-STATES-FAIL: disabled", toggle.label); Qt.exit(1); return; }
+        }
+        console.log("TOGGLE-STATES-PASS");
+    }
+}

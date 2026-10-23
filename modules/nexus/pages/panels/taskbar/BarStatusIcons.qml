@@ -47,12 +47,6 @@ PageBase {
         }
 
         ToggleRow {
-            text: qsTr("Wi-Fi")
-            checked: Config.bar.status.showWifi
-            onToggled: GlobalConfig.bar.status.showWifi = checked
-        }
-
-        ToggleRow {
             text: qsTr("Bluetooth")
             checked: Config.bar.status.showBluetooth
             onToggled: GlobalConfig.bar.status.showBluetooth = checked
