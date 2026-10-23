@@ -1,0 +1,76 @@
+property var taskService: Qt.createQmlObject('import QtQuick; import qs.services; QtObject { readonly property var tasks: Tasks }', host).tasks
+property string chosenTask: ""
+function pickerItem(name, item = subject) {
+    if (item.objectName === name) return item;
+    for (const child of item.children ?? []) {
+        const found = pickerItem(name, child);
+        if (found) return found;
+    }
+    return null;
+}
+function pickerCheck(ok, message) {
+    if (!ok) { console.error("TASK-PICKER-FAIL", message); Qt.exit(1); }
+}
+Timer {
+    interval: 200
+    running: true
+    onTriggered: {
+        const tasks = Array.from({length: 40}, (_, i) => ({title: "Task " + i, project: "Project group" + Math.floor(i / 10), state: "TODO", tags: ["review"]}));
+        tasks.unshift({title: "Project heading", state: "PROJECT", projectHeading: true});
+        for (const state of ["DONE", "HOLD", "CANCELLED"]) tasks.push({title: state, state});
+        host.taskService._snapshot = {filter: "@work", tasks, pomodoro: {enabled: false}, prefs: {"clock-in-reminders": true}};
+        subject.clockInRequested.connect(task => host.chosenTask = task.title);
+    }
+}
+Timer {
+    interval: 500
+    running: true
+    onTriggered: {
+        const list = host.pickerItem("taskNudgeList");
+        host.pickerCheck(list.count === 40, "all clockable tasks must be listed");
+        subject.moveSelection(39);
+    }
+}
+Timer {
+    interval: 800
+    running: true
+    onTriggered: {
+        const list = host.pickerItem("taskNudgeList");
+        host.pickerCheck(list.currentIndex === 39 && list.contentY > 0, "keyboard selection must scroll beyond eight tasks");
+        subject.chooseSelected();
+        host.pickerCheck(host.chosenTask === "Task 39", "Enter must choose the scrolled task");
+        host.pickerItem("taskNudgeSearch").text = "group3 review";
+    }
+}
+Timer {
+    interval: 1100
+    running: true
+    onTriggered: {
+        const list = host.pickerItem("taskNudgeList");
+        host.pickerCheck(list.count === 10 && list.currentIndex === 0, "search project and tags and reset selection");
+        host.pickerItem("taskNudgeSearch").text = "no such task";
+    }
+}
+Timer {
+    interval: 1400
+    running: true
+    onTriggered: {
+        host.pickerCheck(host.pickerItem("taskNudgeList").count === 0, "empty search");
+        subject.chooseSelected();
+        host.pickerCheck(host.chosenTask === "Task 39", "empty Enter must not clock in");
+        host.pickerItem("taskNudgeSearch").text = "";
+    }
+}
+Timer {
+    interval: 1700
+    running: true
+    onTriggered: {
+        const panel = host.pickerItem("taskNudgePanel");
+        const actions = host.pickerItem("taskNudgeActions");
+        const pos = actions.mapToItem(subject, 0, actions.height);
+        host.pickerCheck(panel.y >= 0 && panel.y + panel.height <= subject.height, "panel fits screen");
+        host.pickerCheck(pos.y <= subject.height - 24, "actions fit screen");
+        host.pickerCheck(host.pickerItem("taskNudgeList").height > 80, "task list remains usable");
+        console.log("TASK-PICKER-PASS");
+    }
+}
