@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import qs.components
+import qs.components.containers
 import qs.services
 import Burl.Config
 
