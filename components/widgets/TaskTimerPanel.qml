@@ -68,7 +68,7 @@ ColumnLayout {
         }
         TextButton {
             text: qsTr("Open tasks")
-            onClicked: Tasks.openTasks()
+            onClicked: Tasks.pickerRequested()
         }
     }
 }

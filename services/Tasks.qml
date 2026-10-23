@@ -68,6 +68,10 @@ Singleton {
 
     property string requestedTab: "tasks"
     signal viewRequested(string tab)
+    signal pickerRequested
+    signal clockInSucceeded
+    readonly property bool clockInPending: clockInProc.running
+    property string clockInError: ""
 
     function openTasks(tab: string): void {
         requestedTab = tab || "tasks";
@@ -105,24 +109,34 @@ Singleton {
     }
 
     function clockIn(title: string): void {
-        const escaped = title.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
-        runSideEffect(`(sn-tasks/clock-in-by-title "${escaped}")`);
+        clockInTask({title});
     }
 
-    // THE clock-in entry point — dashboard and TaskNudge must both call
-    // through here rather than keep their own copy, so behaviour can't drift
-    // between the two surfaces.
-    //
-    // Returns whether the clock-in was issued, so a caller can decide what to do
-    // with itself (the nudge dismisses; the tab does not).
     function clockInTask(task: var): bool {
-        if (!task?.title)
+        if (clockInPending || !task?.title)
             return false;
-        const s = task.state ?? "";
-        if (s === "DONE" || s === "HOLD" || s === "CANCELLED")
+        if (["DONE", "HOLD", "CANCELLED"].includes(task.state ?? ""))
             return false;
-        root.clockIn(task.title);
+        clockInError = "";
+        if (!integrationEnabled) {
+            clockInError = qsTr("Emacs task integration is unavailable.");
+            return false;
+        }
+        const escaped = task.title.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+        clockInProc.command = ["timeout", "30", "emacsclient", "-e",
+            `(if (sn-tasks/clock-in-by-title "${escaped}") (progn (sn-tasks/write-state) t) (error "Task was not found"))`];
+        clockInProc.running = true;
         return true;
+    }
+
+    function finishClockIn(output: string, error: string, code: int): void {
+        if (code === 0 && output.trim() === "t") {
+            clockInError = "";
+            clockInSucceeded();
+        } else {
+            clockInError = code === 124 ? qsTr("Emacs did not finish clocking in. Check Emacs for a pending prompt.")
+                : error.trim() || qsTr("Emacs could not clock into the task.");
+        }
     }
 
     function clockOut(): void {
@@ -265,6 +279,13 @@ Singleton {
     // One-shot bootstrap: if the state file doesn't exist yet (fresh
     // Emacs daemon, file purged, etc.) ask Emacs to write it.  FileView
     // picks up the new file on its own.
+    Process {
+        id: clockInProc
+        stdout: StdioCollector { id: clockInOutput }
+        stderr: StdioCollector { id: clockInErrors }
+        onExited: code => root.finishClockIn(clockInOutput.text, clockInErrors.text, code)
+    }
+
     Process {
         id: bootstrapProc
 

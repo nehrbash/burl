@@ -25,11 +25,11 @@ Scope {
         root.deferred = true;
     }
 
-    function clockInTask(task: var): void {
-        if (Tasks.clockInTask(task)) {
-            root.manuallyOpen = false;
-            root.deferred = false;
-        }
+    function openPicker(): void {
+        root.manuallyOpen = true;
+        root.deferred = false;
+        Tasks.clockInError = "";
+        Tasks.refresh();
     }
 
     onShouldShowChanged: Tasks.countdownWatchers += shouldShow ? 1 : -1
@@ -41,6 +41,15 @@ Scope {
     }
 
     Connections {
+        function onPickerRequested(): void {
+            root.openPicker();
+        }
+
+        function onClockInSucceeded(): void {
+            root.manuallyOpen = false;
+            root.deferred = false;
+        }
+
         function onSnapshotUpdated(): void {
             if (Tasks.clockedIn || Tasks.onBreak)
                 root.deferred = false;
@@ -60,16 +69,12 @@ Scope {
     IpcHandler {
         function toggle(): void {
             root.manuallyOpen = !root.manuallyOpen;
-            if (root.manuallyOpen) {
-                root.deferred = false;
-                Tasks.refresh();
-            }
+            if (root.manuallyOpen)
+                root.openPicker();
         }
 
         function open(): void {
-            root.manuallyOpen = true;
-            root.deferred = false;
-            Tasks.refresh();
+            root.openPicker();
         }
 
         function close(): void {
@@ -103,7 +108,7 @@ Scope {
 
                 TaskNudgeCard {
                     anchors.fill: parent
-                    onClockInRequested: task => root.clockInTask(task)
+                    onClockInRequested: task => Tasks.clockInTask(task)
                     onDismissed: {
                         root.manuallyOpen = false;
                         root.deferred = true;

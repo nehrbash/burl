@@ -126,3 +126,33 @@ test("one network indicator distinguishes wired, wireless, disabled and disconne
         [{wifiEnabled: false}, "wifi_off"],
     ]) assert.equal(runInNewContext(binding, {Nmcli, Icons}), expected);
 });
+
+test("clock-in waits for Emacs confirmation and reports errors", () => {
+    let succeeded = 0;
+    const context = {clockInError: "", clockInSucceeded: () => succeeded++, qsTr: text => text};
+    const finish = qmlFunction("services/Tasks.qml", "finishClockIn", context);
+    finish("", "Resolve the unfinished clock first", 1);
+    assert.equal(succeeded, 0);
+    assert.match(context.clockInError, /unfinished clock/);
+    finish("", "", 124);
+    assert.equal(succeeded, 0);
+    assert.match(context.clockInError, /pending prompt/);
+    finish("nil", "", 0);
+    assert.equal(succeeded, 0);
+    finish("t\n", "", 0);
+    assert.equal(succeeded, 1);
+    assert.equal(context.clockInError, "");
+});
+
+test("clock-in rejects unavailable integration and duplicate requests", () => {
+    const context = {clockInPending: false, integrationEnabled: false, clockInError: "", clockInProc: {}, qsTr: text => text};
+    const start = qmlFunction("services/Tasks.qml", "clockInTask", context);
+    assert.equal(start({title: "Task"}), false);
+    assert.match(context.clockInError, /unavailable/);
+    context.integrationEnabled = true;
+    assert.equal(start({title: 'Task "quoted" \\path'}), true);
+    assert.equal(context.clockInProc.running, true);
+    assert.match(context.clockInProc.command[4], /Task \\"quoted\\" \\\\path/);
+    context.clockInPending = true;
+    assert.equal(start({title: "Another task"}), false);
+});

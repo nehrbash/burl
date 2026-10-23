@@ -29,6 +29,8 @@ FocusScope {
     }
 
     function chooseSelected(): void {
+        if (Tasks.clockInPending)
+            return;
         if (Tasks.onBreak)
             Tasks.endBreak();
         else if (taskList.currentIndex >= 0 && taskList.currentIndex < matchingTasks.length)
@@ -308,6 +310,17 @@ FocusScope {
                 color: Qt.alpha(Woodland.brass, 0.24)
             }
 
+            StyledText {
+                Layout.fillWidth: true
+                visible: Tasks.clockInError.length > 0
+                text: Tasks.clockInError
+                color: Colours.palette.m3error
+                font: Tokens.font.body.small
+                wrapMode: Text.Wrap
+                maximumLineCount: 3
+                elide: Text.ElideRight
+            }
+
             Flow {
                 objectName: "taskNudgeActions"
                 Layout.fillWidth: true
@@ -315,8 +328,8 @@ FocusScope {
                 spacing: Tokens.spacing.small
                 TextButton {
                     visible: !Tasks.onBreak
-                    enabled: root.matchingTasks.length > 0
-                    text: Tasks.clockedIn ? qsTr("Switch task") : qsTr("Clock in")
+                    enabled: root.matchingTasks.length > 0 && !Tasks.clockInPending
+                    text: Tasks.clockInPending ? qsTr("Clocking in…") : Tasks.clockedIn ? qsTr("Switch task") : qsTr("Clock in")
                     onClicked: root.chooseSelected()
                 }
                 TextButton {
