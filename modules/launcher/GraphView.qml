@@ -8,6 +8,7 @@ import Burl.Config
 import Burl.Sim
 import Burl.Services
 import "GraphDrift.js" as GraphDrift
+import "GraphModels.js" as GraphModels
 import "GraphActions.js" as GraphActions
 import "SpotifyGraph.js" as SpotifyGraph
 import "SearchRanking.js" as SearchRanking
@@ -154,7 +155,18 @@ Item {
             pendingSelectionId = "";
         }
     }
-    onNodesChanged: Qt.callLater(root.restorePendingSelection)
+    ListModel { id: nodeModel }
+    ListModel { id: appModel }
+    ListModel { id: wallpaperModel }
+    ListModel { id: coverModel }
+
+    onNodesChanged: {
+        GraphModels.sync(nodeModel, nodes, nodes.map((node, i) => i));
+        GraphModels.sync(appModel, nodes, appIndices);
+        GraphModels.sync(wallpaperModel, nodes, wallpaperIndices);
+        GraphModels.sync(coverModel, nodes, coverImageIndices);
+        Qt.callLater(root.restorePendingSelection);
+    }
 
     function growIn(): void {
         growAnim.grow();
@@ -2048,30 +2060,30 @@ Item {
             anchors.fill: parent
             Instantiator {
                 asynchronous: true
-                model: root.nodes.length
+                model: nodeModel
 
                 delegate: Text {
                     id: nodeLabel
-                    parent: { void root.orbitRevision; return labelOrbits.itemAt(index % root.orbitCount); }
+                    parent: { void root.orbitRevision; return labelOrbits.itemAt(nodeIndex % root.orbitCount); }
 
-                    required property int index
-                    readonly property var modelData: root.nodes[index] ?? ({ label: "", glyph: "", color: "transparent", onColor: "transparent" })
-                    readonly property real nx: { if (!live) return 0; return root._px(index); }
-                    readonly property real ny: { if (!live) return 0; return root._py(index); }
-                    readonly property real sr: { if (!live) return 0; return root._nr(index); }
-                    readonly property real score: root.nodeScores[index] ?? 0
+                    required property int nodeIndex
+                    readonly property var modelData: root.nodes[nodeIndex] ?? ({ label: "", glyph: "", color: "transparent", onColor: "transparent" })
+                    readonly property real nx: { if (!live) return 0; return root._px(nodeIndex); }
+                    readonly property real ny: { if (!live) return 0; return root._py(nodeIndex); }
+                    readonly property real sr: { if (!live) return 0; return root._nr(nodeIndex); }
+                    readonly property real score: root.nodeScores[nodeIndex] ?? 0
                     readonly property bool isCurrent: {
                         const q = (root.query ?? "").trim();
                         const hasScope = root.scopeSegments.length > 0;
-                        return root.currentNode === index;
+                        return root.currentNode === nodeIndex;
                     }
                     readonly property bool isMatchHighlighted: {
                         const q = (root.query ?? "").trim();
                         const hasScope = root.scopeSegments.length > 0;
-                        return index === root.hoverIndex || ((q || hasScope) && score > 0);
+                        return nodeIndex === root.hoverIndex || ((q || hasScope) && score > 0);
                     }
-                    readonly property bool live: !isCurrent && (index === root.hoverIndex
-                        || root.topMatchIndices.includes(index))
+                    readonly property bool live: !isCurrent && (nodeIndex === root.hoverIndex
+                        || root.topMatchIndices.includes(nodeIndex))
 
                     visible: live
                     width: 260
@@ -2089,7 +2101,7 @@ Item {
                     x: { return nx - width / 2; }
                     y: { return ny + sr + 8; }
                     opacity: 1
-                    font.pixelSize: index === root.hoverIndex ? 16 : 14
+                    font.pixelSize: nodeIndex === root.hoverIndex ? 16 : 14
                 }
             }
         }
@@ -2103,18 +2115,18 @@ Item {
         // icon / wallpaper-thumbnail Repeaters below stack on top of the disc.
         Instantiator {
             asynchronous: true
-            model: root.nodes.length
+            model: nodeModel
 
             delegate: Item {
                 id: nodeItem
-                parent: { void root.orbitRevision; return isCurrent ? selectedMotion : nodeOrbits.itemAt(index % root.orbitCount); }
-                required property int index
-                readonly property var modelData: root.nodes[index] ?? ({ label: "", glyph: "", color: "transparent", onColor: "transparent" })
+                parent: { void root.orbitRevision; return isCurrent ? selectedMotion : nodeOrbits.itemAt(nodeIndex % root.orbitCount); }
+                required property int nodeIndex
+                readonly property var modelData: root.nodes[nodeIndex] ?? ({ label: "", glyph: "", color: "transparent", onColor: "transparent" })
                 readonly property var node: modelData
-                readonly property real nr: { return root._nr(index); }
-                readonly property real nx: { return root._px(index); }
-                readonly property real ny: { return root._py(index); }
-                readonly property real score: root.nodeScores[index] ?? 0
+                readonly property real nr: { return root._nr(nodeIndex); }
+                readonly property real nx: { return root._px(nodeIndex); }
+                readonly property real ny: { return root._py(nodeIndex); }
+                readonly property real score: root.nodeScores[nodeIndex] ?? 0
                 readonly property bool matched: {
                     const q = (root.query ?? "").trim();
                     return !(q || root.scopeSegments.length) || score > 0;
@@ -2122,18 +2134,18 @@ Item {
                 readonly property bool isCurrent: {
                     const q = (root.query ?? "").trim();
                     const hasScope = root.scopeSegments.length > 0;
-                    return root.currentNode === index;
+                    return root.currentNode === nodeIndex;
                 }
                 readonly property bool isMatchHighlighted: {
                     const q = (root.query ?? "").trim();
                     const hasScope = root.scopeSegments.length > 0;
-                    return index === root.hoverIndex || ((q || hasScope) && score > 0);
+                    return nodeIndex === root.hoverIndex || ((q || hasScope) && score > 0);
                 }
                 readonly property bool slowMotion: sim.alpha < 0.55
 
                 // Distance (in edges) from the nearest match. 0=match,
                 // 1..3=elevated background, Infinity=unrelated.
-                readonly property real graphDepth: root.depthToMatch?.[index] ?? Infinity
+                readonly property real graphDepth: root.depthToMatch?.[nodeIndex] ?? Infinity
 
                 width: { return nr * 2; }
                 height: width
@@ -2154,7 +2166,7 @@ Item {
                         // dim everything except the focus + its 1-hop
                         // neighbours so the local topology pops.
                         if (root.highlightFocus >= 0)
-                            return root.highlightSet[index] ? 1.0 : 0.42;
+                            return root.highlightSet[nodeIndex] ? 1.0 : 0.42;
                         return 1.0;
                     }
                     if (matched) return 1.0;
@@ -2194,7 +2206,7 @@ Item {
                             return 0.55;
                         if (nodeItem.isMatchHighlighted)
                             return 0.4;
-                        const deg = root.nodeDegree[nodeItem.index] ?? 0;
+                        const deg = root.nodeDegree[nodeItem.nodeIndex] ?? 0;
                         return 0.10 + Math.min(0.22, Math.log2(1 + deg) * 0.05);
                     }
 
@@ -2279,24 +2291,24 @@ Item {
         // isn't a notifying property — it's a method).
         Instantiator {
             asynchronous: true
-            model: root.appIndices
+            model: appModel
 
             delegate: Item {
                 id: appDelegate
-                parent: { void root.orbitRevision; return root.currentNode === modelData ? selectedMotion : nodeOrbits.itemAt(modelData % root.orbitCount); }
-                required property int modelData
-                readonly property var node: root.nodes[modelData]
-                readonly property bool isPreview: root.currentNode === modelData
+                parent: { void root.orbitRevision; return root.currentNode === nodeIndex ? selectedMotion : nodeOrbits.itemAt(nodeIndex % root.orbitCount); }
+                required property int nodeIndex
+                readonly property var node: root.nodes[nodeIndex]
+                readonly property bool isPreview: root.currentNode === nodeIndex
 
-                width: { return root._nr(modelData) * 1.5; }
+                width: { return root._nr(nodeIndex) * 1.5; }
                 height: width
-                x: { return root._px(modelData) - width / 2; }
-                y: { return root._py(modelData) - height / 2; }
+                x: { return root._px(nodeIndex) - width / 2; }
+                y: { return root._py(nodeIndex) - height / 2; }
                 opacity: {
                     if (isPreview) return 1.0;
                     const q = (root.query ?? "").trim();
                     if (!q && !root.scopeSegments.length) return 1.0;
-                    return (root.nodeScores[modelData] ?? 0) > 0 ? 1.0 : 0.25;
+                    return (root.nodeScores[nodeIndex] ?? 0) > 0 ? 1.0 : 0.25;
                 }
                 Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
                 // Match the disc Repeater's z bump so the icon stays on top
@@ -2307,7 +2319,7 @@ Item {
                 // on top and hides the icon for every non-selected node.
                 z: {
                     if (isPreview) return 101;
-                    const d = root.depthToMatch?.[modelData] ?? Infinity;
+                    const d = root.depthToMatch?.[nodeIndex] ?? Infinity;
                     if (d <= root.elevationDepth) return 50 - d * 5 + 0.5;
                     return 0.5;
                 }
@@ -2337,23 +2349,23 @@ Item {
         // Wallpaper thumbnails — Image clipped to a circle.
         Instantiator {
             asynchronous: true
-            model: root.wallpaperIndices
+            model: wallpaperModel
 
             delegate: Item {
                 id: wpDelegate
-                parent: { void root.orbitRevision; return root.currentNode === modelData ? selectedMotion : nodeOrbits.itemAt(modelData % root.orbitCount); }
-                required property int modelData
-                readonly property var node: root.nodes[modelData]
+                parent: { void root.orbitRevision; return root.currentNode === nodeIndex ? selectedMotion : nodeOrbits.itemAt(nodeIndex % root.orbitCount); }
+                required property int nodeIndex
+                readonly property var node: root.nodes[nodeIndex]
 
-                width: { return root._nr(modelData) * 2.0; }
+                width: { return root._nr(nodeIndex) * 2.0; }
                 height: width
-                x: { return root._px(modelData) - width / 2; }
-                y: { return root._py(modelData) - height / 2; }
+                x: { return root._px(nodeIndex) - width / 2; }
+                y: { return root._py(nodeIndex) - height / 2; }
                 opacity: {
                     if (isPreview) return 1.0;
                     const q = (root.query ?? "").trim();
                     if (!q && !root.scopeSegments.length) return 1.0;
-                    return (root.nodeScores[modelData] ?? 0) > 0 ? 1.0 : 0.25;
+                    return (root.nodeScores[nodeIndex] ?? 0) > 0 ? 1.0 : 0.25;
                 }
                 Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
                 // Float the preview thumbnail above every other node so
@@ -2364,13 +2376,13 @@ Item {
                 // on top and hides the icon for every non-selected node.
                 z: {
                     if (isPreview) return 101;
-                    const d = root.depthToMatch?.[modelData] ?? Infinity;
+                    const d = root.depthToMatch?.[nodeIndex] ?? Infinity;
                     if (d <= root.elevationDepth) return 50 - d * 5 + 0.5;
                     return 0.5;
                 }
 
                 // Whether this delegate is the centred preview pick.
-                readonly property bool isPreview: root.currentNode === modelData
+                readonly property bool isPreview: root.currentNode === nodeIndex
 
                 // Stacked layers: low-res thumbnail (fast, every wallpaper
                 // loads at once) + full-res original on top, but only
@@ -2424,24 +2436,24 @@ Item {
 
         Instantiator {
             asynchronous: true
-            model: root.coverImageIndices
+            model: coverModel
 
             delegate: Item {
                 id: coverDelegate
-                parent: { void root.orbitRevision; return root.currentNode === modelData ? selectedMotion : nodeOrbits.itemAt(modelData % root.orbitCount); }
-                required property int modelData
-                readonly property var node: root.nodes[modelData]
-                readonly property bool isPreview: root.currentNode === modelData
+                parent: { void root.orbitRevision; return root.currentNode === nodeIndex ? selectedMotion : nodeOrbits.itemAt(nodeIndex % root.orbitCount); }
+                required property int nodeIndex
+                readonly property var node: root.nodes[nodeIndex]
+                readonly property bool isPreview: root.currentNode === nodeIndex
 
-                width: { return root._nr(modelData) * 2.0; }
+                width: { return root._nr(nodeIndex) * 2.0; }
                 height: width
-                x: { return root._px(modelData) - width / 2; }
-                y: { return root._py(modelData) - height / 2; }
+                x: { return root._px(nodeIndex) - width / 2; }
+                y: { return root._py(nodeIndex) - height / 2; }
                 opacity: {
                     if (isPreview) return 1.0;
                     const q = (root.query ?? "").trim();
                     if (!q && !root.scopeSegments.length) return 1.0;
-                    return (root.nodeScores[modelData] ?? 0) > 0 ? 1.0 : 0.25;
+                    return (root.nodeScores[nodeIndex] ?? 0) > 0 ? 1.0 : 0.25;
                 }
                 Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
                 // Sit just above this node's own disc (the disc Repeater
@@ -2450,7 +2462,7 @@ Item {
                 // on top and hides the icon for every non-selected node.
                 z: {
                     if (isPreview) return 101;
-                    const d = root.depthToMatch?.[modelData] ?? Infinity;
+                    const d = root.depthToMatch?.[nodeIndex] ?? Infinity;
                     if (d <= root.elevationDepth) return 50 - d * 5 + 0.5;
                     return 0.5;
                 }

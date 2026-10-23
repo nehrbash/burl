@@ -1,4 +1,11 @@
 property var cycleState: Qt.createQmlObject('import Quickshell; import qs.components; ScreenState { modelData: Quickshell.screens[0] }', host)
+property var retainedDiscs: []
+function discs(item) {
+    let found = [];
+    if (item.nr !== undefined && item.nodeIndex !== undefined) found.push(item);
+    for (const child of item.children ?? []) found = found.concat(discs(child));
+    return found;
+}
 function find(item, predicate) {
     if (predicate(item)) return item;
     for (const child of item.children ?? []) {
@@ -40,6 +47,7 @@ Timer {
     interval: 10700; running: true
     onTriggered: {
         const graph = host.find(subject, item => item._renderIntervalMs !== undefined);
+        host.retainedDiscs = host.discs(graph).map(item => ({id: item.node.id, item}));
         graph.nodes = graph.nodes.slice(0, -3);
     }
 }
@@ -47,6 +55,9 @@ Timer {
     interval: 10900; running: true
     onTriggered: {
         const graph = host.find(subject, item => item._renderIntervalMs !== undefined);
+        const remaining = host.discs(graph);
+        host.check(remaining.length === graph.nodes.length && remaining.every(item => host.retainedDiscs.some(old => old.id === item.node.id && old.item === item)), "removing nodes preserves surviving delegates");
+        host.retainedDiscs = host.retainedDiscs.filter(old => graph.nodes.some(node => node.id === old.id));
         graph.rebuild();
     }
 }
@@ -55,12 +66,8 @@ Timer {
     interval: 11500; running: true
     onTriggered: {
         const graph = host.find(subject, item => item.orbitCount !== undefined);
-        const discs = [];
-        function scan(item) {
-            if (item.node !== undefined && item.index !== undefined) discs.push(item);
-            for (const child of item.children ?? []) scan(child);
-        }
-        scan(graph);
+        const discs = host.discs(graph);
         host.check(discs.length === graph.nodes.length && discs.every(item => item.visible), 'deferred graph attaches every node');
+        host.check(host.retainedDiscs.every(old => discs.includes(old.item) && old.item.node.id === old.id), 'adding nodes preserves surviving delegates');
     }
 }

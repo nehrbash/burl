@@ -23,7 +23,7 @@ function fail(reason) {
 function attachedNodes(graph) {
     const nodes = [];
     function scan(item) {
-        if (item.node !== undefined && item.index !== undefined) nodes.push(item);
+        if (item.nr !== undefined && item.nodeIndex !== undefined) nodes.push(item);
         for (const child of item.children ?? []) scan(child);
     }
     scan(graph);
@@ -58,8 +58,8 @@ Timer {
         } else if (host.rapidPhase === 1 && scene.atSky && !graph.transitioning && graph.layoutReady && !graph.preparing) {
             const attached = host.attachedNodes(graph);
             if (graph.nodes.length < 2 || attached.length !== graph.nodes.length) return;
-            const indices = new Set(attached.map(item => item.index));
-            if (indices.size !== graph.nodes.length || attached.some(item => item.node !== graph.nodes[item.index])) {
+            const indices = new Set(attached.map(item => item.nodeIndex));
+            if (indices.size !== graph.nodes.length || attached.some(item => item.node !== graph.nodes[item.nodeIndex])) {
                 host.fail('asynchronous delegates have duplicate indices or stale payloads');
                 return;
             }
