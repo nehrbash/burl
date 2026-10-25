@@ -77,7 +77,10 @@ Item {
     Flickable {
         id: workspaceScroll
 
-        anchors.fill: parent
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: parent.width + 20
         contentWidth: width
         contentHeight: column.implicitHeight * column.scale
         clip: true

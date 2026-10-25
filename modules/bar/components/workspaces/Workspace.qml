@@ -50,12 +50,12 @@ Item {
         id: grow
     }
 
-    TreeEmbers {
-        x: -6
-        width: parent.width + 12
-        height: parent.height
-        active: root.isActive
-        pointAt: t => ({ x: 0.02 + 0.025 * Math.sin(t * Math.PI), y: 1 - t * 0.75 })
+    BranchCradle {
+        x: -8
+        y: -3
+        width: parent.width + 16
+        height: root.cardHeight + 12
+        selected: root.isActive
     }
 
     TarotCard {
@@ -68,6 +68,17 @@ Item {
         monitorAccent: root.otherMonOnThis ?? "transparent"
         anchors.horizontalCenterOffset: -2
         scale: root.isActive ? 0.97 + root.activeAmount * 0.03 : 0.94
+    }
+
+    TreeEmbers {
+        x: -8
+        width: parent.width + 16
+        height: root.cardHeight + 12
+        active: root.isActive
+        repeatBursts: true
+        emberSize: 3
+        drift: 2
+        pointAt: t => ({ x: 0.5 - 0.44 * Math.sin(t * Math.PI / 2), y: 1 - t * 0.8 })
     }
 
     Loader {

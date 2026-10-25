@@ -566,6 +566,7 @@ Item {
 
     EldritchTree {
         id: branchTree
+        effectParent: treeLight
 
         x: root.artX
         y: root.artY
@@ -604,6 +605,15 @@ Item {
         }
         active: root.atmosphereActive
         enabled: false
+    }
+
+    Item {
+        id: treeLight
+        x: root.artX
+        y: root.artY
+        width: root.artWidth
+        height: root.artHeight
+        visible: root.onScreen
     }
 
     // 2 — motes. Deterministic placement off the Knuth hash above, so they
@@ -1263,6 +1273,14 @@ Item {
             Anim {
                 type: Anim.DefaultEffects
             }
+        }
+
+        BranchCradle {
+            anchors.centerIn: parent
+            width: parent.width * 1.35
+            height: parent.height * 1.4
+            selected: orb.isFocused || orb.isEmphasis
+            ink: orb.accent
         }
 
         SpiritMedallion {

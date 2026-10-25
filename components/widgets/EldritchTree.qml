@@ -9,6 +9,7 @@ import qs.services
 Item {
     id: root
 
+    property Item effectParent: null
     property bool renderedTrunk: true
     property var anchorsData: []
     property var rootAnchorsData: []
@@ -214,28 +215,37 @@ Item {
         }
     }
 
-    BarkRunes {
+    Item {
+        parent: root.effectParent ?? root
         anchors.fill: parent
-        animated: root.animated && root.reveal > 0.98
-        sites: [root.routePoint(root.paintedRoute(false, 0), 0.28),
-            root.routePoint(root.paintedRoute(false, 2), 0.48),
-            root.routePoint(root.paintedRoute(false, 4), 0.62)]
-        runeSize: Math.max(9, root.width * 0.012)
-    }
-
-    Repeater {
-        model: root.orbLimbs.length + root.rootLimbs.length
-        delegate: TreeEmbers {
-            required property int index
-            readonly property bool isRoot: index >= root.orbLimbs.length
-            readonly property int routeIndex: isRoot ? index - root.orbLimbs.length : index
+        visible: root.visible
+        BarkRunes {
             anchors.fill: parent
             animated: root.animated && root.reveal > 0.98
-            active: isRoot ? root.selectedRoot === routeIndex : root.selected === routeIndex
-            pointAt: t => root.renderedTrunk
-                ? root.routePoint(root.paintedRoute(isRoot, routeIndex), t)
-                : Branch.point((isRoot ? root.rootLimbs : root.orbLimbs)[routeIndex].b, t)
-            onArrived: isRoot ? root.rootPulseArrived(routeIndex) : root.pulseArrived(routeIndex)
+            sites: [root.routePoint(root.paintedRoute(false, 0), 0.28),
+                root.routePoint(root.paintedRoute(false, 2), 0.48),
+                root.routePoint(root.paintedRoute(false, 4), 0.62)]
+            runeSize: Math.max(9, root.width * 0.012)
+        }
+
+        Repeater {
+            model: root.orbLimbs.length + root.rootLimbs.length
+            delegate: TreeEmbers {
+                required property int index
+                readonly property bool isRoot: index >= root.orbLimbs.length
+                readonly property int routeIndex: isRoot ? index - root.orbLimbs.length : index
+                anchors.fill: parent
+                animated: root.animated && root.reveal > 0.98
+                active: isRoot ? (root.selectedRoot === routeIndex || root.hoveredRoot === routeIndex)
+                    : (root.selected === routeIndex || root.hovered === routeIndex)
+                repeatBursts: isRoot ? root.selectedRoot === routeIndex : root.selected === routeIndex
+                emberSize: Math.max(5, Math.min(8, root.width * 0.006))
+                drift: 9
+                pointAt: t => root.renderedTrunk
+                    ? root.routePoint(root.paintedRoute(isRoot, routeIndex), t)
+                    : Branch.point((isRoot ? root.rootLimbs : root.orbLimbs)[routeIndex].b, t)
+                onArrived: isRoot ? root.rootPulseArrived(routeIndex) : root.pulseArrived(routeIndex)
+            }
         }
     }
 }

@@ -10,8 +10,8 @@ Item {
 
     property real growth: 1
     property bool animated: true
-    property real goldMix: 0.82
-    property real brightness: 1.12
+    property real goldMix: 0.16
+    property real brightness: 0.78
     property real bend: 0
     property alias phase: treeShader.phase
     property url artSource: Quickshell.shellPath("assets/images/tree/rendered/world-tree-astral.png")

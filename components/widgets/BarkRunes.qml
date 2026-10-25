@@ -9,7 +9,7 @@ Item {
 
     property var sites: []
     property bool animated: true
-    property real runeSize: 15
+    property real runeSize: 20
     property int chosen: -1
     property real light: 0
     readonly property bool awake: visible && animated && sites.length > 0 && Ambience.sway && !GameMode.enabled
@@ -22,19 +22,19 @@ Item {
     }
 
     Timer {
-        interval: 5000 + Math.random() * 11000
+        interval: 1800 + Math.random() * 3200
         running: root.awake
         repeat: true
         onTriggered: {
             root.chosen = Math.floor(Math.random() * root.sites.length);
             waking.restart();
-            interval = 7000 + Math.random() * 13000;
+            interval = 4000 + Math.random() * 6000;
         }
     }
 
     SequentialAnimation {
         id: waking
-        NumberAnimation { target: root; property: "light"; from: 0; to: 0.7; duration: 1300; easing.type: Easing.InOutSine }
+        NumberAnimation { target: root; property: "light"; from: 0; to: 1; duration: 1300; easing.type: Easing.InOutSine }
         PauseAnimation { duration: 450 }
         NumberAnimation { target: root; property: "light"; to: 0; duration: 2300; easing.type: Easing.InOutSine }
     }

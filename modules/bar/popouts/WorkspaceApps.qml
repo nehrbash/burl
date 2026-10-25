@@ -154,7 +154,7 @@ Item {
         artSource: Quickshell.shellPath("assets/images/tree/rendered/sidebar-bough.png")
         growthSource: Quickshell.shellPath("assets/images/tree/rendered/sidebar-bough-growth.png")
         goldMix: 0.06
-        brightness: 1.0
+        brightness: 0.78
         bend: root.branchBend
         growth: Math.min(1, root.growth / 0.72)
         animated: root.awake
@@ -172,6 +172,8 @@ Item {
         anchors.fill: parent
         animated: root.awake && root.growth > 0.98
         active: animated
+        repeatBursts: true
+        emberSize: 4
         pointAt: t => root.boughPoint(0.01 + t * 0.93)
     }
 
@@ -181,6 +183,8 @@ Item {
             required property int index
             anchors.fill: parent
             animated: root.awake && root.growth > 0.98
+            repeatBursts: true
+            emberSize: 4
             active: root.hoveredIndex === index
             pointAt: t => Branch.point(root.limbs[index].b, t)
             onArrived: windowSlots.itemAt(index)?.ignite()
@@ -214,6 +218,13 @@ Item {
                 NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
             }
             visible: bloom > 0.001
+
+            BranchCradle {
+                anchors.centerIn: parent
+                width: parent.width * 1.28
+                height: parent.height * 1.4
+                selected: mouse.containsMouse
+            }
 
             SpiritMedallion {
                 id: seal

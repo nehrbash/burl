@@ -19,6 +19,7 @@ Item {
     TreeEmbers {
         id: embers
         anchors.fill: parent
+        duration: 1550
         pointAt: t => ({ x: 0.5, y: 1 - t })
         onArrived: root.arrivals++
     }
@@ -66,6 +67,17 @@ Item {
                 embers.active = true;
                 runes.visible = true;
                 root.check(!embers.running && !runes.awake, "reduced motion disables both effects");
+                break;
+            case 29:
+                Ambience.master = true;
+                embers.duration = 300;
+                embers.repeatBursts = true;
+                embers.ignite();
+                break;
+            case 58:
+                root.check(root.arrivals >= 3, "persistent selection gets spaced repeat bursts");
+                embers.visible = false;
+                root.check(!embers.running, "hiding cancels recurring bursts");
                 console.log("TREE-EFFECTS-PASS");
                 stop();
                 break;
