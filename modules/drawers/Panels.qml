@@ -19,6 +19,7 @@ Item {
     required property ScreenState screenState
     required property Bar.BarWrapper bar
     required property real borderThickness
+    property Item popoutLayer: root
 
     readonly property alias osd: osd
     readonly property alias osdWrapper: osdWrapper
@@ -108,6 +109,7 @@ Item {
 
     BarPopouts.ClipWrapper {
         id: popoutsWrapper
+        parent: root.popoutLayer
 
         screen: root.screen
         borderThickness: root.borderThickness

@@ -255,6 +255,7 @@ StyledWindow {
 
         Panels {
             id: panels
+            popoutLayer: popoutOverlay
 
             screen: root.screen
             screenState: root.screenState
@@ -295,6 +296,15 @@ StyledWindow {
             popouts: panels.popouts
 
             fullscreen: root.hasFullscreen
+        }
+
+        // Popouts must clear the bark overhang while the world stays behind the sidebar.
+        Item {
+            id: popoutOverlay
+            x: panels.x
+            y: panels.y
+            width: panels.width
+            height: panels.height
         }
     }
 

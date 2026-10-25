@@ -25,12 +25,10 @@ Item {
     implicitWidth: (currentPopout?.implicitWidth ?? 0) + Tokens.padding.extraLargeIncreased
     implicitHeight: (currentPopout?.implicitHeight ?? 0) + Tokens.padding.extraLargeIncreased
 
-    // Parchment sheet: low-contrast grain + faint wallpaper-tinted wash
-    // across every popout, so content reads as ink on a pinned page
     WoodPanel {
         anchors.fill: parent
         radius: Tokens.rounding.extraLarge
-        fill: Qt.alpha(Services.Colours.palette.m3primaryContainer, 0.05)
+        fill: Qt.alpha(Services.Colours.palette.m3surface, 1)
         visible: !root.bare
     }
 

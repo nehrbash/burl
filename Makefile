@@ -13,6 +13,7 @@ check-lifecycle:
 	./scripts/qs-navigation-controls.sh
 	./scripts/qs-world-lifecycle.sh
 	./scripts/qs-tree-effects.sh
+	./scripts/qs-popout-stacking.sh
 	./scripts/qs-world-escape.sh
 	./scripts/qs-launcher-editing.sh
 	./scripts/qs-launcher-cycle.sh
