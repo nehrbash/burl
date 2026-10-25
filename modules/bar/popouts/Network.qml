@@ -27,24 +27,31 @@ ColumnLayout {
     width: Tokens.sizes.bar.networkWidth
 
     RowLayout {
-        Layout.fillWidth: true
+        Layout.alignment: Qt.AlignHCenter
+        spacing: Tokens.spacing.extraSmall
+
         TextButton {
             text: qsTr("Wi-Fi")
-            enabled: root.view !== "wireless"
+            type: TextButton.Tonal
+            isRound: true
+            checked: root.view === "wireless"
             onClicked: root.view = "wireless"
         }
         TextButton {
             text: qsTr("Ethernet")
-            enabled: root.view !== "ethernet"
+            type: TextButton.Tonal
+            isRound: true
+            checked: root.view === "ethernet"
             onClicked: root.view = "ethernet"
         }
         TextButton {
             visible: Tailscale.enabled
             text: "Tailscale"
-            enabled: root.view !== "tailscale"
+            type: TextButton.Tonal
+            isRound: true
+            checked: root.view === "tailscale"
             onClicked: root.view = "tailscale"
         }
-
     }
 
     Loader {
