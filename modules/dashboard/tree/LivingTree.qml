@@ -477,7 +477,7 @@ Item {
         cameraMotion: root.roomCamera
         camera: 0
         active: root.atmosphereActive
-        opacity: root.roomP * 0.72
+        opacity: root.roomP * 0.58
         CameraOpacityBehavior on opacity {
             camera: root.roomCamera
         }
@@ -597,9 +597,9 @@ Item {
         scene: "dream"
         cameraMotion: root.roomCamera
         spilling: true
-        density: 1.35
-        period: 22000
-        opacity: root.roomP * 0.95
+        density: 0.55
+        period: 90000
+        opacity: root.roomP * 0.3
         CameraOpacityBehavior on opacity {
             camera: root.roomCamera
         }
@@ -616,12 +616,8 @@ Item {
         visible: root.onScreen
     }
 
-    // 2 — motes. Deterministic placement off the Knuth hash above, so they
-    // never reshuffle; the twinkle is a per-mote phase on one shared
-    // animation rather than a timer each.
     Repeater {
-        // onScreen too: 64 motes were drifting over the desktop with the dashboard shut.
-        model: root.onScreen && Ambience.leaves && !GameMode.enabled ? 64 : 0
+        model: root.onScreen && Ambience.leaves && !GameMode.enabled ? 16 : 0
 
         delegate: Item {
             id: mote
@@ -638,7 +634,7 @@ Item {
             y: mote.fy * root.trunkTopY
             width: mote.sz
             height: mote.sz
-            opacity: root.openP * (0.30 + (mote.h2 % 55) / 100)
+            opacity: root.openP * (0.15 + (mote.h2 % 20) / 100)
             visible: root.openP > 0.02
 
             Rectangle {
@@ -675,13 +671,13 @@ Item {
 
                 NumberAnimation {
                     to: 0.12
-                    duration: 900 + (mote.h2 % 700)
+                    duration: 4500 + (mote.h2 % 1700)
                     easing.type: Easing.InOutQuad
                 }
 
                 NumberAnimation {
-                    to: 0.30 + (mote.h2 % 55) / 100
-                    duration: 900 + (mote.h1 % 900)
+                    to: 0.15 + (mote.h2 % 20) / 100
+                    duration: 5500 + (mote.h1 % 1900)
                     easing.type: Easing.InOutQuad
                 }
             }

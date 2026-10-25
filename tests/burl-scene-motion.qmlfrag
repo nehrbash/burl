@@ -36,7 +36,7 @@ Timer {
 }
 
 function planet(item) {
-    if (item.cell === 6 && item.parallax !== undefined) return item;
+    if (item.cell === (subject.scene === "tree" ? 7 : 6) && item.parallax !== undefined) return item;
     for (const child of item.children ?? []) { const found = planet(child); if (found) return found; }
     return null;
 }

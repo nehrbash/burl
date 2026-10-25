@@ -168,6 +168,7 @@ Item {
     onHeightChanged: wood.requestPaint()
 
     PaintedTree {
+        shimmerPeriod: 48000
         anchors.fill: parent
         visible: root.renderedTrunk
         growth: root.reveal

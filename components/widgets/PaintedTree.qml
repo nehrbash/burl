@@ -12,6 +12,7 @@ Item {
     property bool animated: true
     property real goldMix: 0.16
     property real brightness: 0.78
+    property int shimmerPeriod: 12000
     property real bend: 0
     property alias phase: treeShader.phase
     property url artSource: Quickshell.shellPath("assets/images/tree/rendered/world-tree-astral.png")
@@ -52,7 +53,7 @@ Item {
         running: root.visible && root.animated && root.growth > 0.98 && Ambience.sway && !GameMode.enabled
         from: 0
         to: 1
-        duration: 12000
+        duration: root.shimmerPeriod
         loops: Animation.Infinite
     }
 }

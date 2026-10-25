@@ -15,10 +15,12 @@ for reduced in 0 1; do
         --root "$ROOT" --size 1280x720 --settle 2100 \
         --decl "$REPO/tests/burl-glass-motion.qmlfrag" \
         components/widgets/AstralGlass.qml "$WORK/glass-$reduced.png"
-    BURL_NO_AMBIENT=$reduced "$REPO/scripts/qs-shot.sh" \
-        --root "$ROOT" --size 1280x720 --settle 2100 \
-        --decl "$REPO/tests/burl-scene-motion.qmlfrag" \
-        components/widgets/AstralScene.qml "$WORK/scene-$reduced.png"
+    for scene in sky tree; do
+        BURL_NO_AMBIENT=$reduced "$REPO/scripts/qs-shot.sh" \
+            --root "$ROOT" --size 1280x720 --settle 2100 \
+            --decl "$REPO/tests/burl-scene-motion.qmlfrag" --set "scene: \"$scene\"" \
+            components/widgets/AstralScene.qml "$WORK/scene-$scene-$reduced.png"
+    done
 done
 
 for scene in dream tree sky; do
