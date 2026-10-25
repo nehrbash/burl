@@ -8,6 +8,7 @@ import qs.components
 import qs.components.controls
 import qs.services
 import qs.utils
+import qs.modules.services
 
 ColumnLayout {
     id: root
@@ -15,7 +16,7 @@ ColumnLayout {
     required property PopoutState popouts
 
     property string connectingToSsid: ""
-    property string view: "wireless" // "wireless" or "ethernet"
+    property string view: "wireless"
     property var passwordNetwork: null
     property bool showPasswordDialog: false
 
@@ -37,6 +38,26 @@ ColumnLayout {
             enabled: root.view !== "ethernet"
             onClicked: root.view = "ethernet"
         }
+        TextButton {
+            visible: Tailscale.enabled
+            text: "Tailscale"
+            enabled: root.view !== "tailscale"
+            onClicked: root.view = "tailscale"
+        }
+
+    }
+
+    Loader {
+        Layout.fillWidth: true
+        active: root.view === "tailscale"
+        visible: active
+        sourceComponent: TailscalePanel { compact: true }
+    }
+
+    TextButton {
+        visible: root.view === "tailscale"
+        text: qsTr("Network settings")
+        onClicked: root.popouts.detachRequested("network")
     }
 
     StyledText {

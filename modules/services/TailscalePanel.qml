@@ -16,11 +16,26 @@ ColumnLayout {
 
     spacing: Tokens.spacing.small
 
-    StyledText {
+    RowLayout {
         Layout.fillWidth: true
-        text: "Tailscale · " + Tailscale.summary
-        font: Tokens.font.title.medium
-        wrapMode: Text.Wrap
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 0
+            StyledText { Layout.fillWidth: true; text: "Tailscale"; font: Tokens.font.title.medium }
+            StyledText { Layout.fillWidth: true; text: Tailscale.summary; color: Colours.palette.m3onSurfaceVariant; elide: Text.ElideRight }
+        }
+        ServiceActionButton {
+            icon: Tailscale.connected ? "link_off" : "link"
+            description: Tailscale.busy ? qsTr("Working…") : Tailscale.connected ? qsTr("Disconnect Tailscale") : qsTr("Connect Tailscale")
+            enabled: Tailscale.enabled && !Tailscale.busy && !Tailscale.error
+            onClicked: Tailscale.toggle()
+        }
+        ServiceActionButton {
+            icon: "refresh"
+            description: qsTr("Refresh Tailscale")
+            enabled: Tailscale.enabled && !Tailscale.busy
+            onClicked: Tailscale.refresh()
+        }
     }
     StyledText {
         Layout.fillWidth: true
@@ -29,27 +44,15 @@ ColumnLayout {
         color: Colours.palette.m3error
         wrapMode: Text.Wrap
     }
-    StyledText {
-        Layout.fillWidth: true
-        text: [Tailscale.details.name, Tailscale.details.ip, Tailscale.details.tailnet].filter(Boolean).join(" · ")
-        wrapMode: Text.Wrap
-    }
-    RowLayout {
-        TextButton {
-            text: Tailscale.busy ? qsTr("Working…") : Tailscale.connected ? qsTr("Disconnect") : qsTr("Connect")
-            enabled: Tailscale.enabled && !Tailscale.busy && !Tailscale.error
-            onClicked: Tailscale.toggle()
-        }
-        TextButton {
-            text: qsTr("Copy IP")
-            enabled: Tailscale.connected && !!Tailscale.details.ip
-            onClicked: Quickshell.clipboardText = Tailscale.details.ip
-        }
-        TextButton {
-            text: qsTr("Refresh")
-            enabled: Tailscale.enabled && !Tailscale.busy
-            onClicked: Tailscale.refresh()
-        }
+    InfoRow {
+        visible: !!Tailscale.details.ip
+        first: true
+        last: true
+        icon: "computer"
+        label: Tailscale.details.name
+        subtext: Tailscale.details.ip
+        value: root.compact ? "" : Tailscale.details.tailnet
+        trailingComponent: CopyAddress { address: Tailscale.details.ip }
     }
     TextButton {
         visible: !!Tailscale.details.authUrl
@@ -61,31 +64,30 @@ ColumnLayout {
     }
     Repeater {
         model: root.compact ? Tailscale.details.peers.slice(0, 4) : Tailscale.details.peers
-        delegate: ColumnLayout {
+        delegate: InfoRow {
             id: peer
+
             required property var modelData
-            Layout.fillWidth: true
-            spacing: Tokens.spacing.extraSmall
-            InfoRow {
-                first: true
-                last: true
-                label: peer.modelData.name
-                subtext: peer.modelData.ip + (peer.modelData.exitNode ? " · " + qsTr("Exit node") : "")
-                value: peer.modelData.online ? qsTr("Online") + " · " + peer.modelData.connection : qsTr("Offline")
-                icon: peer.modelData.online ? "devices" : "cloud_off"
-            }
-            RowLayout {
-                TextButton {
-                    text: qsTr("Copy IP")
-                    enabled: !!peer.modelData.ip
-                    onClicked: Quickshell.clipboardText = peer.modelData.ip
-                }
-                TextButton {
+            readonly property string peerStatus: modelData.online ? qsTr("Online") : qsTr("Offline")
+
+            first: true
+            last: true
+            label: modelData.name
+            subtext: modelData.ip + (root.compact ? " · " + peerStatus : "") + (modelData.exitNode ? " · " + qsTr("Exit node") : "")
+            value: root.compact ? "" : peerStatus + (modelData.online ? " · " + modelData.connection : "")
+            icon: modelData.online ? "devices" : "cloud_off"
+            iconColour: modelData.online ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
+            trailingComponent: RowLayout {
+                spacing: Tokens.spacing.extraSmall
+
+                ServiceActionButton {
                     visible: !root.compact && (peer.modelData.exitAvailable || peer.modelData.exitNode)
-                    text: peer.modelData.exitNode ? qsTr("Stop using exit node") : qsTr("Use exit node")
+                    icon: peer.modelData.exitNode ? "logout" : "public"
+                    description: peer.modelData.exitNode ? qsTr("Stop using exit node") : qsTr("Use exit node")
                     enabled: Tailscale.connected && !Tailscale.busy && (peer.modelData.online || peer.modelData.exitNode)
                     onClicked: Tailscale.setExitNode(peer.modelData.exitNode ? "" : peer.modelData.ip)
                 }
+                CopyAddress { address: peer.modelData.ip }
             }
         }
     }
@@ -98,5 +100,27 @@ ColumnLayout {
         visible: !root.compact
         text: qsTr("Open Tailscale admin")
         onClicked: Qt.openUrlExternally("https://login.tailscale.com/admin/machines")
+    }
+
+    component CopyAddress: ServiceActionButton {
+        id: copy
+
+        required property string address
+        property bool copied: false
+
+        icon: copied ? "check" : "content_copy"
+        description: copied ? qsTr("Copied") : qsTr("Copy IP address")
+        enabled: !!address
+        onClicked: {
+            Quickshell.clipboardText = address;
+            copied = true;
+            feedback.restart();
+        }
+
+        Timer {
+            id: feedback
+            interval: 1500
+            onTriggered: copy.copied = false
+        }
     }
 }

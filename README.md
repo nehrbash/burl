@@ -72,8 +72,8 @@ desktop starts or an adapter appears. Turning Bluetooth off manually lasts
 until Burl restarts or the adapter is reconnected; disabling the startup
 preference leaves the current power state unchanged.
 
-Settings → Tailscale and Settings → Syncthing enable optional bar indicators
-with status popouts. Tailscale shows peers and addresses, copies IPs, connects
+Settings → Network enables Tailscale in the network popout; Settings → Syncthing
+enables its bar indicator. Tailscale shows peers and addresses, copies IPs, connects
 or disconnects, and selects an exit node. It requires the `tailscale` CLI and
 a running daemon; control actions require permission to manage that daemon.
 

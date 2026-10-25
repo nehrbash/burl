@@ -55,15 +55,7 @@ QtObject {
             component: root.networkPage,
             label: qsTr("Network"),
             icon: "wifi",
-            description: qsTr("Wi-Fi, ethernet"),
-            category: "connectivity"
-        },
-        {
-            id: "tailscale",
-            component: root.tailscalePage,
-            label: "Tailscale",
-            icon: "vpn_key",
-            description: qsTr("Tailnet, peers, exit nodes"),
+            description: qsTr("Wi-Fi, ethernet, Tailscale"),
             category: "connectivity"
         },
         {
@@ -190,7 +182,6 @@ QtObject {
         }
     }
 
-    readonly property Component tailscalePage: Component { TailscalePage {} }
     readonly property Component syncthingPage: Component { SyncthingPage {} }
 
     readonly property Component audioPage: Component {

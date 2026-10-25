@@ -15,6 +15,7 @@ ConnectedRect {
     property alias value: value.text
     property string icon
     property color iconColour: Colours.palette.m3onSurfaceVariant
+    property Component trailingComponent
     property Component leadingComponent: icon ? iconComp : null
 
     Layout.fillWidth: true
@@ -75,6 +76,12 @@ ConnectedRect {
             color: Colours.palette.m3onSurfaceVariant
             font: Tokens.font.body.small
             elide: Text.ElideRight
+        }
+
+        Loader {
+            visible: active
+            active: root.trailingComponent !== null
+            sourceComponent: root.trailingComponent
         }
     }
 }

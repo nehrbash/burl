@@ -9,6 +9,7 @@ import qs.components.controls
 import qs.services
 import qs.utils
 import qs.modules.nexus.common
+import qs.modules.services
 
 PageBase {
     id: root
@@ -212,6 +213,25 @@ PageBase {
                     }
                 }
             }
+        }
+
+        SectionHeader { text: "Tailscale" }
+
+        ToggleRow {
+            first: true
+            last: true
+            text: qsTr("Show Tailscale in Network")
+            subtext: qsTr("Monitor the local tailnet connection")
+            checked: GlobalConfig.services.tailscaleEnabled
+            onToggled: GlobalConfig.services.tailscaleEnabled = checked
+        }
+
+        Loader {
+            Layout.fillWidth: true
+            Layout.topMargin: Tokens.spacing.small
+            active: Tailscale.enabled
+            visible: active
+            sourceComponent: TailscalePanel {}
         }
     }
 }

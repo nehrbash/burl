@@ -228,15 +228,6 @@ Item {
         }
 
         WrappedLoader {
-            name: "tailscale"
-            active: Tailscale.enabled
-            sourceComponent: MaterialIcon {
-                text: Tailscale.connected ? "vpn_key" : "vpn_key_off"
-                color: Tailscale.error || Tailscale.details.health.length ? Colours.palette.m3error : root.colour
-            }
-        }
-
-        WrappedLoader {
             name: "syncthing"
             active: Syncthing.enabled
             sourceComponent: MaterialIcon {

@@ -16,11 +16,31 @@ ColumnLayout {
 
     spacing: Tokens.spacing.small
 
-    StyledText {
+    RowLayout {
         Layout.fillWidth: true
-        text: "Syncthing · " + Syncthing.summary
-        font: Tokens.font.title.medium
-        wrapMode: Text.Wrap
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 0
+            StyledText { text: "Syncthing"; font: Tokens.font.title.medium }
+            StyledText {
+                Layout.fillWidth: true
+                text: Syncthing.summary + " · " + qsTr("%1 connected").arg(Syncthing.connectedCount)
+                color: Colours.palette.m3onSurfaceVariant
+                elide: Text.ElideRight
+            }
+        }
+        ServiceActionButton {
+            icon: "refresh"
+            description: Syncthing.refreshing ? qsTr("Refreshing…") : qsTr("Refresh Syncthing")
+            enabled: Syncthing.enabled && !Syncthing.refreshing && !Syncthing.busy
+            onClicked: Syncthing.refresh()
+        }
+        ServiceActionButton {
+            icon: "open_in_new"
+            description: qsTr("Open Syncthing web interface")
+            enabled: Syncthing.available
+            onClicked: Qt.openUrlExternally(Syncthing.baseUrl)
+        }
     }
     StyledText {
         Layout.fillWidth: true
@@ -28,23 +48,6 @@ ColumnLayout {
         text: Syncthing.error || Syncthing.actionError
         color: Colours.palette.m3error
         wrapMode: Text.Wrap
-    }
-    StyledText {
-        Layout.fillWidth: true
-        text: qsTr("%1 devices connected · local folder status").arg(Syncthing.connectedCount)
-        wrapMode: Text.Wrap
-    }
-    RowLayout {
-        TextButton {
-            text: Syncthing.refreshing ? qsTr("Refreshing…") : qsTr("Refresh")
-            enabled: Syncthing.enabled && !Syncthing.refreshing && !Syncthing.busy
-            onClicked: Syncthing.refresh()
-        }
-        TextButton {
-            text: qsTr("Open web interface")
-            enabled: Syncthing.available
-            onClicked: Qt.openUrlExternally(Syncthing.baseUrl)
-        }
     }
     Repeater {
         model: root.compact ? Syncthing.folders.slice(0, 4) : Syncthing.folders
@@ -58,32 +61,35 @@ ColumnLayout {
                 last: true
                 icon: folder.modelData.state === "Error" ? "sync_problem" : folder.modelData.paused ? "pause" : "folder"
                 label: folder.modelData.name
-                subtext: folder.modelData.needed ? qsTr("%1 items remaining · %2 errors").arg(folder.modelData.needed).arg(folder.modelData.errors) : folder.modelData.path
-                value: folder.modelData.state
+                subtext: root.compact ? folder.modelData.state : folder.modelData.needed ? qsTr("%1 items remaining · %2 errors").arg(folder.modelData.needed).arg(folder.modelData.errors) : folder.modelData.path
+                value: root.compact ? "" : folder.modelData.state
+                trailingComponent: RowLayout {
+                    spacing: Tokens.spacing.extraSmall
+                    ServiceActionButton {
+                        icon: folder.modelData.paused ? "play_arrow" : "pause"
+                        description: folder.modelData.paused ? qsTr("Resume folder") : qsTr("Pause folder")
+                        enabled: Syncthing.available && !Syncthing.busy
+                        onClicked: Syncthing.pauseFolder(folder.modelData)
+                    }
+                    ServiceActionButton {
+                        icon: "refresh"
+                        description: qsTr("Rescan folder")
+                        enabled: Syncthing.available && !Syncthing.busy && !folder.modelData.paused
+                        onClicked: Syncthing.scan(folder.modelData)
+                    }
+                }
             }
             Rectangle {
                 Layout.fillWidth: true
                 implicitHeight: 4
                 radius: 2
-                visible: !folder.modelData.paused
+                visible: !folder.modelData.paused && ["Syncing", "Out of sync"].includes(folder.modelData.state)
                 color: Colours.palette.m3surfaceContainerHighest
                 Rectangle {
                     width: parent.width * folder.modelData.progress
                     height: parent.height
                     radius: parent.radius
                     color: folder.modelData.state === "Error" ? Colours.palette.m3error : Colours.palette.m3primary
-                }
-            }
-            RowLayout {
-                TextButton {
-                    text: folder.modelData.paused ? qsTr("Resume") : qsTr("Pause")
-                    enabled: Syncthing.available && !Syncthing.busy
-                    onClicked: Syncthing.pauseFolder(folder.modelData)
-                }
-                TextButton {
-                    text: qsTr("Rescan")
-                    enabled: Syncthing.available && !Syncthing.busy && !folder.modelData.paused
-                    onClicked: Syncthing.scan(folder.modelData)
                 }
             }
         }
@@ -109,11 +115,12 @@ ColumnLayout {
                 subtext: device.modelData.address
                 value: device.modelData.paused ? qsTr("Paused") : device.modelData.connected ? qsTr("Connected") : qsTr("Disconnected")
                 icon: "devices"
-            }
-            TextButton {
-                text: device.modelData.paused ? qsTr("Resume") : qsTr("Pause")
-                enabled: Syncthing.available && !Syncthing.busy
-                onClicked: Syncthing.pauseDevice(device.modelData)
+                trailingComponent: ServiceActionButton {
+                    icon: device.modelData.paused ? "play_arrow" : "pause"
+                    description: device.modelData.paused ? qsTr("Resume device") : qsTr("Pause device")
+                    enabled: Syncthing.available && !Syncthing.busy
+                    onClicked: Syncthing.pauseDevice(device.modelData)
+                }
             }
         }
     }

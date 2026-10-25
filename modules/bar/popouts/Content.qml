@@ -140,11 +140,6 @@ Item {
         }
 
         Popout {
-            name: "tailscale"
-            sourceComponent: TailscaleStatus { popouts: root.popouts }
-        }
-
-        Popout {
             name: "syncthing"
             sourceComponent: SyncthingStatus { popouts: root.popouts }
         }
