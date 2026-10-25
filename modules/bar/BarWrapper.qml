@@ -78,6 +78,16 @@ Item {
         }
     ]
 
+    // Overhang stays beneath applications but remains whole over Burl's own sky.
+    Item {
+        anchors.fill: parent
+        clip: !(root.screenState.launcher || root.screenState.dashboard)
+        SidebarTrunk {
+            bar: root
+            height: parent.height
+        }
+    }
+
     Rectangle {
         x: content.x - 4
         width: root.contentWidth + 8
@@ -108,17 +118,6 @@ Item {
             screen: root.screen
             screenState: root.screenState
             popouts: root.popouts // qmllint disable incompatible-type
-        }
-    }
-
-    // Overhang stays beneath applications but remains whole over Burl's own sky.
-    Item {
-        anchors.fill: parent
-        clip: !(root.screenState.launcher || root.screenState.dashboard)
-        z: -1
-        SidebarTrunk {
-            bar: root
-            height: parent.height
         }
     }
 

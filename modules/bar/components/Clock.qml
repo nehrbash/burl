@@ -16,7 +16,7 @@ StyledRect {
     implicitWidth: Tokens.sizes.bar.innerWidth
     implicitHeight: layout.implicitHeight + root.padding * 2
 
-    color: "#bf161418"
+    color: "#161418"
     border.color: "#887e6947"
     border.width: 1
     radius: Tokens.rounding.medium

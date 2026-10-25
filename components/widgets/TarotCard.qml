@@ -13,11 +13,8 @@ Item {
     implicitHeight: implicitWidth * 1.5
 
     Rectangle {
-        x: 1
-        y: 1
-        width: parent.width
-        height: parent.height
-        color: "#660b0907"
+        anchors.fill: parent
+        color: Woodland.barkEdge
     }
 
     Item {

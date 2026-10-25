@@ -70,17 +70,6 @@ Item {
         scale: root.isActive ? 0.97 + root.activeAmount * 0.03 : 0.94
     }
 
-    TreeEmbers {
-        x: -8
-        width: parent.width + 16
-        height: root.cardHeight + 12
-        active: root.isActive
-        repeatBursts: true
-        emberSize: 3
-        drift: 2
-        pointAt: t => ({ x: 0.5 - 0.44 * Math.sin(t * Math.PI / 2), y: 1 - t * 0.8 })
-    }
-
     Loader {
         id: windowLoader
         anchors.horizontalCenter: parent.horizontalCenter

@@ -483,6 +483,16 @@ Item {
         }
     }
 
+    TreeGround {
+        width: root.geomW
+        height: root.geomH
+        rootX: root.trunkX
+        rootY: root.artY + root.artHeight * 0.94
+        rootSpan: root.artWidth
+        opacity: root.roomP
+        visible: root.onScreen
+    }
+
     // 0b — a warm bloom behind the trunk. RadialGradient on a Shape, NOT a
     // rounded Rectangle — a Rectangle has no falloff and draws a hard-edged
     // disc across the screen.
@@ -591,15 +601,15 @@ Item {
 
     SpectralClouds {
         x: 0
-        y: 0
+        y: root.artY + root.artHeight * 0.78
         width: root.geomW
-        height: root.geomH
+        height: root.artHeight * 0.22
         scene: "dream"
         cameraMotion: root.roomCamera
         spilling: true
         density: 0.55
         period: 90000
-        opacity: root.roomP * 0.3
+        opacity: root.roomP * 0.38
         CameraOpacityBehavior on opacity {
             camera: root.roomCamera
         }

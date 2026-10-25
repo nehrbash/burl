@@ -16,7 +16,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: width / 2
-        color: pointer.containsMouse ? "#e0262228" : "#bf161418"
+        color: pointer.containsMouse ? "#262228" : "#161418"
         border.color: Qt.alpha(root.ink, 0.6)
     }
     Text {
