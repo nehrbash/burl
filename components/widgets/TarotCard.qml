@@ -50,14 +50,10 @@ Item {
             color: root.monitorAccent
         }
     }
-    Rectangle {
+    BranchMount {
         anchors.fill: parent
-        visible: root.selected
-        anchors.margins: 3
-        color: "transparent"
-        antialiasing: true
-        border.width: 1.5
-        border.color: "#fff0be"
+        anchors.margins: -5
+        selected: root.selected
     }
     Rectangle {
         visible: root.badge.length > 0

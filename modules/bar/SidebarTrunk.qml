@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import qs.components.widgets
 
 Item {
     id: root
@@ -24,5 +25,11 @@ Item {
         sourceClipRect: Qt.rect(0, 1800, 724, 372)
         fillMode: Image.Stretch
         mipmap: true
+    }
+    BarkRunes {
+        anchors.fill: parent
+        runeSize: 9
+        sites: [{ x: 0.24, y: 0.12, angle: -8 }, { x: 0.28, y: 0.34, angle: 6 },
+            { x: 0.25, y: 0.58, angle: -5 }, { x: 0.32, y: 0.82, angle: 12 }]
     }
 }

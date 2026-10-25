@@ -50,6 +50,14 @@ Item {
         id: grow
     }
 
+    TreeEmbers {
+        x: -6
+        width: parent.width + 12
+        height: parent.height
+        active: root.isActive
+        pointAt: t => ({ x: 0.02 + 0.025 * Math.sin(t * Math.PI), y: 1 - t * 0.75 })
+    }
+
     TarotCard {
         anchors.horizontalCenter: parent.horizontalCenter
         width: Tokens.sizes.bar.innerWidth
@@ -64,7 +72,7 @@ Item {
 
     Loader {
         id: windowLoader
-        x: 0
+        anchors.horizontalCenter: parent.horizontalCenter
         y: root.cardHeight - height * 0.45
         width: Tokens.sizes.bar.innerWidth * 0.55
         height: width

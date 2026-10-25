@@ -72,7 +72,6 @@ Item {
     }
 
     property real growth: 0
-    property real sap: 0
     property int hoveredIndex: -1
 
     function progress(limb: var): real {
@@ -102,7 +101,6 @@ Item {
         }
     }
     onGrowthChanged: bough.requestPaint()
-    onHoveredIndexChanged: bough.requestPaint()
     onWoodDarkChanged: bough.requestPaint()
     onWoodMidChanged: bough.requestPaint()
     onWoodLightChanged: bough.requestPaint()
@@ -114,13 +112,6 @@ Item {
         from: 0; to: 1
         duration: 1250
         easing.type: Easing.InOutCubic
-    }
-
-    NumberAnimation on sap {
-        running: root.awake && Ambience.sway && !GameMode.enabled
-        from: 0; to: 1
-        duration: 4400
-        loops: Animation.Infinite
     }
 
     Canvas {
@@ -149,15 +140,7 @@ Item {
                 Branch.partialCurve(ctx, limb.b, p);
                 ctx.stroke();
                 ctx.restore();
-                if (i === root.hoveredIndex) {
-                    ctx.beginPath();
-                    ctx.strokeStyle = Qt.alpha(Colours.palette.m3primary, 0.7);
-                    ctx.lineWidth = 0.0018;
-                    Branch.partialCurve(ctx, limb.b, p);
-                    ctx.stroke();
-                }
             }
-
         }
     }
 
@@ -177,27 +160,39 @@ Item {
         animated: root.awake
     }
 
+    BarkRunes {
+        anchors.fill: parent
+        animated: root.awake && root.growth > 0.98
+        sites: [root.boughPoint(0.22), root.boughPoint(0.48), root.boughPoint(0.74)]
+        runeSize: 11
+    }
+
+    TreeEmbers {
+        id: branchEmbers
+        anchors.fill: parent
+        animated: root.awake && root.growth > 0.98
+        active: animated
+        pointAt: t => root.boughPoint(0.01 + t * 0.93)
+    }
+
     Repeater {
-        model: 10
-        delegate: Rectangle {
+        model: root.limbs.length
+        delegate: TreeEmbers {
             required property int index
-            readonly property real t: (root.sap + index * 0.071) % 1
-            readonly property var point: root.boughPoint(0.01 + t * 0.93)
-            x: point.x * root.width - width / 2
-            y: point.y * root.height - height / 2
-            width: index % 3 === 0 ? 3 : 1.5
-            height: width
-            radius: width / 2
-            color: Colours.palette.m3primary
-            opacity: Math.sin(t * Math.PI) * 0.6
-            visible: root.growth > 0.98 && root.awake && Ambience.sway && !GameMode.enabled
+            anchors.fill: parent
+            animated: root.awake && root.growth > 0.98
+            active: root.hoveredIndex === index
+            pointAt: t => Branch.point(root.limbs[index].b, t)
+            onArrived: windowSlots.itemAt(index)?.ignite()
         }
     }
 
     Repeater {
+        id: windowSlots
         model: ScriptModel { values: root.windows }
         delegate: Item {
             id: slot
+            function ignite(): void { seal.ignite(); }
             required property var modelData
             required property int index
             readonly property var limb: root.limbs[index]
@@ -221,6 +216,7 @@ Item {
             visible: bloom > 0.001
 
             SpiritMedallion {
+                id: seal
                 anchors.fill: parent
                 glyph: ""
                 accent: Colours.palette.m3primary
@@ -243,10 +239,15 @@ Item {
                 anchors.topMargin: 4
                 width: Math.min(136, title.implicitWidth + 18)
                 height: 24
-                radius: height / 2
-                color: Colours.palette.m3surfaceContainer
+                radius: 2
+                color: Woodland.mix(Woodland.barkEdge, Colours.palette.m3surface, 0.55)
                 border.width: 1
                 border.color: Qt.alpha(mouse.containsMouse ? Colours.palette.m3primary : Colours.palette.m3outline, 0.22)
+                BranchMount {
+                    anchors.fill: parent
+                    anchors.margins: -4
+                    selected: mouse.containsMouse
+                }
                 Text {
                     id: title
                     anchors.fill: parent

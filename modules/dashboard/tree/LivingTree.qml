@@ -9,6 +9,7 @@ import Burl
 import Burl.Config
 import Burl.Services
 import qs.components
+import qs.components.controls
 import qs.components.containers
 import qs.components.effects
 import qs.components.widgets
@@ -1595,50 +1596,15 @@ Item {
         // Absorb page clicks before they reach the tree.
         MouseArea { anchors.fill: parent }
 
-        Row {
+        NavigationTabs {
             anchors.horizontalCenter: parent.horizontalCenter
-            y: -42
-            spacing: 8
+            y: -implicitHeight - 8
+            width: Math.min(implicitWidth, stage.openW)
             opacity: stage.unfurlP
             enabled: stage.unfurlP > 0.9
-            Repeater {
-                model: root.sections.filter(s => s.enabled)
-                delegate: Rectangle {
-                    id: folioTab
-                    required property var modelData
-                    readonly property bool selected: modelData.id === stage.sectionId
-                    readonly property bool keyboardSelected: modelData.id === root.focusedId
-                    width: sectionName.implicitWidth+26
-                    height: 34
-                    radius: 3
-                    gradient: Gradient {
-                        GradientStop { position: 0; color: Woodland.mix(Woodland.barkEdge, Colours.palette.m3primary, folioTab.selected ? 0.38 : 0.12) }
-                        GradientStop { position: 1; color: Woodland.barkEdge }
-                    }
-                    border.width: folioTab.keyboardSelected ? 2 : 1
-                    border.color: Qt.alpha(Woodland.parchmentEdge, folioTab.keyboardSelected ? 1 : folioTab.selected ? 0.75 : 0.35)
-                    Rectangle {
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.bottom: parent.bottom
-                        anchors.margins: 4
-                        height: 1
-                        color: Qt.alpha(Woodland.parchmentEdge, folioTab.selected ? 0.7 : 0.2)
-                    }
-                    Text {
-                        id: sectionName
-                        anchors.centerIn: parent
-                        text: modelData.text
-                        color: Woodland.parchment
-                        font.pixelSize: 12
-                    }
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.growSection(parent.modelData.id)
-                    }
-                }
-            }
+            model: root.sections.filter(s => s.enabled)
+            currentIndex: model.findIndex(s => s.id === stage.sectionId)
+            onActivated: index => root.growSection(model[index].id)
         }
 
         Grimoire {

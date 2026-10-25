@@ -197,40 +197,6 @@ Item {
                     ctx.stroke();
                 }
             }
-            if (root.renderedTrunk) {
-                const routes = [
-                    { route: root.paintedRoute(false,root.hovered), selected: false },
-                    { route: root.paintedRoute(true,root.hoveredRoot), selected: false },
-                    { route: root.paintedRoute(false,root.selected), selected: true },
-                    { route: root.paintedRoute(true,root.selectedRoot), selected: true }
-                ];
-                ctx.lineCap = "round";
-                ctx.lineJoin = "round";
-                for (const entry of routes) {
-                    const route = entry.route;
-                    if (!route) continue;
-                    const progress = Math.min(1,root.reveal/route.arrival), points = route.points;
-                    ctx.beginPath();
-                    ctx.moveTo(points[0][0],points[0][1]);
-                    for (let j = 1; j < points.length; ++j) {
-                        if (points[j][2] > progress) break;
-                        ctx.lineTo(points[j][0],points[j][1]);
-                    }
-                    const tip = root.routePoint(route,progress);
-                    ctx.lineTo(tip.x,tip.y);
-                    if (entry.selected) {
-                        ctx.lineWidth = 0.009;
-                        ctx.strokeStyle = Qt.alpha(Colours.palette.m3primary,0.10);
-                        ctx.stroke();
-                        ctx.lineWidth = 0.004;
-                        ctx.strokeStyle = Qt.alpha(Colours.palette.m3primary,0.25);
-                        ctx.stroke();
-                    }
-                    ctx.lineWidth = entry.selected ? 0.0016 : 0.0008;
-                    ctx.strokeStyle = Qt.alpha(Colours.palette.m3primary,entry.selected ? 0.85 : 0.25);
-                    ctx.stroke();
-                }
-            }
             for (let i = 0; i < root.rootCradles.length; ++i) {
                 const c = root.rootCradles[i];
                 const p = Math.max(0,Math.min(1,(root.reveal-c.start)/c.span));
@@ -248,42 +214,28 @@ Item {
         }
     }
 
+    BarkRunes {
+        anchors.fill: parent
+        animated: root.animated && root.reveal > 0.98
+        sites: [root.routePoint(root.paintedRoute(false, 0), 0.28),
+            root.routePoint(root.paintedRoute(false, 2), 0.48),
+            root.routePoint(root.paintedRoute(false, 4), 0.62)]
+        runeSize: Math.max(9, root.width * 0.012)
+    }
+
     Repeater {
-        model: root.orbLimbs.length+root.rootLimbs.length
-        delegate: Item {
-            id: spark
+        model: root.orbLimbs.length + root.rootLimbs.length
+        delegate: TreeEmbers {
             required property int index
-            property real travel: 0
             readonly property bool isRoot: index >= root.orbLimbs.length
-            readonly property int routeIndex: isRoot ? index-root.orbLimbs.length : index
-            readonly property var limb: isRoot ? root.rootLimbs[routeIndex] : root.orbLimbs[routeIndex]
-            readonly property var location: root.renderedTrunk ? root.routePoint(root.paintedRoute(isRoot,routeIndex),travel) : Branch.point(limb.b,travel)
-            readonly property bool active: isRoot ? root.hoveredRoot === routeIndex : root.selected === routeIndex || root.hovered === routeIndex
-            x: location.x*root.width-width/2
-            y: location.y*root.height-height/2
-            width: 12
-            height: 12
-            opacity: Math.sin(travel*Math.PI)*(active ? 0.95 : 0.45)
-            visible: root.visible && (isRoot ? root.rootProgress(routeIndex) : root.orbProgress(routeIndex)) > 0.98 && root.animated && Ambience.sway && !GameMode.enabled
-            Rectangle {
-                anchors.fill: parent
-                radius: width/2
-                color: Qt.alpha(Colours.palette.m3primary,0.13)
-            }
-            Rectangle {
-                anchors.centerIn: parent
-                width: spark.active ? 4 : 2
-                height: width
-                radius: width/2
-                color: Colours.palette.m3primary
-            }
-            SequentialAnimation on travel {
-                running: spark.visible
-                loops: Animation.Infinite
-                PauseAnimation { duration: spark.active ? 180 : 1100+spark.index*230 }
-                NumberAnimation { from: 0; to: 1; duration: spark.active ? 1800 : 3200+spark.index*110; easing.type: Easing.InOutSine }
-                ScriptAction { script: spark.isRoot ? root.rootPulseArrived(spark.routeIndex) : root.pulseArrived(spark.routeIndex) }
-            }
+            readonly property int routeIndex: isRoot ? index - root.orbLimbs.length : index
+            anchors.fill: parent
+            animated: root.animated && root.reveal > 0.98
+            active: isRoot ? root.selectedRoot === routeIndex : root.selected === routeIndex
+            pointAt: t => root.renderedTrunk
+                ? root.routePoint(root.paintedRoute(isRoot, routeIndex), t)
+                : Branch.point((isRoot ? root.rootLimbs : root.orbLimbs)[routeIndex].b, t)
+            onArrived: isRoot ? root.rootPulseArrived(routeIndex) : root.pulseArrived(routeIndex)
         }
     }
 }

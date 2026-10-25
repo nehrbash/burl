@@ -26,4 +26,8 @@ Rectangle {
             GradientStop { position: 1; color: "#4c3825" }
         }
     }
+    BranchMount {
+        anchors.fill: parent
+        anchors.margins: -3
+    }
 }
