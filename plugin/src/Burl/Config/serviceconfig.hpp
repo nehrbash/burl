@@ -13,6 +13,10 @@ class ServiceConfig : public ConfigObject {
     Q_OBJECT
     QML_ANONYMOUS
 
+    CONFIG_GLOBAL_PROPERTY(bool, tailscaleEnabled, false)
+    CONFIG_GLOBAL_PROPERTY(bool, syncthingEnabled, false)
+    CONFIG_GLOBAL_PROPERTY(QString, syncthingConfigPath)
+    CONFIG_GLOBAL_PROPERTY(QString, syncthingUrl, u"http://127.0.0.1:8384"_s)
     CONFIG_GLOBAL_PROPERTY(bool, bluetoothAutoEnable, true)
     CONFIG_GLOBAL_PROPERTY(QString, weatherLocation)
     CONFIG_GLOBAL_PROPERTY(bool, useFahrenheit,

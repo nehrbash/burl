@@ -72,6 +72,20 @@ desktop starts or an adapter appears. Turning Bluetooth off manually lasts
 until Burl restarts or the adapter is reconnected; disabling the startup
 preference leaves the current power state unchanged.
 
+Settings → Tailscale and Settings → Syncthing enable optional bar indicators
+with status popouts. Tailscale shows peers and addresses, copies IPs, connects
+or disconnects, and selects an exit node. It requires the `tailscale` CLI and
+a running daemon; control actions require permission to manage that daemon.
+
+Syncthing shows local folder progress and connected devices, pauses/resumes
+folders or devices, rescans folders, and opens its web interface. It reads the
+API key from `$XDG_STATE_HOME/syncthing/config.xml` (defaulting to
+`~/.local/state/syncthing/config.xml`). Set a different configuration path and
+loopback HTTP address on its settings page if needed. Credentials stay outside
+Burl's settings. Status refreshes every 30 seconds; folder progress describes
+this device's copy, not confirmation that every peer has received it.
+
+
 In Settings → Panels → Launcher → Commands, add or edit a command's name,
 keyword, description, executable and default arguments. Enable “Allow extra
 arguments” to append arguments typed after its exact keyword, such as

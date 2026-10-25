@@ -59,6 +59,22 @@ QtObject {
             category: "connectivity"
         },
         {
+            id: "tailscale",
+            component: root.tailscalePage,
+            label: "Tailscale",
+            icon: "vpn_key",
+            description: qsTr("Tailnet, peers, exit nodes"),
+            category: "connectivity"
+        },
+        {
+            id: "syncthing",
+            component: root.syncthingPage,
+            label: "Syncthing",
+            icon: "sync",
+            description: qsTr("Folders, devices, sync status"),
+            category: "connectivity"
+        },
+        {
             id: "bluetooth",
             component: root.bluetoothPage,
             label: qsTr("Connected devices"),
@@ -173,6 +189,9 @@ QtObject {
             }
         }
     }
+
+    readonly property Component tailscalePage: Component { TailscalePage {} }
+    readonly property Component syncthingPage: Component { SyncthingPage {} }
 
     readonly property Component audioPage: Component {
         StackPage {

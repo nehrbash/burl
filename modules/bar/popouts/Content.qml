@@ -140,6 +140,16 @@ Item {
         }
 
         Popout {
+            name: "tailscale"
+            sourceComponent: TailscaleStatus { popouts: root.popouts }
+        }
+
+        Popout {
+            name: "syncthing"
+            sourceComponent: SyncthingStatus { popouts: root.popouts }
+        }
+
+        Popout {
             name: "disks"
             sourceComponent: RemovableMedia {
                 popouts: root.popouts

@@ -228,6 +228,25 @@ Item {
         }
 
         WrappedLoader {
+            name: "tailscale"
+            active: Tailscale.enabled
+            sourceComponent: MaterialIcon {
+                text: Tailscale.connected ? "vpn_key" : "vpn_key_off"
+                color: Tailscale.error || Tailscale.details.health.length ? Colours.palette.m3error : root.colour
+            }
+        }
+
+        WrappedLoader {
+            name: "syncthing"
+            active: Syncthing.enabled
+            sourceComponent: MaterialIcon {
+                text: Syncthing.error || Syncthing.folders.some(f => f.state === "Error") ? "sync_problem"
+                    : Syncthing.folders.some(f => f.paused) ? "sync_disabled" : "sync"
+                color: Syncthing.error || Syncthing.folders.some(f => f.state === "Error") ? Colours.palette.m3error : root.colour
+            }
+        }
+
+        WrappedLoader {
             name: "disks"
             active: Disks.mounted.length > 0
 
