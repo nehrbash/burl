@@ -1,13 +1,6 @@
-pragma ComponentBehavior: Bound
-
 import QtQuick
-import QtQuick.Layouts
-import QtQuick.Templates
-import Quickshell
-import Burl.Config
 import qs.components
 import qs.components.controls
-import qs.services
 
 Item {
     id: root
@@ -15,184 +8,22 @@ Item {
     required property real nonAnimWidth
     required property ScreenState screenState
     required property var tabs
-
     readonly property alias count: bar.count
-    onTabsChanged: Qt.callLater(function () { bar.setCurrentIndex(root.screenState.dashboardTab); })
 
-    // Woodland chrome: olive marks the active tab; groove divider reads as carved wood
-    readonly property color activeAccent: Colours.light ? Woodland.olive : Woodland.oliveLight
-    readonly property color grooveColour: Colours.light ? Woodland.groove : Qt.alpha(Woodland.parchmentEdge, 0.3)
+    implicitHeight: bar.implicitHeight
 
-    implicitHeight: bar.implicitHeight + bar.anchors.topMargin + indicator.implicitHeight + indicator.anchors.topMargin + separator.implicitHeight
+    WheelHandler {
+        onWheel: event => {
+            if (event.angleDelta.y)
+                root.screenState.selectDashboardTab(root.screenState.dashboardTab + (event.angleDelta.y < 0 ? 1 : -1));
+        }
+    }
 
-    TabBar {
+    NavigationTabs {
         id: bar
-
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.top: parent.top
-        anchors.topMargin: Tokens.sizes.dashboard.tabIndicatorSpacing
-
+        anchors.fill: parent
+        model: root.tabs
         currentIndex: root.screenState.dashboardTab
-
-        implicitHeight: contentHeight
-        background: null
-        contentItem: RowLayout {
-            spacing: 0
-
-            Repeater {
-                model: bar.contentModel
-            }
-        }
-
-        Repeater {
-            model: ScriptModel {
-                values: root.tabs
-            }
-
-            delegate: Tab {
-                required property var modelData
-
-                iconName: modelData.iconName
-                text: modelData.text
-            }
-        }
-    }
-
-    Item {
-        id: indicator
-
-        anchors.top: bar.bottom
-        anchors.topMargin: 5
-
-        implicitWidth: {
-            const tab = bar.currentItem;
-            if (tab)
-                return tab.implicitWidth;
-            const width = (root.nonAnimWidth - bar.spacing * (bar.count - 1)) / bar.count;
-            return width;
-        }
-        implicitHeight: 3
-
-        x: {
-            const tab = bar.currentItem;
-            const width = (root.nonAnimWidth - bar.spacing * (bar.count - 1)) / bar.count;
-            const tabWidth = tab?.implicitWidth ?? width;
-            return width * bar.currentIndex + (width - tabWidth) / 2;
-        }
-
-        clip: true
-
-        StyledRect {
-            anchors.top: parent.top
-            anchors.left: parent.left
-            anchors.right: parent.right
-            implicitHeight: parent.implicitHeight * 2
-
-            color: root.activeAccent
-            radius: Tokens.rounding.full
-        }
-
-        Behavior on x {
-            Anim {}
-        }
-
-        Behavior on implicitWidth {
-            Anim {}
-        }
-    }
-
-    StyledRect {
-        id: separator
-
-        anchors.top: indicator.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
-
-        implicitHeight: 1
-        color: root.grooveColour
-    }
-
-    component Tab: TabButton {
-        id: tab
-
-        required property string iconName
-        readonly property bool current: TabBar.tabBar.currentItem === this
-        onClicked: root.screenState.selectDashboardTab(TabBar.index)
-        Keys.onLeftPressed: {
-            root.screenState.selectDashboardTab((root.screenState.dashboardTab + bar.count - 1) % bar.count);
-            bar.currentItem.forceActiveFocus();
-        }
-        Keys.onRightPressed: {
-            root.screenState.selectDashboardTab((root.screenState.dashboardTab + 1) % bar.count);
-            bar.currentItem.forceActiveFocus();
-        }
-
-        Layout.fillWidth: true
-        Layout.preferredWidth: 1 // Uniform width across all tabs
-        implicitWidth: implicitContentWidth
-        implicitHeight: implicitContentHeight
-        background: null
-
-        contentItem: CustomMouseArea {
-            id: mouse
-
-            function onWheel(event: WheelEvent): void {
-                if (event.angleDelta.y < 0)
-                    root.screenState.selectDashboardTab(root.screenState.dashboardTab + 1);
-                else if (event.angleDelta.y > 0)
-                    root.screenState.selectDashboardTab(root.screenState.dashboardTab - 1);
-            }
-
-            implicitWidth: Math.max(icon.width, label.width)
-            implicitHeight: icon.height + label.height
-
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-
-            onPressed: root.screenState.selectDashboardTab(tab.TabBar.index)
-
-            StateLayer {
-                id: stateLayer
-
-                anchors.fill: undefined
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                implicitHeight: parent.height + Tokens.sizes.dashboard.tabIndicatorSpacing * 2
-
-                radius: Tokens.rounding.medium
-                color: tab.current ? root.activeAccent : Colours.palette.m3onSurface
-                onClicked: root.screenState.selectDashboardTab(tab.TabBar.index)
-            }
-
-            MaterialIcon {
-                id: icon
-
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.bottom: label.top
-
-                text: tab.iconName
-                color: tab.current ? root.activeAccent : Colours.palette.m3onSurfaceVariant
-                fill: tab.current ? 1 : 0
-                fontStyle: Tokens.font.icon.medium
-
-                Behavior on fill {
-                    Anim {
-                        type: Anim.DefaultEffects
-                    }
-                }
-            }
-
-            StyledText {
-                id: label
-
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.bottom: parent.bottom
-
-                text: tab.text
-                color: tab.current ? root.activeAccent : Colours.palette.m3onSurfaceVariant
-            }
-        }
+        onActivated: index => root.screenState.selectDashboardTab(index)
     }
 }

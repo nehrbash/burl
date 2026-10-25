@@ -5,6 +5,7 @@ import QtQuick.Layouts
 import Burl.Config
 import qs.components
 import qs.components.containers
+import qs.components.controls
 import qs.services
 import qs.modules.nexus
 
@@ -41,7 +42,6 @@ VerticalFadeFlickable {
 
                 readonly property bool isCurrentPage: modelData.id === root.nState.currentPageId
                 readonly property bool isCategoryStart: index === 0 || PageRegistry.pages[index - 1].category !== modelData.category
-                readonly property bool isCategoryEnd: index === list.model.length - 1 || PageRegistry.pages[index + 1].category !== modelData.category
 
                 Layout.fillWidth: true
                 Layout.topMargin: index !== 0 && isCategoryStart ? Tokens.spacing.medium : 0
@@ -50,17 +50,33 @@ VerticalFadeFlickable {
                     return h % 2 === 0 ? h : h + 1;
                 }
 
-                color: isCurrentPage ? Woodland.mix(Woodland.velvet, Woodland.brass, 0.18) : Woodland.velvet
+                color: "transparent"
+                radius: 0
+                activeFocusOnTab: true
+                Accessible.role: Accessible.PageTab
+                Accessible.name: modelData.label
+                Accessible.selected: isCurrentPage
+                Keys.onPressed: event => {
+                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Space) {
+                        root.nState.currentPageId = modelData.id;
+                        event.accepted = true;
+                    }
+                }
 
-                topLeftRadius: stateLayer.pressed ? Tokens.rounding.medium : isCurrentPage ? Tokens.rounding.extraLargeIncreased : isCategoryStart ? Tokens.rounding.extraLarge : Tokens.rounding.extraSmall
-                topRightRadius: stateLayer.pressed ? Tokens.rounding.medium : isCurrentPage ? Tokens.rounding.extraLargeIncreased : isCategoryStart ? Tokens.rounding.extraLarge : Tokens.rounding.extraSmall
-                bottomLeftRadius: stateLayer.pressed ? Tokens.rounding.medium : isCurrentPage ? Tokens.rounding.extraLargeIncreased : isCategoryEnd ? Tokens.rounding.extraLarge : Tokens.rounding.extraSmall
-                bottomRightRadius: stateLayer.pressed ? Tokens.rounding.medium : isCurrentPage ? Tokens.rounding.extraLargeIncreased : isCategoryEnd ? Tokens.rounding.extraLarge : Tokens.rounding.extraSmall
+                Item {
+                    anchors.left: parent.left
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    width: 16
+                    visible: item.isCurrentPage || item.activeFocus
 
-                RadiusBehavior on topLeftRadius {}
-                RadiusBehavior on topRightRadius {}
-                RadiusBehavior on bottomLeftRadius {}
-                RadiusBehavior on bottomRightRadius {}
+                    TabEngraving {
+                        anchors.centerIn: parent
+                        width: parent.height - 16
+                        rotation: 90
+                        selected: true
+                    }
+                }
 
                 StateLayer {
                     id: stateLayer
@@ -79,27 +95,14 @@ VerticalFadeFlickable {
 
                     anchors.fill: parent
                     anchors.margins: Tokens.padding.large
+                    anchors.leftMargin: Tokens.padding.large + 16
                     spacing: Tokens.spacing.medium
 
-                    StyledRect {
-                        Layout.fillHeight: true
-                        Layout.topMargin: -1
-                        Layout.bottomMargin: -1
-                        implicitWidth: height
-
-                        radius: Tokens.rounding.full
-                        color: item.isCurrentPage ? Woodland.brass : Woodland.midnight
-
-                        MaterialIcon {
-                            anchors.centerIn: parent
-                            anchors.verticalCenterOffset: 1
-
-                            text: item.modelData.icon
-                            color: item.isCurrentPage ? Colours.palette.m3onPrimary : Woodland.brass
-                            fontStyle: Tokens.font.icon.builders.medium.weight(Font.Medium).build()
-                            grade: 25
-                            fill: item.modelData.noFill ? 0 : 1
-                        }
+                    MaterialIcon {
+                        text: item.modelData.icon
+                        color: item.isCurrentPage ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
+                        fontStyle: Tokens.font.icon.medium
+                        fill: item.modelData.noFill ? 0 : 1
                     }
 
                     ColumnLayout {
@@ -109,6 +112,7 @@ VerticalFadeFlickable {
                         StyledText {
                             Layout.fillWidth: true
                             text: item.modelData.label
+                            color: item.isCurrentPage ? Colours.palette.m3primary : Colours.palette.m3onSurface
                             font: Tokens.font.body.medium
                             elide: Text.ElideRight
                         }
@@ -126,9 +130,4 @@ VerticalFadeFlickable {
         }
     }
 
-    component RadiusBehavior: Behavior {
-        Anim {
-            type: Anim.DefaultEffects
-        }
-    }
 }

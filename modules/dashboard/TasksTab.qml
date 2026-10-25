@@ -139,38 +139,19 @@ Item {
 
         spacing: Tokens.spacing.medium
 
-        RowLayout {
+        NavigationTabs {
             Layout.fillWidth: true
-            spacing: Tokens.spacing.small
-
-            SubTabPill {
-                label: qsTr("Tasks")
-                active: root.subTab === "tasks"
-                onActivated: root.subTab = "tasks"
-            }
-            SubTabPill {
-                label: qsTr("Calendar")
-                active: root.subTab === "calendar"
-                onActivated: { root.subTab = "calendar"; Agenda.refresh(); }
-            }
-            SubTabPill {
-                label: qsTr("Today")
-                active: root.subTab === "today"
-                onActivated: {
-                    root.subTab = "today";
-                    Tasks.fetchReport("today");
-                }
-            }
-            SubTabPill {
-                label: qsTr("This week")
-                active: root.subTab === "thisweek"
-                onActivated: {
-                    root.subTab = "thisweek";
-                    Tasks.fetchReport("thisweek");
-                }
-            }
-            Item {
-                Layout.fillWidth: true
+            model: [
+                { id: "tasks", text: qsTr("Tasks") },
+                { id: "calendar", text: qsTr("Calendar") },
+                { id: "today", text: qsTr("Today") },
+                { id: "thisweek", text: qsTr("This week") }
+            ]
+            currentIndex: model.findIndex(tab => tab.id === root.subTab)
+            onActivated: index => {
+                root.subTab = model[index].id;
+                if (root.subTab === "calendar") Agenda.refresh();
+                else if (root.subTab === "today" || root.subTab === "thisweek") Tasks.fetchReport(root.subTab);
             }
         }
 
@@ -312,16 +293,10 @@ Item {
                 Layout.fillWidth: true
             }
 
-            TaskFilterPill {
-                label: "@work"
-                active: Tasks.filter === "@work"
-                onActivated: Tasks.setFilter("@work")
-            }
-
-            TaskFilterPill {
-                label: "@personal"
-                active: Tasks.filter === "@personal"
-                onActivated: Tasks.setFilter("@personal")
+            NavigationTabs {
+                model: [{text: "@work"}, {text: "@personal"}]
+                currentIndex: Tasks.filter === "@personal" ? 1 : 0
+                onActivated: index => Tasks.setFilter(model[index].text)
             }
 
             TaskFilterPill {
@@ -814,35 +789,5 @@ Item {
         }
     }
 
-
-    component SubTabPill: StyledRect {
-        id: subpill
-
-        property string label
-        property bool active
-
-        signal activated
-
-        radius: Tokens.rounding.full
-        color: subpill.active ? Colours.palette.m3primaryContainer : "transparent"
-        implicitHeight: subText.implicitHeight + Tokens.padding.medium * 2
-        implicitWidth: subText.implicitWidth + Tokens.padding.large * 2
-
-        MouseArea {
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: subpill.activated()
-        }
-
-        StyledText {
-            id: subText
-
-            anchors.centerIn: parent
-            text: subpill.label
-            font: Tokens.font.label.builders.medium.weight(subpill.active ? Font.Medium : Font.Normal).build()
-            color: subpill.active ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3onSurface
-        }
-    }
 
 }

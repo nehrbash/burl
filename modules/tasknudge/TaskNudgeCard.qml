@@ -145,15 +145,10 @@ FocusScope {
                     font: Tokens.font.body.small
                     color: Colours.palette.m3onSurfaceVariant
                 }
-                TaskFilterPill {
-                    label: "@work"
-                    active: Tasks.filter === "@work"
-                    onActivated: Tasks.setFilter("@work")
-                }
-                TaskFilterPill {
-                    label: "@personal"
-                    active: Tasks.filter === "@personal"
-                    onActivated: Tasks.setFilter("@personal")
+                NavigationTabs {
+                    model: [{text: "@work"}, {text: "@personal"}]
+                    currentIndex: Tasks.filter === "@personal" ? 1 : 0
+                    onActivated: index => Tasks.setFilter(model[index].text)
                 }
             }
 

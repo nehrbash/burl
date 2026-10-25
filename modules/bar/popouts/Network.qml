@@ -26,32 +26,18 @@ ColumnLayout {
     spacing: Tokens.spacing.small
     width: Tokens.sizes.bar.networkWidth
 
-    RowLayout {
-        Layout.alignment: Qt.AlignHCenter
-        spacing: Tokens.spacing.extraSmall
-
-        TextButton {
-            text: qsTr("Wi-Fi")
-            type: TextButton.Tonal
-            isRound: true
-            checked: root.view === "wireless"
-            onClicked: root.view = "wireless"
-        }
-        TextButton {
-            text: qsTr("Ethernet")
-            type: TextButton.Tonal
-            isRound: true
-            checked: root.view === "ethernet"
-            onClicked: root.view = "ethernet"
-        }
-        TextButton {
-            visible: Tailscale.enabled
-            text: "Tailscale"
-            type: TextButton.Tonal
-            isRound: true
-            checked: root.view === "tailscale"
-            onClicked: root.view = "tailscale"
-        }
+    NavigationTabs {
+        Layout.fillWidth: true
+        model: Tailscale.enabled ? [
+            { id: "wireless", text: qsTr("Wi-Fi") },
+            { id: "ethernet", text: qsTr("Ethernet") },
+            { id: "tailscale", text: "Tailscale" }
+        ] : [
+            { id: "wireless", text: qsTr("Wi-Fi") },
+            { id: "ethernet", text: qsTr("Ethernet") }
+        ]
+        currentIndex: model.findIndex(tab => tab.id === root.view)
+        onActivated: index => root.view = model[index].id
     }
 
     Loader {
