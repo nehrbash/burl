@@ -15,6 +15,7 @@ check-lifecycle:
 	./scripts/qs-tree-effects.sh
 	./scripts/qs-monitor-focus.sh
 	./scripts/qs-popout-stacking.sh
+	./scripts/qs-popout-resize.sh
 	./scripts/qs-world-escape.sh
 	./scripts/qs-launcher-editing.sh
 	./scripts/qs-launcher-cycle.sh

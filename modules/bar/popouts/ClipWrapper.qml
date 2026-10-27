@@ -13,6 +13,7 @@ Item {
 
     readonly property alias content: content
     property real offsetScale: x > 0 || content.hasCurrent ? 0 : 1
+    property real placementHeight: 0
 
     visible: width > 0 && height > 0
     clip: true
@@ -25,11 +26,32 @@ Item {
         if (content.isDetached)
             return (parent.height - content.nonAnimHeight) / 2;
 
-        const off = content.currentCenter - borderThickness - content.nonAnimHeight / 2;
-        const diff = parent.height - Math.floor(off + content.nonAnimHeight);
+        const off = content.currentCenter - borderThickness - placementHeight / 2;
+        const diff = parent.height - Math.floor(off + placementHeight);
         if (diff < 0)
             return off + diff;
         return Math.max(off, 0);
+    }
+
+    Connections {
+        target: content
+
+        function onNonAnimHeightChanged(): void {
+            // Shrinking content must not move its tabs out from under the pointer.
+            root.placementHeight = Math.max(root.placementHeight, content.nonAnimHeight);
+        }
+        function onHasCurrentChanged(): void {
+            root.placementHeight = content.nonAnimHeight;
+        }
+        function onCurrentNameChanged(): void {
+            root.placementHeight = content.nonAnimHeight;
+        }
+        function onCurrentChanged(): void {
+            root.placementHeight = content.nonAnimHeight;
+        }
+        function onCurrentCenterChanged(): void {
+            root.placementHeight = content.nonAnimHeight;
+        }
     }
 
     Behavior on offsetScale {
