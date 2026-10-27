@@ -144,6 +144,7 @@ Item {
 
                         Workspace {
                             activeWsId: root.activeWsId
+                            focusedMonitor: root.isFocusedMonitor
                             occupied: root.occupied
                             groupOffset: root.groupOffset
                             otherMonitorWs: root.otherMonitorWs
