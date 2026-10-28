@@ -91,9 +91,6 @@ Variants {
         SidebarTrunk {
             bar: ShellState.componentsFor(win.screen)?.bar ?? null
             height: parent.height
-            // The bar's own trunk covers every rune site; glowing here only
-            // repaints the full-screen wallpaper surface.
-            runesAnimated: false
         }
 
         Loader {
