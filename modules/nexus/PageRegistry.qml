@@ -43,6 +43,14 @@ QtObject {
             category: "connectivity"
         },
         {
+            id: "hyprland",
+            component: root.hyprlandPage,
+            label: qsTr("Hyprland"),
+            icon: "tune",
+            description: qsTr("Plugins and performance mode"),
+            category: "system"
+        },
+        {
             id: "mouse",
             component: root.mousePage,
             label: qsTr("Mouse"),
@@ -194,6 +202,8 @@ QtObject {
             }
         }
     }
+
+    readonly property Component hyprlandPage: Component { HyprlandPage {} }
 
     readonly property Component mousePage: Component {
         MousePage {}

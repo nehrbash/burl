@@ -35,7 +35,7 @@ Item {
 
     onIsActiveChanged: {
         // Performance mode must not animate desktop chrome.
-        if (isActive && !GameMode.enabled)
+        if (isActive && !GameMode.pauseAnimations)
             grow.grow();
         else
             grow.snap();

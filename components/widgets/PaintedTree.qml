@@ -50,7 +50,7 @@ Item {
     UniformAnimator {
         target: treeShader
         uniform: "phase"
-        running: root.visible && root.animated && root.growth > 0.98 && Ambience.sway && !GameMode.enabled
+        running: root.visible && root.animated && root.growth > 0.98 && Ambience.sway && !GameMode.pauseAnimations
         from: 0
         to: 1
         duration: root.shimmerPeriod

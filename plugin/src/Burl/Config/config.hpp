@@ -52,6 +52,8 @@ class GlobalConfig : public RootConfig {
 
     CONFIG_PROPERTY(bool, enabled, true)
     CONFIG_GLOBAL_PROPERTY(QVariantMap, mouse, {})
+    CONFIG_GLOBAL_PROPERTY(QVariantMap, performance, {})
+    CONFIG_GLOBAL_PROPERTY(QVariantMap, hyprlandPlugins, {})
     CONFIG_SUBOBJECT(AppearanceConfig, appearance)
     CONFIG_SUBOBJECT(GeneralConfig, general)
     CONFIG_SUBOBJECT(GuixConfig, guix)

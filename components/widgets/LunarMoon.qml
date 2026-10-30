@@ -10,7 +10,7 @@ Item {
 
     property bool active: true
     property real ritualPhase: 0
-    readonly property bool moving: active && visible && opacity > 0.001 && Ambience.sway && !GameMode.enabled
+    readonly property bool moving: active && visible && opacity > 0.001 && Ambience.sway && !GameMode.pauseAnimations
     readonly property real glow: 0.5 + 0.5 * Math.sin(ritualPhase * 8)
     property real phase: Weather.moonPhase
     readonly property real litFraction: (1 - Math.cos(phase * Math.PI * 2)) / 2

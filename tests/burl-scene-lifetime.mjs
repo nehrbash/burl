@@ -15,15 +15,15 @@ test('scene retention respects visibility and Performance mode', () => {
         for (const shouldBeActive of [false, true]) {
             for (const offsetScale of [0, 0.5, 1]) {
                 const root = { loaderActive: true, shouldBeActive, offsetScale };
-                const retained = runInNewContext(active, { root, GameMode: { enabled } });
+                const retained = runInNewContext(active, { root, GameMode: { releaseScenes: enabled } });
                 assert.equal(retained, !enabled || shouldBeActive || offsetScale < 1);
             }
         }
     }
     const root = { loaderActive: false, screen: { name: 'test' } };
     const Hypr = { focusedMonitor: { name: 'test' } };
-    assert.equal(runInNewContext(preload, { root, Hypr, GameMode: { enabled: true } }), false);
-    assert.equal(runInNewContext(preload, { root, Hypr, GameMode: { enabled: false } }), true);
+    assert.equal(runInNewContext(preload, { root, Hypr, GameMode: { releaseScenes: true } }), false);
+    assert.equal(runInNewContext(preload, { root, Hypr, GameMode: { releaseScenes: false } }), true);
 });
 
 test('native Loader destroys closed Performance scenes and retains normal scenes', { skip: !process.env.QMLTESTRUNNER }, () => {
@@ -42,7 +42,7 @@ Item {
     property int created: 0
     property int destroyed: 0
     function reloadWhenReady() {}
-    QtObject { id: mode; property bool enabled: true }
+    QtObject { id: mode; property bool releaseScenes: true }
     QtObject { id: hypr; property var focusedMonitor: ({name: "test"}) }
     onShouldBeActiveChanged: { ${handler} }
     Timer {
@@ -70,8 +70,8 @@ Item {
             tryCompare(root, "created", 1);
             verify(sceneLoader.item !== null);
             root.offsetScale = 0;
-            mode.enabled = false;
-            mode.enabled = true;
+            mode.releaseScenes = false;
+            mode.releaseScenes = true;
             compare(root.destroyed, 0);
             root.shouldBeActive = false;
             root.offsetScale = 0.5;
@@ -84,7 +84,7 @@ Item {
             compare(root.created, 1);
             root.shouldBeActive = true;
             tryCompare(root, "created", 2);
-            mode.enabled = false;
+            mode.releaseScenes = false;
             root.shouldBeActive = false;
             tryCompare(root, "offsetScale", 1);
             wait(30);
@@ -93,9 +93,9 @@ Item {
             root.shouldBeActive = true;
             compare(sceneLoader.item, warm);
             root.shouldBeActive = false;
-            mode.enabled = true;
+            mode.releaseScenes = true;
             tryCompare(root, "destroyed", 2);
-            mode.enabled = false;
+            mode.releaseScenes = false;
             tryCompare(root, "created", 3);
             root.loaderActive = false;
             tryCompare(root, "destroyed", 3);

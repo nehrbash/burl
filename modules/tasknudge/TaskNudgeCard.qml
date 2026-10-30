@@ -12,6 +12,7 @@ import Burl.Config
 
 FocusScope {
     id: root
+    focus: true
 
     signal clockInRequested(var task)
     signal dismissed
@@ -45,9 +46,19 @@ FocusScope {
     }
 
     onMatchingTasksChanged: taskList.currentIndex = matchingTasks.length ? 0 : -1
-    Component.onCompleted: search.forceActiveFocus()
+    Component.onCompleted: {
+        if (Tasks.onBreak)
+            root.forceActiveFocus();
+        else
+            search.forceActiveFocus();
+    }
 
-    Keys.onEscapePressed: if (!Tasks.onBreak) root.dismissed()
+    Keys.onEscapePressed: {
+        if (Tasks.onBreak)
+            Tasks.endBreak();
+        else
+            root.dismissed();
+    }
     Keys.onUpPressed: root.moveSelection(-1)
     Keys.onDownPressed: root.moveSelection(1)
     Keys.onReturnPressed: root.chooseSelected()

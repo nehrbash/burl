@@ -15,7 +15,7 @@ Item {
     property real viewPanX: 0
     property real viewPanY: 0
     // Room changes hide the scenery without restarting its ambient clocks.
-    readonly property bool moving: active && visible && (cameraMotion ? cameraMotion.revealP > 0.001 : opacity > 0.001) && Ambience.sway && !GameMode.enabled
+    readonly property bool moving: active && visible && (cameraMotion ? cameraMotion.revealP > 0.001 : opacity > 0.001) && Ambience.sway && !GameMode.pauseAnimations
     readonly property bool dream: scene === "dream"
     readonly property bool tree: scene === "tree"
     readonly property bool sky: scene === "sky"

@@ -523,7 +523,7 @@ Item {
     }
     // Bound catch-up work after a stalled frame to avoid a sustained backlog.
     readonly property int _maxCatchUpSteps: 4
-    readonly property bool ambientDrift: Ambience.sway && !GameMode.enabled
+    readonly property bool ambientDrift: Ambience.sway && !GameMode.pauseAnimations
 
     property real driftSeconds: 0
     readonly property real driftStrength: ambientDrift ? 1 : 0

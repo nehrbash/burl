@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Burl.Config
 import qs.services
 import "CompositorEffectPolicy.js" as Policy
 
@@ -16,6 +17,7 @@ Singleton {
 
     function execute(change: var): void {
         state = change.state;
+        props.appliedJson = JSON.stringify(state.applied);
         props.focus = state.focus;
         props.performance = state.performance;
         props.appliedCommon = Object.keys(state.applied).length > 0;
@@ -41,6 +43,7 @@ Singleton {
         id: props
         reloadableId: "compositorEffects"
         // JS objects cannot cross Quickshell reload engines.
+        property string appliedJson: ""
         property bool focus: false
         property bool performance: false
         property bool appliedCommon: false
@@ -49,12 +52,13 @@ Singleton {
         onLoaded: {
             root.state = {
                 focus: focus, performance: performance,
-                applied: Policy.options({ focus: appliedCommon, performance: appliedPerformance }),
+                applied: appliedJson ? JSON.parse(appliedJson) : Policy.options({ focus: appliedCommon, performance: appliedPerformance }),
+                preferences: GlobalConfig.performance,
                 pending: false, reloadObserved: false
             };
             root.ready = true;
             Hypr.extras.batchMessage(Policy.commands(Policy.options(root.state)));
-            root.execute(Policy.request(root.state, "focus", focus));
+            root.execute(Policy.configure(root.state, GlobalConfig.performance));
             for (const mode of Object.keys(root.queued))
                 root.setMode(mode, root.queued[mode]);
             root.queued = {};
@@ -83,6 +87,14 @@ Singleton {
             else
                 root.execute(Policy.finished(root.state, false));
             console.warn("Compositor effects: config reload timed out");
+        }
+    }
+
+    Connections {
+        target: GlobalConfig
+        function onPerformanceChanged(): void {
+            if (root.ready)
+                root.execute(Policy.configure(root.state, GlobalConfig.performance));
         }
     }
 

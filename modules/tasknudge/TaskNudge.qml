@@ -14,9 +14,16 @@ Scope {
 
     property bool deferred: true
     property bool manuallyOpen
+    property bool breakDismissed: false
 
     readonly property bool needsClockIn: !Tasks.clockedIn && !Tasks.onBreak && Tasks.clockInReminders
-    readonly property bool shouldShow: GlobalConfig.tasknudge.enabled && (Tasks.onBreak || manuallyOpen || (needsClockIn && !deferred))
+    readonly property bool shouldShow: GlobalConfig.tasknudge.enabled && ((Tasks.onBreak && !breakDismissed) || manuallyOpen || (needsClockIn && !deferred))
+
+    function dismiss(): void {
+        root.breakDismissed = Tasks.onBreak;
+        root.manuallyOpen = false;
+        root.deferred = true;
+    }
 
     function stopClockInReminders(): void {
         if (Tasks.clockInReminders)
@@ -50,7 +57,13 @@ Scope {
             root.deferred = false;
         }
 
+        function onBreakDismissed(): void {
+            root.dismiss();
+        }
+
         function onSnapshotUpdated(): void {
+            if (!Tasks.onBreak)
+                root.breakDismissed = false;
             if (Tasks.clockedIn || Tasks.onBreak)
                 root.deferred = false;
             if (Tasks.onBreak && !root._fetchedForBreak) {
@@ -78,7 +91,7 @@ Scope {
         }
 
         function close(): void {
-            root.manuallyOpen = false;
+            root.dismiss();
         }
 
         target: "taskNudge"
@@ -98,7 +111,7 @@ Scope {
                 screen: modelData
                 name: "task-nudge"
                 WlrLayershell.layer: WlrLayer.Overlay
-                WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+                WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
                 WlrLayershell.exclusionMode: ExclusionMode.Ignore
 
                 anchors.top: true
@@ -109,10 +122,7 @@ Scope {
                 TaskNudgeCard {
                     anchors.fill: parent
                     onClockInRequested: task => Tasks.clockInTask(task)
-                    onDismissed: {
-                        root.manuallyOpen = false;
-                        root.deferred = true;
-                    }
+                    onDismissed: root.dismiss()
                     onStopRemindersRequested: root.stopClockInReminders()
                 }
             }

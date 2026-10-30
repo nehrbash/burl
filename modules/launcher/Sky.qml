@@ -129,7 +129,7 @@ Item {
         width: 2
         height: 2
         opacity: 0
-        visible: root.onScreen && Ambience.sway && !GameMode.enabled
+        visible: root.onScreen && Ambience.sway && !GameMode.pauseAnimations
 
         Rectangle {
             // The tail behind the head, rotated to the travel angle. Must derive

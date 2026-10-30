@@ -25,7 +25,7 @@ Item {
     // Both rooms share one camera so an interrupted pan reverses coherently.
     property real panP: 0
     property real cameraTarget: 0
-    readonly property bool cameraAnimated: Ambience.grow && !GameMode.enabled
+    readonly property bool cameraAnimated: Ambience.grow && !GameMode.pauseAnimations
     readonly property bool cameraMoving: panAnimation.running
 
     property int panMs: 480
@@ -200,7 +200,7 @@ Item {
     property real revealP: 0
 
     Behavior on revealP {
-        enabled: Ambience.grow && !GameMode.enabled
+        enabled: Ambience.grow && !GameMode.pauseAnimations
         NumberAnimation {
             duration: root.surfaceOpen ? 300 : 260
             easing.type: root.surfaceOpen ? Easing.OutCubic : Easing.InCubic

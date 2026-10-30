@@ -69,6 +69,7 @@ Singleton {
     property string requestedTab: "tasks"
     signal viewRequested(string tab)
     signal pickerRequested
+    signal breakDismissed
     signal clockInSucceeded
     readonly property bool clockInPending: clockInProc.running
     property string clockInError: ""
@@ -187,10 +188,12 @@ Singleton {
     }
 
     function endBreak(): void {
+        breakDismissed();
         runSideEffect("(sn-tasks/end-break)");
     }
 
     function stopPomodoro(): void {
+        breakDismissed();
         runSideEffect("(sn-tasks/stop-pomodoro)");
     }
 

@@ -91,7 +91,7 @@ Item {
     property real hoverProximity: 0
 
     Behavior on hoverProximity {
-        enabled: Ambience.grow && !GameMode.enabled
+        enabled: Ambience.grow && !GameMode.pauseAnimations
 
         Anim {
             type: Anim.DefaultEffects
@@ -422,7 +422,7 @@ Item {
     }
 
     Behavior on openP {
-        enabled: Ambience.grow && !GameMode.enabled
+        enabled: Ambience.grow && !GameMode.pauseAnimations
         NumberAnimation { duration: 650; easing.type: Easing.OutCubic }
     }
 
@@ -627,7 +627,7 @@ Item {
     }
 
     Repeater {
-        model: root.onScreen && Ambience.leaves && !GameMode.enabled ? 16 : 0
+        model: root.onScreen && Ambience.leaves && !GameMode.pauseAnimations ? 16 : 0
 
         delegate: Item {
             id: mote
@@ -672,7 +672,7 @@ Item {
             }
 
             SequentialAnimation on opacity {
-                running: mote.visible && Ambience.sway && !GameMode.enabled
+                running: mote.visible && Ambience.sway && !GameMode.pauseAnimations
                 loops: Animation.Infinite
 
                 PauseAnimation {
@@ -889,7 +889,7 @@ Item {
         property real intensity: 0.3
 
         Behavior on intensity {
-            enabled: Ambience.grow && !GameMode.enabled
+            enabled: Ambience.grow && !GameMode.pauseAnimations
 
             Anim {
                 type: Anim.DefaultEffects
@@ -1274,7 +1274,7 @@ Item {
         visible: root.onScreen && orb.section != null && orb.revealP > 0.01
 
         Behavior on hoverBump {
-            enabled: Ambience.grow && !GameMode.enabled
+            enabled: Ambience.grow && !GameMode.pauseAnimations
 
             Anim {
                 type: Anim.DefaultEffects
@@ -1459,7 +1459,7 @@ Item {
         visible: root.onScreen && node.action != null && node.revealP > 0.01
 
         Behavior on hoverBump {
-            enabled: Ambience.grow && !GameMode.enabled
+            enabled: Ambience.grow && !GameMode.pauseAnimations
 
             Anim {
                 type: Anim.DefaultEffects
@@ -1560,7 +1560,7 @@ Item {
         onIsEmphasisNowChanged: syncFlight()
 
         Behavior on flightP {
-            enabled: Ambience.grow && !GameMode.enabled
+            enabled: Ambience.grow && !GameMode.pauseAnimations
             NumberAnimation { duration: 1000; easing.type: Easing.Linear }
         }
 

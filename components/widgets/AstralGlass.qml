@@ -9,7 +9,7 @@ Item {
     id: root
     property bool active: true
     property real phase: 0
-    readonly property bool moving: active && visible && opacity > 0.001 && Ambience.sway && !GameMode.enabled
+    readonly property bool moving: active && visible && opacity > 0.001 && Ambience.sway && !GameMode.pauseAnimations
     readonly property var positions: [[0.06, 0.2], [0.17, 0.73], [0.87, 0.18], [0.94, 0.6], [0.3, 0.1], [0.76, 0.85], [0.08, 0.88], [0.74, 0.32]]
     enabled: false
 

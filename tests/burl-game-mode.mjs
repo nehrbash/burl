@@ -31,9 +31,11 @@ function harness(profile = PowerProfile.Balanced, manageLlama = true) {
     const context = {
         root, props, stopLlama, PowerProfiles, PowerProfile,
         Quickshell: { env: key => key === "BURL_MANAGE_LLAMA" && manageLlama ? "1" : "", execDetached: args => commands.push(Array.from(args)) },
-        GlobalConfig: { utilities: { toasts: { gameModeChanged: false } } },
+        GlobalConfig: { performance: {}, utilities: { toasts: { gameModeChanged: false } } },
     };
     Object.defineProperties(context, {
+        llamaAvailable: { get: () => manageLlama },
+        manageLlama: { get: () => PowerProfiles.profile === PowerProfile.Performance && context.GlobalConfig.performance.stopLlama !== false },
         ready: { get: () => root.ready },
         enabled: { get: () => PowerProfiles.profile === PowerProfile.Performance },
         available: { get: () => PowerProfiles.hasPerformanceProfile },
@@ -44,7 +46,7 @@ function harness(profile = PowerProfile.Balanced, manageLlama = true) {
         const args = match[1].replace(/:\s*\w+/g, "");
         root[name] = context[name] = runInNewContext(`(function(${args}) {${match[2]}\n})`, context);
     }
-    return { root, props, stopLlama, PowerProfiles, commands, options, reloads };
+    return { root, props, stopLlama, PowerProfiles, commands, options, reloads, preferences: context.GlobalConfig.performance };
 }
 
 test("quick toggle and profile selector share the system profile", () => {
@@ -156,4 +158,21 @@ test("performance mode leaves personal services alone without opt-in", () => {
     h.root.setEnabled(false);
     h.root.syncEffects();
     assert.equal(h.commands.length, 0);
+});
+
+
+test("changing the local AI preference restores only an owned stop", () => {
+    const h = harness(PowerProfile.Performance);
+    h.preferences.stopLlama = false;
+    h.root.syncEffects();
+    assert.equal(h.stopLlama.running, false);
+    h.preferences.stopLlama = true;
+    h.root.syncEffects();
+    assert.equal(h.stopLlama.running, true);
+    h.preferences.stopLlama = false;
+    h.root.syncEffects();
+    h.root.llamaStopped("#t");
+    assert.deepEqual(h.commands, [["herd", "start", "llama-server"]]);
+    h.root.syncEffects();
+    assert.equal(h.commands.length, 1);
 });

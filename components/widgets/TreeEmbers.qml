@@ -17,7 +17,7 @@ Item {
     property int duration: 2300
     property color ink: Woodland.mix(Woodland.parchment, Colours.palette.m3primary, 0.35)
     property real travel: 1.3
-    readonly property bool motionAllowed: visible && animated && Ambience.grow && !GameMode.enabled
+    readonly property bool motionAllowed: visible && animated && Ambience.grow && !GameMode.pauseAnimations
     readonly property bool running: procession.running
     signal arrived()
 

@@ -17,6 +17,12 @@ Singleton {
     readonly property bool enabled: PowerProfiles.profile === PowerProfile.Performance
     readonly property bool available: PowerProfiles.hasPerformanceProfile
     property bool ready: false
+    readonly property bool pauseAnimations: enabled && GlobalConfig.performance.pauseAnimations !== false
+    readonly property bool releaseScenes: enabled && GlobalConfig.performance.releaseScenes !== false
+    readonly property bool disableBlur: enabled && GlobalConfig.performance.blur !== false
+    readonly property bool llamaAvailable: Quickshell.env("BURL_MANAGE_LLAMA") === "1"
+    readonly property bool manageLlama: enabled && GlobalConfig.performance.stopLlama !== false
+    readonly property var plugins: HyprlandPlugins
 
     function setProfile(profile: int): void {
         if (profile !== PowerProfile.Performance || available)
@@ -32,7 +38,7 @@ Singleton {
     }
 
     function restoreLlama(): void {
-        if (Quickshell.env("BURL_MANAGE_LLAMA") === "1" && !enabled && props.llamaStopped) {
+        if (llamaAvailable && !manageLlama && props.llamaStopped) {
             props.llamaStopped = false;
             Quickshell.execDetached(["herd", "start", "llama-server"]);
         }
@@ -42,18 +48,18 @@ Singleton {
         if (!ready)
             return;
         root.compositorEffects.setMode("performance", enabled);
-        if (enabled === props.effectsApplied)
-            return;
-        props.effectsApplied = enabled;
-        if (enabled) {
-            if (Quickshell.env("BURL_MANAGE_LLAMA") === "1" && !props.llamaStopped && !stopLlama.running)
+        if (manageLlama) {
+            if (llamaAvailable && !props.llamaStopped && !stopLlama.running)
                 stopLlama.running = true;
         } else {
             restoreLlama();
         }
+        if (enabled === props.effectsApplied)
+            return;
+        props.effectsApplied = enabled;
         if (GlobalConfig.utilities.toasts.gameModeChanged)
             Toaster.toast(enabled ? qsTr("Performance mode enabled") : qsTr("Performance mode disabled"),
-                enabled ? qsTr("Desktop effects paused") : qsTr("Desktop settings restored"), "rocket_launch");
+                enabled ? qsTr("Your performance preferences are active") : qsTr("Desktop settings restored"), "rocket_launch");
     }
 
     function llamaStopped(text: string): void {
@@ -62,6 +68,7 @@ Singleton {
     }
 
     onEnabledChanged: syncEffects()
+    onManageLlamaChanged: syncEffects()
 
     PersistentProperties {
         id: props

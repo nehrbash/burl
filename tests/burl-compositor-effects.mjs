@@ -118,3 +118,30 @@ test("Lua commands follow the native adapter's nested config syntax", () => {
         "eval hl.config({ general = { gaps_in = 0 } })"
     ]);
 });
+
+test("performance preferences remove only their effects and retain focus", () => {
+    let state = policy.request(policy.initialState(), "performance", true).state;
+    let change = policy.configure(state, { blur: false, animations: false, tearing: false });
+    assert.equal(change.reload, true);
+    state = policy.finished(change.state, true).state;
+    assert.equal("decoration:blur:enabled" in state.applied, false);
+    assert.equal("animations:enabled" in state.applied, false);
+    assert.equal("general:allow_tearing" in state.applied, false);
+    assert.equal(state.applied["decoration:shadow:enabled"], 0);
+    state = policy.request(state, "focus", true).state;
+    assert.equal(state.applied["animations:enabled"], 0);
+    assert.equal("decoration:blur:enabled" in state.applied, false);
+    change = policy.configure(state, {});
+    assert.equal(change.reload, false);
+    assert.equal(change.state.applied["decoration:blur:enabled"], 0);
+});
+
+test("preferences changed during restoration use the latest choice", () => {
+    let state = policy.request(policy.initialState(), "performance", true).state;
+    state = policy.configure(state, { blur: false }).state;
+    state = policy.configure(state, { blur: false, shadows: false }).state;
+    state = policy.reloaded(state).state;
+    state = policy.finished(state, true).state;
+    assert.equal("decoration:blur:enabled" in state.applied, false);
+    assert.equal("decoration:shadow:enabled" in state.applied, false);
+});

@@ -26,7 +26,7 @@ Item {
     readonly property real energy: (selected ? selectedEnergy : hovered ? 0.85 : prominent ? 0.65 : 0.20) + pulse*0.5
 
     function ignite(): void {
-        if (animate && Ambience.grow && !GameMode.enabled)
+        if (animate && Ambience.grow && !GameMode.pauseAnimations)
             flare.restart();
     }
 
@@ -39,7 +39,7 @@ Item {
 
     SequentialAnimation on breath {
         running: true
-        paused: !(root.visible && root.animate && Ambience.sway && !GameMode.enabled)
+        paused: !(root.visible && root.animate && Ambience.sway && !GameMode.pauseAnimations)
         loops: Animation.Infinite
 
         PauseAnimation { duration: root.phase*130 }
@@ -88,7 +88,7 @@ Item {
 
         RotationAnimation on rotation {
             running: true
-            paused: !(root.visible && root.animate && Ambience.sway && !GameMode.enabled)
+            paused: !(root.visible && root.animate && Ambience.sway && !GameMode.pauseAnimations)
             from: root.phase*37
             to: root.phase*37+360
             duration: 22000+root.phase*1700

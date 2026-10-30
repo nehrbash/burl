@@ -73,7 +73,7 @@ Item {
         id: preloadTimer
         interval: 4000
         // Multiple monitor graphs must not compete with the first opening.
-        running: !GameMode.enabled && !root.loaderActive && root.screen.name === Hypr.focusedMonitor?.name
+        running: !GameMode.releaseScenes && !root.loaderActive && root.screen.name === Hypr.focusedMonitor?.name
         repeat: false
         onTriggered: root.loaderActive = true
     }
@@ -88,7 +88,7 @@ Item {
         id: sceneLoader
         anchors.fill: parent
         // Finish the close animation before releasing the scene.
-        active: root.loaderActive && (!GameMode.enabled || root.shouldBeActive || root.offsetScale < 1)
+        active: root.loaderActive && (!GameMode.releaseScenes || root.shouldBeActive || root.offsetScale < 1)
         // Parsing the scene must not block the opening animation.
         asynchronous: true
         onStatusChanged: {

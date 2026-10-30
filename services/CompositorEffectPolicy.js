@@ -8,19 +8,35 @@ var common = {
     "decoration:active_opacity": 1,
     "decoration:inactive_opacity": 1
 };
-var performance = {
-    "decoration:shadow:enabled": 0,
-    "decoration:blur:enabled": 0,
-    "general:border_size": 1,
-    "general:allow_tearing": 1
-};
+
 
 function initialState() {
     return { focus: false, performance: false, applied: {}, pending: false, reloadObserved: false };
 }
 
+var groups = {
+    animations: { "animations:enabled": 0 },
+    gaps: { "general:gaps_in": 0, "general:gaps_out": 0 },
+    rounding: { "decoration:rounding": 0 },
+    opacity: { "decoration:active_opacity": 1, "decoration:inactive_opacity": 1 },
+    shadows: { "decoration:shadow:enabled": 0 },
+    blur: { "decoration:blur:enabled": 0 },
+    borders: { "general:border_size": 1 },
+    tearing: { "general:allow_tearing": 1 }
+};
+
 function options(state) {
-    return Object.assign({}, state.focus || state.performance ? common : {}, state.performance ? performance : {});
+    var desired = Object.assign({}, state.focus ? common : {});
+    if (state.performance) {
+        for (var key of Object.keys(groups))
+            if (state.preferences?.[key] !== false)
+                Object.assign(desired, groups[key]);
+    }
+    return desired;
+}
+
+function configure(previous, preferences) {
+    return request(Object.assign({}, previous, { preferences: preferences }), "performance", previous.performance);
 }
 
 function equal(left, right) {

@@ -16,7 +16,7 @@ Item {
     readonly property bool ready: atlas.status === Image.Ready
     readonly property bool moving: root.active && root.visible
         && (root.cameraMotion ? root.cameraMotion.revealP > 0.001 : root.opacity > 0.001)
-        && root.ready && Ambience.sway && !GameMode.enabled
+        && root.ready && Ambience.sway && !GameMode.pauseAnimations
 
     Image {
         id: atlas

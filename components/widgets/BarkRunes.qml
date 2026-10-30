@@ -12,7 +12,7 @@ Item {
     property real runeSize: 20
     property int chosen: -1
     property real light: 0
-    readonly property bool awake: visible && animated && sites.length > 0 && Ambience.sway && !GameMode.enabled
+    readonly property bool awake: visible && animated && sites.length > 0 && Ambience.sway && !GameMode.pauseAnimations
 
     onAwakeChanged: {
         if (!awake) {

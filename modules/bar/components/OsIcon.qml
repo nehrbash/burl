@@ -16,7 +16,7 @@ Item {
     function acknowledge(): void {
         response = 1;
         reply.restart();
-        if (Ambience.sway && !GameMode.enabled) nod.restart();
+        if (Ambience.sway && !GameMode.pauseAnimations) nod.restart();
     }
 
     MouseArea {

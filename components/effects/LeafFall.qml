@@ -9,7 +9,7 @@ import qs.components
 // sideways on a gust and settle out near the bottom edge instead of being cut
 // off mid-air.
 //
-//   LeafFall { anchors.fill: parent; active: root.visible && !GameMode.enabled }
+//   LeafFall { anchors.fill: parent; active: root.visible && !GameMode.pauseAnimations }
 //
 // WHY A Repeater AND NOT ParticleSystem
 // The leaf art is 256x256 and is drawn at 26-42px. ImageParticle exposes
@@ -39,11 +39,11 @@ import qs.components
 //   * zero cost when hidden: `running` false collapses the model to 0, which
 //     destroys every delegate and with it every animation. No timers survive,
 //     nothing ticks, nothing is drawn. Honours Ambience.leaves; callers add
-//     `&& !GameMode.enabled`.
+//     `&& !GameMode.pauseAnimations`.
 Item {
     id: root
 
-    // Bind to the surface's real visibility AND (at the call site) !GameMode.enabled.
+    // Bind to the surface's real visibility AND (at the call site) !GameMode.pauseAnimations.
     property bool active: false
     // Leaves entering per second. Sets how thinly the leaves are spread in time
     // (the random pre-roll each leaf waits before falling again), so a low rate

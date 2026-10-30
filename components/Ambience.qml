@@ -7,7 +7,7 @@ import Quickshell.Io
 // Master switch for every ambient (always-running, non-reactive) animation in
 // the shell. Deliberately imports NO qs.services — it must be safe to use from
 // components/ without an import cycle, exactly like Woodland.qml. Callers that
-// also want to stop during games AND in `!GameMode.enabled` at the call site.
+// also want to stop during games AND in `!GameMode.pauseAnimations` at the call site.
 //
 //   BURL_NO_AMBIENT=1   env kill switch (applies at shell start)
 //   qs -c qs ipc call ambience off | on | toggle | status

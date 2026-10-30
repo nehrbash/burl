@@ -82,7 +82,7 @@ Item {
         growthAnimation.stop();
         root.hoveredIndex = -1;
         root.growth = 0;
-        if (root.awake && Ambience.grow && !GameMode.enabled)
+        if (root.awake && Ambience.grow && !GameMode.pauseAnimations)
             growthAnimation.start();
         else
             root.growth = 1;
@@ -214,7 +214,7 @@ Item {
             property real hoverBump: mouse.containsMouse ? 1.08 : 1
             scale: (0.35 + 0.65 * bloom) * hoverBump
             Behavior on hoverBump {
-                enabled: Ambience.grow && !GameMode.enabled
+                enabled: Ambience.grow && !GameMode.pauseAnimations
                 NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
             }
             visible: bloom > 0.001

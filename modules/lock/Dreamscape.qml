@@ -30,7 +30,7 @@ Item {
     NumberAnimation on arrival {
         from: 0
         to: 1
-        duration: Ambience.grow && !GameMode.enabled ? 2200 : 0
+        duration: Ambience.grow && !GameMode.pauseAnimations ? 2200 : 0
         easing.type: Easing.OutCubic
         running: true
     }
