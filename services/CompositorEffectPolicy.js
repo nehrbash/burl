@@ -18,11 +18,17 @@ var groups = {
     animations: { "animations:enabled": 0 },
     gaps: { "general:gaps_in": 0, "general:gaps_out": 0 },
     rounding: { "decoration:rounding": 0 },
-    opacity: { "decoration:active_opacity": 1, "decoration:inactive_opacity": 1 },
+    opacity: { "decoration:active_opacity": 1, "decoration:inactive_opacity": 1, "rule:performance-opaque": 1 },
     shadows: { "decoration:shadow:enabled": 0 },
     blur: { "decoration:blur:enabled": 0 },
     borders: { "general:border_size": 1 },
     tearing: { "general:allow_tearing": 1 }
+};
+
+// Window-rule opacity multiplies over decoration opacity, so only an
+// override rule makes rule-dimmed windows opaque. A reload drops it.
+var rules = {
+    "performance-opaque": 'match = { class = ".*" }, opacity = "1.0 override 1.0 override"'
 };
 
 function options(state) {
@@ -84,6 +90,10 @@ function finished(previous, success) {
 
 function commands(options) {
     return Object.keys(options).map(key => {
+        if (key.startsWith("rule:")) {
+            var name = key.slice(5);
+            return "eval hl.window_rule({ name = \"" + name + "\", " + rules[name] + " })";
+        }
         var parts = key.split(":");
         return "eval hl.config({ " + parts.join(" = { ") + " = " + options[key]
             + " }".repeat(parts.length - 1) + " })";

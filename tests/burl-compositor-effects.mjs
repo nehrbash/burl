@@ -39,10 +39,10 @@ test("both mode orders produce the same union and focus exit preserves performan
         order.forEach(mode => h.request(mode, true));
         assert.equal(h.actual["decoration:blur:enabled"], 0);
         assert.equal(h.actual["general:gaps_in"], 0);
-        assert.equal(Object.keys(h.state.applied).length, 10);
+        assert.equal(Object.keys(h.state.applied).length, 11);
         h.request("focus", false);
         assert.equal(h.reloads, 0);
-        assert.equal(Object.keys(h.state.applied).length, 10);
+        assert.equal(Object.keys(h.state.applied).length, 11);
         h.request("performance", false);
         assert.equal(h.reloads, 1);
         h.event(); h.finish(true);
@@ -116,6 +116,12 @@ test("Lua commands follow the native adapter's nested config syntax", () => {
     assert.deepEqual(plain(policy.commands({ "decoration:blur:enabled": 0, "general:gaps_in": 0 })), [
         "eval hl.config({ decoration = { blur = { enabled = 0 } } })",
         "eval hl.config({ general = { gaps_in = 0 } })"
+    ]);
+});
+
+test("performance opacity overrides window-rule opacity", () => {
+    assert.deepEqual(plain(policy.commands({ "rule:performance-opaque": 1 })), [
+        'eval hl.window_rule({ name = "performance-opaque", match = { class = ".*" }, opacity = "1.0 override 1.0 override" })'
     ]);
 });
 

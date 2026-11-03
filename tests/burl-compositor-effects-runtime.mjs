@@ -64,14 +64,14 @@ ShellRoot {
                     if (!progress.reloaded) {
                         FocusMode.enabled = true;
                         CompositorEffects.setMode("performance", true);
-                        check(Object.keys(CompositorEffects.state.applied).length === 10, "both active");
+                        check(Object.keys(CompositorEffects.state.applied).length === 11, "both active");
                         progress.reloaded = true;
                         Quickshell.reload(false);
                         root.step = -1;
                     } else {
                         check(FocusMode.enabled && state.focus && state.performance, "scalar mode restore");
-                        check(Object.keys(state.applied).length === 10, "applied restore");
-                        check(Hypr.batches.some(batch => batch.length === 10), "startup reapplies union");
+                        check(Object.keys(state.applied).length === 11, "applied restore");
+                        check(Hypr.batches.some(batch => batch.length === 11), "startup reapplies union");
                         CompositorEffects.setMode("performance", false);
                         root.step = 1;
                     }
