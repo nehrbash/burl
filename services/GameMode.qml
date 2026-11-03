@@ -18,9 +18,9 @@ Singleton {
     readonly property bool powerSaver: PowerProfiles.profile === PowerProfile.PowerSaver
     readonly property bool available: PowerProfiles.hasPerformanceProfile
     property bool ready: false
-    readonly property bool pauseAnimations: enabled && GlobalConfig.performance.pauseAnimations !== false
-    readonly property bool releaseScenes: enabled && GlobalConfig.performance.releaseScenes !== false
-    readonly property bool disableBlur: enabled && GlobalConfig.performance.blur !== false
+    readonly property bool pauseAnimations: powerSaver || enabled && GlobalConfig.performance.pauseAnimations !== false
+    readonly property bool releaseScenes: powerSaver || enabled && GlobalConfig.performance.releaseScenes !== false
+    readonly property bool disableBlur: powerSaver || enabled && GlobalConfig.performance.blur !== false
     readonly property bool llamaAvailable: Quickshell.env("BURL_MANAGE_LLAMA") === "1"
     readonly property bool manageLlama: enabled && GlobalConfig.performance.stopLlama !== false
     readonly property var plugins: HyprlandPlugins

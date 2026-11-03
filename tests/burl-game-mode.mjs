@@ -86,11 +86,11 @@ test("starting in Balanced does not alter visual settings or start local AI", ()
     assert.equal(h.stopLlama.running, false);
 });
 
-test("power saver disables compositor blur and animations without stopping local AI", () => {
+test("power saver disables compositor blur, shadows and animations without stopping local AI", () => {
     const h = harness();
     h.PowerProfiles.profile = PowerProfile.PowerSaver;
     h.root.syncEffects();
-    assert.deepEqual(JSON.parse(JSON.stringify(h.options)), [{ "animations:enabled": 0, "decoration:blur:enabled": 0 }]);
+    assert.deepEqual(JSON.parse(JSON.stringify(h.options)), [{ "animations:enabled": 0, "decoration:blur:enabled": 0, "decoration:shadow:enabled": 0 }]);
     assert.equal(h.stopLlama.running, false);
     h.PowerProfiles.profile = PowerProfile.Balanced;
     h.root.syncEffects();
