@@ -39,6 +39,7 @@ function harness(profile = PowerProfile.Balanced, manageLlama = true) {
         ready: { get: () => root.ready },
         enabled: { get: () => PowerProfiles.profile === PowerProfile.Performance },
         available: { get: () => PowerProfiles.hasPerformanceProfile },
+        powerSaver: { get: () => PowerProfiles.profile === PowerProfile.PowerSaver },
     });
     for (const name of ["setProfile", "setEnabled", "toggle", "restoreLlama", "syncEffects", "llamaStopped"]) {
         const match = source.match(new RegExp(`^    function ${name}\\(([^)]*)\\): \\w+ \\{([\\s\\S]*?)\\n    \\}`, "m"));
@@ -83,6 +84,17 @@ test("starting in Balanced does not alter visual settings or start local AI", ()
     assert.equal(h.reloads.length, 0);
     assert.equal(h.commands.length, 0);
     assert.equal(h.stopLlama.running, false);
+});
+
+test("power saver disables compositor blur and animations without stopping local AI", () => {
+    const h = harness();
+    h.PowerProfiles.profile = PowerProfile.PowerSaver;
+    h.root.syncEffects();
+    assert.deepEqual(JSON.parse(JSON.stringify(h.options)), [{ "animations:enabled": 0, "decoration:blur:enabled": 0 }]);
+    assert.equal(h.stopLlama.running, false);
+    h.PowerProfiles.profile = PowerProfile.Balanced;
+    h.root.syncEffects();
+    assert.deepEqual(h.reloads, ["reload"]);
 });
 
 test("unavailable Performance cannot be selected", () => {

@@ -15,6 +15,7 @@ Singleton {
     readonly property var compositorEffects: CompositorEffects
 
     readonly property bool enabled: PowerProfiles.profile === PowerProfile.Performance
+    readonly property bool powerSaver: PowerProfiles.profile === PowerProfile.PowerSaver
     readonly property bool available: PowerProfiles.hasPerformanceProfile
     property bool ready: false
     readonly property bool pauseAnimations: enabled && GlobalConfig.performance.pauseAnimations !== false
@@ -48,6 +49,7 @@ Singleton {
         if (!ready)
             return;
         root.compositorEffects.setMode("performance", enabled);
+        root.compositorEffects.setMode("powersaver", powerSaver);
         if (manageLlama) {
             if (llamaAvailable && !props.llamaStopped && !stopLlama.running)
                 stopLlama.running = true;
@@ -68,6 +70,7 @@ Singleton {
     }
 
     onEnabledChanged: syncEffects()
+    onPowerSaverChanged: syncEffects()
     onManageLlamaChanged: syncEffects()
 
     PersistentProperties {

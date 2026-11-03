@@ -11,7 +11,7 @@ var common = {
 
 
 function initialState() {
-    return { focus: false, performance: false, applied: {}, pending: false, reloadObserved: false };
+    return { focus: false, performance: false, powersaver: false, applied: {}, pending: false, reloadObserved: false };
 }
 
 var groups = {
@@ -31,8 +31,12 @@ var rules = {
     "performance-opaque": 'match = { class = ".*" }, opacity = "1.0 override 1.0 override"'
 };
 
+var powersaver = Object.assign({}, groups.animations, groups.blur);
+
 function options(state) {
     var desired = Object.assign({}, state.focus ? common : {});
+    if (state.powersaver)
+        Object.assign(desired, powersaver);
     if (state.performance) {
         for (var key of Object.keys(groups))
             if (state.preferences?.[key] !== false)
@@ -54,7 +58,7 @@ function result(state, apply, reload) {
 }
 
 function request(previous, mode, enabled) {
-    if (mode !== "focus" && mode !== "performance")
+    if (mode !== "focus" && mode !== "performance" && mode !== "powersaver")
         throw new Error("Unknown compositor effect mode: " + mode);
     var state = Object.assign({}, previous);
     state[mode] = enabled;

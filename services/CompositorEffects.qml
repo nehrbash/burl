@@ -20,6 +20,7 @@ Singleton {
         props.appliedJson = JSON.stringify(state.applied);
         props.focus = state.focus;
         props.performance = state.performance;
+        props.powersaver = state.powersaver;
         props.appliedCommon = Object.keys(state.applied).length > 0;
         props.appliedPerformance = "general:allow_tearing" in state.applied;
         if (change.options !== null)
@@ -46,12 +47,13 @@ Singleton {
         property string appliedJson: ""
         property bool focus: false
         property bool performance: false
+        property bool powersaver: false
         property bool appliedCommon: false
         property bool appliedPerformance: false
 
         onLoaded: {
             root.state = {
-                focus: focus, performance: performance,
+                focus: focus, performance: performance, powersaver: powersaver,
                 applied: appliedJson ? JSON.parse(appliedJson) : Policy.options({ focus: appliedCommon, performance: appliedPerformance }),
                 preferences: GlobalConfig.performance,
                 pending: false, reloadObserved: false

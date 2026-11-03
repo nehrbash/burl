@@ -119,6 +119,16 @@ test("Lua commands follow the native adapter's nested config syntax", () => {
     ]);
 });
 
+test("power saver disables only blur and animations", () => {
+    const h = harness();
+    h.request("powersaver", true);
+    assert.deepEqual(plain(h.state.applied), { "animations:enabled": 0, "decoration:blur:enabled": 0 });
+    h.request("performance", true); h.request("powersaver", false);
+    assert.equal(h.reloads, 0);
+    h.request("performance", false);
+    assert.equal(h.reloads, 1);
+});
+
 test("performance opacity overrides window-rule opacity", () => {
     assert.deepEqual(plain(policy.commands({ "rule:performance-opaque": 1 })), [
         'eval hl.window_rule({ name = "performance-opaque", match = { class = ".*" }, opacity = "1.0 override 1.0 override" })'
