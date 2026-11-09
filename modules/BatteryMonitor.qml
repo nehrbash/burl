@@ -9,6 +9,17 @@ Scope {
     id: root
 
     readonly property list<var> warnLevels: [...GlobalConfig.general.battery.warnLevels].sort((a, b) => b.level - a.level)
+    readonly property int hibernateGraceSeconds: 60
+
+    // Critical warnings stay on screen until the charger is connected; a
+    // timed toast is easy to miss while away from the laptop.
+    property list<QtObject> stickyToasts
+
+    function closeStickyToasts(): void {
+        for (const toast of stickyToasts)
+            toast?.close();
+        stickyToasts = [];
+    }
 
     Connections {
         function onOnBatteryChanged(): void {
@@ -16,6 +27,8 @@ Scope {
                 if (GlobalConfig.utilities.toasts.chargingChanged)
                     Toaster.toast(qsTr("Charger unplugged"), qsTr("Battery is discharging"), "power_off");
             } else {
+                hibernateTimer.stop();
+                root.closeStickyToasts();
                 if (GlobalConfig.utilities.toasts.chargingChanged)
                     Toaster.toast(qsTr("Charger plugged in"), qsTr("Battery is charging"), "power");
                 for (const level of root.warnLevels)
@@ -35,12 +48,14 @@ Scope {
             for (const level of root.warnLevels) {
                 if (p <= level.level && !level.warned) {
                     level.warned = true;
-                    Toaster.toast(level.title ?? qsTr("Battery warning"), level.message ?? qsTr("Battery level is low"), level.icon ?? "battery_android_alert", level.critical ? Toast.Error : Toast.Warning);
+                    const toast = Toaster.toast(level.title ?? qsTr("Battery warning"), level.message ?? qsTr("Battery level is low"), level.icon ?? "battery_android_alert", level.critical ? Toast.Error : Toast.Warning, level.critical ? -1 : 0);
+                    if (level.critical)
+                        root.stickyToasts.push(toast);
                 }
             }
 
             if (!hibernateTimer.running && p <= GlobalConfig.general.battery.criticalLevel) {
-                Toaster.toast(qsTr("Hibernating in 5 seconds"), qsTr("Hibernating to prevent data loss"), "battery_android_alert", Toast.Error);
+                root.stickyToasts.push(Toaster.toast(qsTr("Hibernating in %1 seconds").arg(root.hibernateGraceSeconds), qsTr("Plug in a charger to cancel"), "battery_android_alert", Toast.Error, -1));
                 hibernateTimer.start();
             }
         }
@@ -51,7 +66,11 @@ Scope {
     Timer {
         id: hibernateTimer
 
-        interval: 5000
-        onTriggered: SessionManager.hibernate()
+        interval: root.hibernateGraceSeconds * 1000
+        onTriggered: {
+            root.closeStickyToasts();
+            if (UPower.onBattery)
+                SessionManager.hibernate();
+        }
     }
 }

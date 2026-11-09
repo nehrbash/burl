@@ -69,7 +69,7 @@ public:
 
     [[nodiscard]] QQmlListProperty<Toast> toasts();
 
-    Q_INVOKABLE void toast(const QString& title, const QString& message, const QString& icon = QString(),
+    Q_INVOKABLE burl::Toast* toast(const QString& title, const QString& message, const QString& icon = QString(),
         burl::Toast::Type type = Toast::Type::Info, int timeout = 5000);
 
 signals:

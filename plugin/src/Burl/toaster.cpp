@@ -1,5 +1,6 @@
 #include "toaster.hpp"
 
+#include <qjsengine.h>
 #include <qlogging.h>
 #include <qtimer.h>
 
@@ -13,8 +14,6 @@ Toast::Toast(const QString& title, const QString& message, const QString& icon, 
     , m_icon(icon)
     , m_type(type)
     , m_timeout(timeout) {
-    QTimer::singleShot(timeout, this, &Toast::close);
-
     if (m_icon.isEmpty()) {
         switch (m_type) {
         case Type::Success:
@@ -32,7 +31,7 @@ Toast::Toast(const QString& title, const QString& message, const QString& icon, 
         }
     }
 
-    if (timeout <= 0) {
+    if (timeout == 0) {
         switch (m_type) {
         case Type::Warning:
             m_timeout = 7000;
@@ -45,6 +44,10 @@ Toast::Toast(const QString& title, const QString& message, const QString& icon, 
             break;
         }
     }
+
+    // A negative timeout keeps the toast until close() is called.
+    if (m_timeout > 0)
+        QTimer::singleShot(m_timeout, this, &Toast::close);
 }
 
 bool Toast::closed() const {
@@ -100,7 +103,7 @@ QQmlListProperty<Toast> Toaster::toasts() {
     return QQmlListProperty<Toast>(this, &m_toasts);
 }
 
-void Toaster::toast(const QString& title, const QString& message, const QString& icon, Toast::Type type, int timeout) {
+Toast* Toaster::toast(const QString& title, const QString& message, const QString& icon, Toast::Type type, int timeout) {
     auto* toast = new Toast(title, message, icon, type, timeout, this);
     QObject::connect(toast, &Toast::finishedClose, this, [toast, this]() {
         if (m_toasts.removeOne(toast)) {
@@ -110,6 +113,8 @@ void Toaster::toast(const QString& title, const QString& message, const QString&
     });
     m_toasts.push_front(toast);
     emit toastsChanged();
+    QJSEngine::setObjectOwnership(toast, QJSEngine::CppOwnership);
+    return toast;
 }
 
 } // namespace burl
