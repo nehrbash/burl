@@ -14,7 +14,7 @@ Item {
     property bool flag
 
     function shouldShowToast(toast: Toast): bool {
-        if (!Notifs.hasFullscreen())
+        if (!Hypr.anyNormalFullscreen)
             return true;
         if (Config.utilities.toasts.fullscreen === "all")
             return true;
