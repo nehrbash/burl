@@ -82,7 +82,7 @@ endif()
 if("m3shapes" IN_LIST ENABLE_MODULES)
     message(STATUS "Fetching M3Shapes module")
     include(FetchContent)
-    set(M3SHAPES_REV bdc327b29f95394a732baf3c9b19658ba23755b6)
+    set(M3SHAPES_REV 8a6fe8961749887d677700b6508e0c9249968b7e)
     FetchContent_Declare(
         m3shapes_external
         GIT_REPOSITORY https://github.com/soramanew/m3shapes.git
@@ -92,8 +92,4 @@ if("m3shapes" IN_LIST ENABLE_MODULES)
     FetchContent_MakeAvailable(m3shapes_external)
     message(STATUS "Done fetching M3Shapes module")
 
-    # Fix m3shapes wrong rpath
-    if(TARGET m3shapesplugin)
-        set_target_properties(m3shapesplugin PROPERTIES INSTALL_RPATH "$ORIGIN")
-    endif()
 endif()
