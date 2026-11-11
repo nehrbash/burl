@@ -68,20 +68,7 @@ QtObject {
                     if (status !== Image.Ready || width != TokenConfig.sizes.notifs.image || height != TokenConfig.sizes.notifs.image)
                         return;
 
-                    const cacheKey = notif.appName + notif.summary + notif.notificationId + notif.image;
-                    let h1 = 0xdeadbeef, h2 = 0x41c6ce57, ch;
-                    for (let i = 0; i < cacheKey.length; i++) {
-                        ch = cacheKey.charCodeAt(i);
-                        h1 = Math.imul(h1 ^ ch, 2654435761);
-                        h2 = Math.imul(h2 ^ ch, 1597334677);
-                    }
-                    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
-                    h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-                    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
-                    h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-                    const hash = (h2 >>> 0).toString(16).padStart(8, 0) + (h1 >>> 0).toString(16).padStart(8, 0);
-
-                    const cache = `${Paths.notifimagecache}/${hash}.png`;
+                    const cache = notif.imageCachePath();
                     CUtils.saveItem(this, Qt.resolvedUrl(cache), () => {
                         notif.image = cache;
                         notif.dummyImageLoader.active = false;
@@ -185,7 +172,29 @@ QtObject {
         }
     }
 
+    function imageCachePath(): string {
+        const cacheKey = appName + summary + notificationId + image;
+        let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+        for (let i = 0; i < cacheKey.length; i++) {
+            const ch = cacheKey.charCodeAt(i);
+            h1 = Math.imul(h1 ^ ch, 2654435761);
+            h2 = Math.imul(h2 ^ ch, 1597334677);
+        }
+        h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
+        h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+        h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
+        h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+        const hash = (h2 >>> 0).toString(16).padStart(8, 0) + (h1 >>> 0).toString(16).padStart(8, 0);
+        return `${Paths.notifimagecache}/${hash}.png`;
+    }
+
     function maybeTriggerDummyImageLoader(): void {
+        if (image.startsWith("image://icon//")) {
+            // Senders may delete temporary icon files as soon as Notify returns.
+            const source = image.slice("image://icon/".length);
+            const cache = imageCachePath();
+            image = CUtils.copyFile(Qt.resolvedUrl(source), Qt.resolvedUrl(cache)) ? cache : "";
+        }
         if (image && !image.startsWith("image://icon/") && !image.startsWith(Paths.notifimagecache))
             dummyImageLoader.active = true;
     }
@@ -226,13 +235,18 @@ QtObject {
         if (dup) {
             expireTimeout = dup.expireTimeout;
             urgency = dup.urgency;
+            appIcon = dup.appIcon;
+            image = dup.image;
+            maybeTriggerDummyImageLoader();
         }
         timer.restart();
     }
 
     Component.onCompleted: {
-        if (!notification)
+        if (!notification) {
+            maybeTriggerDummyImageLoader();
             return;
+        }
 
         notificationId = notification.id;
         summary = notification.summary;
