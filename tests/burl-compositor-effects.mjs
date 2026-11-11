@@ -119,10 +119,17 @@ test("Lua commands follow the native adapter's nested config syntax", () => {
     ]);
 });
 
-test("power saver disables only blur, shadows and animations", () => {
+test("power saver disables blur, shadows and animations and makes windows opaque", () => {
     const h = harness();
     h.request("powersaver", true);
-    assert.deepEqual(plain(h.state.applied), { "animations:enabled": 0, "decoration:blur:enabled": 0, "decoration:shadow:enabled": 0 });
+    assert.deepEqual(plain(h.state.applied), {
+        "animations:enabled": 0,
+        "decoration:blur:enabled": 0,
+        "decoration:shadow:enabled": 0,
+        "decoration:active_opacity": 1,
+        "decoration:inactive_opacity": 1,
+        "rule:performance-opaque": 1
+    });
     h.request("performance", true); h.request("powersaver", false);
     assert.equal(h.reloads, 0);
     h.request("performance", false);

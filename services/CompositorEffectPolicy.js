@@ -31,7 +31,7 @@ var rules = {
     "performance-opaque": 'match = { class = ".*" }, opacity = "1.0 override 1.0 override"'
 };
 
-var powersaver = Object.assign({}, groups.animations, groups.blur, groups.shadows);
+var powersaver = Object.assign({}, groups.animations, groups.blur, groups.shadows, groups.opacity);
 
 function options(state) {
     var desired = Object.assign({}, state.focus ? common : {});
