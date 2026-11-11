@@ -58,7 +58,7 @@ Item {
 
         anchors.right: parent.right
         anchors.top: parent.top
-        anchors.margins: root.nState.isWindow ? 0 : Tokens.padding.extraSmall
+        anchors.margins: Tokens.padding.large
 
         group: blobGroup
         opacity: root.blobColour.a
