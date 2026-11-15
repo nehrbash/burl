@@ -90,7 +90,14 @@ test("power saver disables compositor blur, shadows and animations without stopp
     const h = harness();
     h.PowerProfiles.profile = PowerProfile.PowerSaver;
     h.root.syncEffects();
-    assert.deepEqual(JSON.parse(JSON.stringify(h.options)), [{ "animations:enabled": 0, "decoration:blur:enabled": 0, "decoration:shadow:enabled": 0 }]);
+    assert.deepEqual(JSON.parse(JSON.stringify(h.options)), [{
+        "animations:enabled": 0,
+        "decoration:blur:enabled": 0,
+        "decoration:shadow:enabled": 0,
+        "decoration:active_opacity": 1,
+        "decoration:inactive_opacity": 1,
+        "rule:performance-opaque": 1,
+    }]);
     assert.equal(h.stopLlama.running, false);
     h.PowerProfiles.profile = PowerProfile.Balanced;
     h.root.syncEffects();

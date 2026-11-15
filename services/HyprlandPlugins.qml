@@ -14,7 +14,8 @@ Singleton {
     property var loaded: []
     readonly property var choices: GlobalConfig.hyprlandPlugins
     readonly property bool performance: PowerProfiles.profile === PowerProfile.Performance
-    readonly property var plugins: Policy.entries(installed, loaded, choices, performance)
+    readonly property bool powerSaver: PowerProfiles.profile === PowerProfile.PowerSaver
+    readonly property var plugins: Policy.entries(installed, loaded, choices, performance, powerSaver)
     property bool ready: false
     property bool busy: false
     property string error: ""
@@ -45,7 +46,7 @@ Singleton {
         attempted = {};
         changed = false;
         operation = "save";
-        pendingLoaderText = Policy.loaderSettings(choices, performance);
+        pendingLoaderText = Policy.loaderSettings(choices, performance, powerSaver);
         if (pendingLoaderText === savedLoaderText)
             readLoaded();
         else
@@ -118,6 +119,7 @@ Singleton {
 
     onChoicesChanged: Qt.callLater(refresh)
     onPerformanceChanged: Qt.callLater(refresh)
+    onPowerSaverChanged: Qt.callLater(refresh)
 
     FileView {
         path: Quickshell.env("BURL_HYPRLAND_PLUGIN_MANIFEST") || Quickshell.env("HOME") + "/.config/hypr-plugins.lua"

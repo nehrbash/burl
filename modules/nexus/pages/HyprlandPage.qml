@@ -52,7 +52,8 @@ PageBase {
                 ToggleRow {
                     first: true
                     text: pluginRow.modelData.name
-                    subtext: pluginRow.modelData.paused ? qsTr("Paused by performance mode")
+                    subtext: pluginRow.modelData.pausedForPowerSaver ? qsTr("Paused by Power Saver")
+                        : pluginRow.modelData.paused ? qsTr("Paused by performance mode")
                         : pluginRow.modelData.loaded ? qsTr("Loaded") : qsTr("Not loaded")
                     checked: pluginRow.modelData.enabled
                     enabled: HyprlandPlugins.ready && !HyprlandPlugins.busy

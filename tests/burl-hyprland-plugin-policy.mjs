@@ -31,5 +31,32 @@ test("performance pauses only opted-in enabled plugins", () => {
 
 test("startup settings ignore unsafe or malformed preference keys", () => {
     const text = policy.loaderSettings({ 'bad"key': { enabled: true }, incomplete: {} }, false);
-    assert.equal(text, "return {\n\n}\n");
+    assert.equal(text, 'return {\n  ["hyprmist"] = true,\n}\n');
+});
+
+test("Power Saver suppresses mist without changing saved choices or other plugins", () => {
+    const plugins = [{ id: "hyprmist", path: "/plugins/hyprmist.so" }, ...installed];
+    const choices = { hyprmist: { enabled: true }, hyprbars: { enabled: true } };
+    const saved = JSON.stringify(choices);
+    const entries = policy.entries(plugins, [{ name: "hyprmist" }, { name: "hyprbars" }], choices, false, true);
+    assert.equal(entries[0].enabled, true);
+    assert.equal(entries[0].desired, false);
+    assert.equal(entries[0].pausedForPowerSaver, true);
+    assert.equal(entries[2].desired, true);
+    assert.equal(policy.entries(plugins, [], choices, false, false)[0].desired, true);
+    assert.match(policy.loaderSettings(choices, false, true), /\["hyprmist"\] = false/);
+    assert.match(policy.loaderSettings(choices, false, false), /\["hyprmist"\] = true/);
+    assert.equal(JSON.stringify(choices), saved);
+    const disabled = { hyprmist: { enabled: false } };
+    assert.equal(policy.entries(plugins, [], disabled, false, true)[0].desired, false);
+    assert.equal(policy.entries(plugins, [], disabled, false, false)[0].desired, false);
+});
+
+test("Power Saver prevents unconfigured mist from reloading", () => {
+    assert.match(policy.loaderSettings({}, false, true), /\["hyprmist"\] = false/);
+    const entry = policy.entries([{ id: "hyprmist" }], [{ name: "hyprmist" }], {}, false, true)[0];
+    assert.equal(entry.desired, false);
+    assert.equal(entry.enabled, true);
+    assert.equal(policy.entries([{ id: "hyprmist" }], [], {}, false, false)[0].desired, true);
+    assert.match(policy.loaderSettings({}, false, false), /\["hyprmist"\] = true/);
 });

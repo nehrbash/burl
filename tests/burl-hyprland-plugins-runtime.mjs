@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { test } from "node:test";
 
-test("plugin service applies preferences, restores paused plugins and reports failure", { skip: process.env.RUN_QML_PLUGINS !== "1" }, () => {
+for (const coldPowerSaver of [false, true]) test(`plugin service restores paused plugins from ${coldPowerSaver ? "cold Power Saver" : "Balanced"}`, { skip: process.env.RUN_QML_PLUGINS !== "1" }, () => {
     const dir = mkdtempSync(join(tmpdir(), "burl-plugins-"));
     try {
         const root = join(dir, "quickshell", "qs");
@@ -18,10 +18,10 @@ test("plugin service applies preferences, restores paused plugins and reports fa
             .replace("import Quickshell.Services.UPower", "import qs.fixture").replace("import Burl.Config", ""));
         writeFileSync(join(services, "Hypr.qml"), "pragma Singleton\nimport QtQuick\nQtObject { signal configReloaded() }\n");
         writeFileSync(join(fixture, "GlobalConfig.qml"), "pragma Singleton\nimport QtQuick\nQtObject { property var hyprlandPlugins: ({}) }\n");
-        writeFileSync(join(fixture, "PowerProfile.qml"), "pragma Singleton\nimport QtQuick\nQtObject { enum Profile { Balanced, Performance } }\n");
-        writeFileSync(join(fixture, "PowerProfiles.qml"), "pragma Singleton\nimport QtQuick\nQtObject { property int profile: 0 }\n");
-        writeFileSync(join(dir, ".config", "hypr-plugins.lua"), 'return { "/plugins/mist.so", "/plugins/bad.so" }\n');
-        writeFileSync(join(dir, "actual.json"), JSON.stringify(["mist"]));
+        writeFileSync(join(fixture, "PowerProfile.qml"), "pragma Singleton\nimport QtQuick\nQtObject { enum Profile { Balanced, Performance, PowerSaver } }\n");
+        writeFileSync(join(fixture, "PowerProfiles.qml"), `pragma Singleton\nimport QtQuick\nQtObject { property int profile: ${coldPowerSaver ? 2 : 0} }\n`);
+        writeFileSync(join(dir, ".config", "hypr-plugins.lua"), 'return { "/plugins/hyprmist.so", "/plugins/bad.so" }\n');
+        writeFileSync(join(dir, "actual.json"), JSON.stringify(coldPowerSaver ? [] : ["hyprmist"]));
         const python = spawnSync("which", ["python3"], { encoding: "utf8" }).stdout.trim();
         writeFileSync(join(dir, "bin", "hyprctl"), `#!${python}
 import json, os, pathlib, sys
@@ -53,7 +53,7 @@ ShellRoot {
     id: root
     settings.watchFiles: false
     property var service: HyprlandPlugins
-    property int step: 0
+    property int step: ${coldPowerSaver ? -1 : 0}
     property int ticks: 0
     function check(value, text) { if (!value) throw new Error(text); }
     Timer {
@@ -62,33 +62,51 @@ ShellRoot {
             try {
                 if (++root.ticks > 200) throw new Error("fixture timed out: " + root.step + " " + HyprlandPlugins.operation + " " + HyprlandPlugins.busy + " " + HyprlandPlugins.ready + " " + HyprlandPlugins.error);
                 if (!HyprlandPlugins.ready || HyprlandPlugins.busy) return;
-                const mist = HyprlandPlugins.plugins[0];
+                const hyprmist = HyprlandPlugins.plugins[0];
                 const bad = HyprlandPlugins.plugins[1];
-                if (root.step === 0) {
-                    check(mist.loaded && !bad.loaded, "initial state preserved");
-                    HyprlandPlugins.setChoice(mist, "disableInPerformance", true);
+                if (root.step === -1) {
+                    check(!hyprmist.loaded && hyprmist.enabled && hyprmist.pausedForPowerSaver, "cold Power Saver retains default enabled intent");
+                    check(Object.keys(GlobalConfig.hyprlandPlugins).length === 0, "power saver does not write user preferences");
+                    PowerProfiles.profile = PowerProfile.Balanced;
+                    root.step++;
+                } else if (root.step === 0) {
+                    check(hyprmist.loaded && !bad.loaded, "initial state preserved");
+                    HyprlandPlugins.setChoice(hyprmist, "disableInPerformance", true);
                     root.step++;
                 } else if (root.step === 1) {
-                    check(mist.loaded, "preference alone preserves loaded state");
+                    check(hyprmist.loaded, "preference alone preserves loaded state");
                     PowerProfiles.profile = PowerProfile.Performance;
                     root.step++;
                 } else if (root.step === 2) {
-                    check(!mist.loaded && mist.enabled && mist.paused, "performance pauses plugin");
+                    check(!hyprmist.loaded && hyprmist.enabled && hyprmist.paused, "performance pauses plugin");
                     PowerProfiles.profile = PowerProfile.Balanced;
                     root.step++;
                 } else if (root.step === 3) {
-                    check(mist.loaded && !mist.paused, "balanced restores plugin");
-                    HyprlandPlugins.setChoice(mist, "enabled", false);
+                    check(hyprmist.loaded && !hyprmist.paused, "balanced restores plugin");
+                    PowerProfiles.profile = PowerProfile.PowerSaver;
                     root.step++;
                 } else if (root.step === 4) {
-                    check(!mist.loaded && !mist.enabled, "user disables plugin");
+                    check(!hyprmist.loaded && hyprmist.enabled && hyprmist.pausedForPowerSaver, "power saver pauses mist");
+                    check(GlobalConfig.hyprlandPlugins.hyprmist.enabled, "power saver preserves preference");
                     Hypr.configReloaded();
                     root.step++;
                 } else if (root.step === 5) {
-                    check(!mist.loaded, "reload retains disabled choice");
-                    HyprlandPlugins.setChoice(bad, "enabled", true);
+                    check(!hyprmist.loaded, "reload retains power saver policy");
+                    PowerProfiles.profile = PowerProfile.Balanced;
                     root.step++;
                 } else if (root.step === 6) {
+                    check(hyprmist.loaded && !hyprmist.paused, "balanced restores mist after power saver");
+                    HyprlandPlugins.setChoice(hyprmist, "enabled", false);
+                    root.step++;
+                } else if (root.step === 7) {
+                    check(!hyprmist.loaded && !hyprmist.enabled, "user disables plugin");
+                    Hypr.configReloaded();
+                    root.step++;
+                } else if (root.step === 8) {
+                    check(!hyprmist.loaded, "reload retains disabled choice");
+                    HyprlandPlugins.setChoice(bad, "enabled", true);
+                    root.step++;
+                } else if (root.step === 9) {
                     check(!bad.loaded && HyprlandPlugins.error.length > 0, "failure reported with actual state");
                     console.log("PLUGINS-RUNTIME-PASS");
                     Qt.quit();
@@ -110,7 +128,7 @@ ShellRoot {
         assert.equal(result.status, 0, output);
         assert.match(output, /PLUGINS-RUNTIME-PASS/);
         assert.doesNotMatch(output, /PLUGINS-RUNTIME-FAIL|TypeError|ReferenceError/);
-        assert.match(readFileSync(join(dir, ".config/hypr/plugins-generated.lua"), "utf8"), /\["mist"\] = false/);
+        assert.match(readFileSync(join(dir, ".config/hypr/plugins-generated.lua"), "utf8"), /\["hyprmist"\] = false/);
     } finally {
         rmSync(dir, { recursive: true, force: true });
     }
