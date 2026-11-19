@@ -23,6 +23,7 @@ Singleton {
     readonly property bool disableBlur: powerSaver || enabled && GlobalConfig.performance.blur !== false
     readonly property bool llamaAvailable: Quickshell.env("BURL_MANAGE_LLAMA") === "1"
     readonly property bool manageLlama: enabled && GlobalConfig.performance.stopLlama !== false
+    readonly property bool readAloudAvailable: Quickshell.env("BURL_MANAGE_READ_ALOUD") === "1"
     readonly property var plugins: HyprlandPlugins
 
     function setProfile(profile: int): void {
@@ -45,6 +46,13 @@ Singleton {
         }
     }
 
+    function restoreReadAloud(): void {
+        if (readAloudAvailable && !enabled && props.readAloudStopped) {
+            props.readAloudStopped = false;
+            Quickshell.execDetached(["herd", "start", "read-aloud"]);
+        }
+    }
+
     function syncEffects(): void {
         if (!ready)
             return;
@@ -55,6 +63,12 @@ Singleton {
                 stopLlama.running = true;
         } else {
             restoreLlama();
+        }
+        if (enabled) {
+            if (readAloudAvailable && !props.readAloudStopped && !stopReadAloud.running)
+                stopReadAloud.running = true;
+        } else {
+            restoreReadAloud();
         }
         if (enabled === props.effectsApplied)
             return;
@@ -69,6 +83,11 @@ Singleton {
         restoreLlama();
     }
 
+    function readAloudStopped(text: string): void {
+        props.readAloudStopped = text.trim().split("\n").pop() === "#t";
+        restoreReadAloud();
+    }
+
     onEnabledChanged: syncEffects()
     onPowerSaverChanged: syncEffects()
     onManageLlamaChanged: syncEffects()
@@ -78,6 +97,7 @@ Singleton {
 
         property bool effectsApplied: false
         property bool llamaStopped: false
+        property bool readAloudStopped: false
 
         reloadableId: "gameMode"
         onLoaded: {
@@ -93,6 +113,15 @@ Singleton {
         command: ["herd", "eval", "root", "(let ((svc (lookup-service 'llama-server))) (and svc (service-running-value svc) (begin (stop-service svc) (not (service-running-value svc)))))"]
         stdout: StdioCollector {
             onStreamFinished: root.llamaStopped(text)
+        }
+    }
+
+    Process {
+        id: stopReadAloud
+
+        command: ["herd", "eval", "root", "(let ((svc (lookup-service 'read-aloud))) (and svc (service-running-value svc) (begin (stop-service svc) (not (service-running-value svc)))))"]
+        stdout: StdioCollector {
+            onStreamFinished: root.readAloudStopped(text)
         }
     }
 

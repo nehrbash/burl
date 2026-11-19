@@ -8,12 +8,13 @@ const policy = {};
 runInNewContext(readFileSync(new URL("../services/CompositorEffectPolicy.js", import.meta.url), "utf8").replace(/^\.pragma library\s*/, ""), policy);
 const PowerProfile = { PowerSaver: 0, Balanced: 1, Performance: 2 };
 
-function harness(profile = PowerProfile.Balanced, manageLlama = true) {
+function harness(profile = PowerProfile.Balanced, manageLlama = true, manageReadAloud = true) {
     const commands = [];
     const options = [];
     const reloads = [];
-    const props = { effectsApplied: false, llamaStopped: false };
+    const props = { effectsApplied: false, llamaStopped: false, readAloudStopped: false };
     const stopLlama = { running: false };
+    const stopReadAloud = { running: false };
     const PowerProfiles = { profile, hasPerformanceProfile: true };
     const root = { ready: true };
     let state = policy.initialState();
@@ -29,25 +30,26 @@ function harness(profile = PowerProfile.Balanced, manageLlama = true) {
     }
     root.compositorEffects = { setMode: (mode, enabled) => apply(policy.request(state, mode, enabled)) };
     const context = {
-        root, props, stopLlama, PowerProfiles, PowerProfile,
+        root, props, stopLlama, stopReadAloud, PowerProfiles, PowerProfile,
         Quickshell: { env: key => key === "BURL_MANAGE_LLAMA" && manageLlama ? "1" : "", execDetached: args => commands.push(Array.from(args)) },
         GlobalConfig: { performance: {}, utilities: { toasts: { gameModeChanged: false } } },
     };
     Object.defineProperties(context, {
         llamaAvailable: { get: () => manageLlama },
+        readAloudAvailable: { get: () => manageReadAloud },
         manageLlama: { get: () => PowerProfiles.profile === PowerProfile.Performance && context.GlobalConfig.performance.stopLlama !== false },
         ready: { get: () => root.ready },
         enabled: { get: () => PowerProfiles.profile === PowerProfile.Performance },
         available: { get: () => PowerProfiles.hasPerformanceProfile },
         powerSaver: { get: () => PowerProfiles.profile === PowerProfile.PowerSaver },
     });
-    for (const name of ["setProfile", "setEnabled", "toggle", "restoreLlama", "syncEffects", "llamaStopped"]) {
+    for (const name of ["setProfile", "setEnabled", "toggle", "restoreLlama", "syncEffects", "llamaStopped", "restoreReadAloud", "readAloudStopped"]) {
         const match = source.match(new RegExp(`^    function ${name}\\(([^)]*)\\): \\w+ \\{([\\s\\S]*?)\\n    \\}`, "m"));
         assert.ok(match, `QML function ${name} exists`);
         const args = match[1].replace(/:\s*\w+/g, "");
         root[name] = context[name] = runInNewContext(`(function(${args}) {${match[2]}\n})`, context);
     }
-    return { root, props, stopLlama, PowerProfiles, commands, options, reloads, preferences: context.GlobalConfig.performance };
+    return { root, props, stopLlama, stopReadAloud, PowerProfiles, commands, options, reloads, preferences: context.GlobalConfig.performance };
 }
 
 test("quick toggle and profile selector share the system profile", () => {
@@ -194,4 +196,54 @@ test("changing the local AI preference restores only an owned stop", () => {
     assert.deepEqual(h.commands, [["herd", "start", "llama-server"]]);
     h.root.syncEffects();
     assert.equal(h.commands.length, 1);
+});
+
+
+test("Performance stops speech and restores only its own stop once", () => {
+    const h = harness(PowerProfile.Performance);
+    h.root.syncEffects();
+    assert.equal(h.stopReadAloud.running, true);
+    h.root.readAloudStopped("#t");
+    h.root.setEnabled(false);
+    h.root.syncEffects();
+    h.root.restoreReadAloud();
+    assert.deepEqual(h.commands, [["herd", "start", "read-aloud"]]);
+});
+
+test("speech already stopped or missing is not restored", () => {
+    for (const result of ["#f", ""]) {
+        const h = harness(PowerProfile.Performance);
+        h.root.syncEffects();
+        h.root.readAloudStopped(result);
+        h.root.setEnabled(false);
+        h.root.syncEffects();
+        assert.equal(h.commands.length, 0);
+    }
+});
+
+test("speech stop finishing after leaving Performance is restored", () => {
+    const h = harness(PowerProfile.Performance);
+    h.root.syncEffects();
+    h.root.setEnabled(false);
+    h.root.syncEffects();
+    h.root.readAloudStopped("#t");
+    assert.deepEqual(h.commands, [["herd", "start", "read-aloud"]]);
+});
+
+test("speech ownership survives reload without starting unrelated services", () => {
+    const h = harness(PowerProfile.Performance);
+    h.props.readAloudStopped = true;
+    h.root.syncEffects();
+    assert.equal(h.stopReadAloud.running, false);
+    h.root.setEnabled(false);
+    h.root.syncEffects();
+    assert.deepEqual(h.commands, [["herd", "start", "read-aloud"]]);
+});
+
+test("speech is untouched without opt-in and outside Performance", () => {
+    for (const h of [harness(PowerProfile.Performance, true, false), harness(), harness(PowerProfile.PowerSaver)]) {
+        h.root.syncEffects();
+        assert.equal(h.stopReadAloud.running, false);
+        assert.equal(h.commands.length, 0);
+    }
 });
