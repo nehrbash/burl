@@ -6,6 +6,7 @@ check:
 	ctest --test-dir build/cli-check --output-on-failure
 	@for file in tests/hyprland-*.lua; do lua "$$file" || exit 1; done
 check-lifecycle:
+	RUN_QML_SCREENSHOTS=1 node --test tests/burl-screenshot-save-runtime.mjs
 	RUN_QML_MOUSE=1 node --test tests/burl-mouse-settings-runtime.mjs
 	RUN_QML_NOTIFICATIONS=1 node --test tests/burl-notification-images-runtime.mjs
 	RUN_QML_EFFECTS=1 node --test tests/burl-compositor-effects-runtime.mjs

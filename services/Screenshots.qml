@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Burl
 import Burl.Config
 import Burl.Models
@@ -207,19 +208,54 @@ Singleton {
             Quickshell.execDetached(["satty", "-f", path]);
     }
 
-    // mv, not cp — matching the notification's Save action — so the entry flips
-    // unsaved -> saved in a single rebuild instead of appearing twice. `-n`
-    // guards an existing target.
     function save(path: string, base: string): void {
         if (!path)
             return;
-        const target = base.endsWith(".png") ? base : `${base}.png`;
+        const target = `${root.saveddir}/${base.endsWith(".png") ? base : `${base}.png`}`;
         if (root.previewPath === path) {
-            root.pendingSave = `${root.saveddir}/${target}`;
+            root.pendingSave = target;
             pendingSaveTimeout.restart();
         }
-        Quickshell.execDetached(["sh", "-c", 'mkdir -p "$1" && mv -n "$2" "$1/$3"', "sh", root.saveddir, path, target]);
-        Toaster.toast(qsTr("Saved"), qsTr("Kept in %1").arg(Paths.shortenHome(root.saveddir)), "bookmark_add");
+        const job = saveProcess.createObject(root, {sourcePath: path, targetPath: target});
+        job.running = true;
+    }
+
+    Component {
+        id: saveProcess
+
+        Process {
+            required property string sourcePath
+            required property string targetPath
+            property bool didStart: false
+
+            // mv -n exits successfully when a collision leaves the source untouched.
+            command: ["sh", "-c", 'mkdir -p "$1" && mv -n -T -- "$2" "$3" && [ ! -e "$2" ]', "sh", root.saveddir, sourcePath, targetPath]
+            onStarted: didStart = true
+            onExited: (code, status) => {
+                if (code === 0 && status === 0) {
+                    // The saved directory may not have existed when its watcher started.
+                    savedModel.watchChanges = false;
+                    savedModel.watchChanges = true;
+                    Toaster.toast(qsTr("Saved"), qsTr("Kept in %1").arg(Paths.shortenHome(root.saveddir)), "bookmark_add");
+                } else {
+                    failed();
+                }
+                destroy();
+            }
+            onRunningChanged: {
+                if (!running && !didStart) {
+                    failed();
+                    destroy();
+                }
+            }
+            function failed(): void {
+                if (root.pendingSave === targetPath) {
+                    root.pendingSave = "";
+                    pendingSaveTimeout.stop();
+                }
+                Toaster.toast(qsTr("Could not save screenshot"), qsTr("Check that the source exists and the destination is writable with no file of the same name."), "error");
+            }
+        }
     }
 
     // The DIRECTORY, not the file: most file managers hand a FILE argument to
