@@ -15,6 +15,7 @@ import "modules/areapicker"
 import "modules/lock"
 import "modules/cheatsheet"
 import "modules/switcher"
+import "modules/sharepicker"
 import "modules/tasknudge"
 import QtQuick
 import Quickshell
@@ -44,6 +45,7 @@ ShellRoot {
     }
     TaskNudge {}
     Switcher {}
+    SharePicker {}
     Cheatsheet {}
 
     ConfigToasts {}

@@ -1,0 +1,29 @@
+#!/bin/sh
+# xdg-desktop-portal-hyprland custom_picker_binary. The running burl shell
+# shows the chooser and writes XDPH's "[SELECTION]..." reply into a FIFO;
+# without a reachable shell this falls back to the stock picker.
+
+set -u
+
+token=false
+for arg; do
+    [ "$arg" = --allow-token ] && token=true
+done
+
+dir=$(mktemp -d "${XDG_RUNTIME_DIR:-/tmp}/burl-share-picker.XXXXXX") || exit 1
+trap 'rm -rf "$dir"' EXIT
+trap 'exit 1' INT TERM
+mkfifo "$dir/reply" || exit 1
+
+# qs ipc exits 0 even when the target is missing, so look for pick's answer.
+ack=$(burl-shell ipc --any-display call sharepicker pick \
+    "$dir/reply" "$token" "${XDPH_WINDOW_SHARING_LIST:-}" 2>/dev/null)
+if [ "$ack" != ready ]; then
+    rm -rf "$dir"
+    exec hyprland-share-picker "$@"
+fi
+
+# A share request nobody answers would hold XDPH's portal call open.
+if ! timeout 300 cat "$dir/reply"; then
+    burl-shell ipc --any-display call sharepicker cancel >/dev/null 2>&1
+fi
