@@ -254,7 +254,7 @@ Scope {
                     ctx.tries++;
                     if (ctx.tries < ctx.maxTries) {
                         ctx.state = Pam.Failed;
-                        if (ctx.retryOnFail)
+                        if (ctx.retryOnFail && ctx.canAttempt)
                             start();
                     } else {
                         ctx.state = Pam.MaxTries;
@@ -271,7 +271,11 @@ Scope {
             id: errorRetry
 
             interval: 800
-            onTriggered: pam.start()
+            // pam_fprintd times out as an error; without this check the retry outlives the lock.
+            onTriggered: {
+                if (ctx.canAttempt)
+                    pam.start();
+            }
         }
 
         Timer {

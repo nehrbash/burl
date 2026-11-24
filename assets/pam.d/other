@@ -1,0 +1,7 @@
+#%PAM-1.0
+
+# libpam always loads this fallback; deny anything not named explicitly.
+auth     required pam_deny.so
+account  required pam_deny.so
+password required pam_deny.so
+session  required pam_deny.so
