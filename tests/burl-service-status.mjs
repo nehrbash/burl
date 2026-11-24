@@ -44,3 +44,28 @@ test('incomplete API data cannot become an up-to-date snapshot', () => {
     assert.equal(status.validResponse('db/status?folder=doc', {}), false);
     assert.equal(status.validResponse('config/folders', [{id:'doc'}]), true);
 });
+
+test('syncthing timestamps treat epoch and zero time as never and age relative to now', () => {
+    assert.equal(status.timestamp('1969-12-31T19:00:00-05:00'), 0);
+    assert.equal(status.timestamp('0001-01-01T00:00:00Z'), 0);
+    const now = status.timestamp('2026-11-24T12:00:00Z');
+    assert.equal(status.ago(0, now), '');
+    assert.equal(status.ago(now - 30e3, now), 'just now');
+    assert.equal(status.ago(now - 5 * 60e3, now), '5m ago');
+    assert.equal(status.ago(now - 3 * 3600e3, now), '3h ago');
+    assert.equal(status.ago(now - 49 * 3600e3, now), '2d ago');
+});
+
+test('syncthing peers report last seen and remote completion', () => {
+    const offline = status.peer({deviceID: 'a', name: 'Laptop'}, {connected: false, address: 'x'}, {lastSeen: '2026-11-24T09:00:00-05:00'}, {completion: 92.5, needItems: 3, needDeletes: 1});
+    assert.equal(offline.connected, false);
+    assert.equal(offline.address, '');
+    assert.equal(offline.lastSeen, Date.parse('2026-11-24T14:00:00Z'));
+    assert.equal(offline.completion, 92.5);
+    assert.equal(offline.needed, 4);
+    const unknown = status.peer({deviceID: 'b'}, undefined, {lastSeen: '1970-01-01T00:00:00Z'}, null);
+    assert.equal(unknown.lastSeen, 0);
+    assert.equal(unknown.completion, -1);
+    assert.equal(status.folder({id: 'doc'}, {state: 'idle'}, {lastScan: '2026-11-24T14:00:00Z', lastFile: {at: '0001-01-01T00:00:00Z'}}).lastChange, 0);
+    assert.equal(status.validResponse('db/completion?device=a', {}), false);
+});

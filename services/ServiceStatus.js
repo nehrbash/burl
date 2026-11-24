@@ -21,7 +21,31 @@ function tailscale(data) {
     };
 }
 
-function folder(config, status) {
+function timestamp(value) {
+    const ms = Date.parse(value || "");
+    // Syncthing reports "never" as the Unix epoch or Go's zero time.
+    return ms > Date.UTC(2000, 0, 1) ? ms : 0;
+}
+
+function ago(ms, now) {
+    if (!ms) return "";
+    const s = Math.max(0, Math.round((now - ms) / 1000));
+    return s < 60 ? "just now" : s < 3600 ? Math.floor(s / 60) + "m ago"
+        : s < 86400 ? Math.floor(s / 3600) + "h ago" : Math.floor(s / 86400) + "d ago";
+}
+
+function peer(config, connection, stats, completion) {
+    const connected = connection?.connected === true;
+    return {
+        id: config.deviceID, name: config.name || config.deviceID, paused: config.paused === true,
+        connected: connected, address: connected ? connection.address || "" : "",
+        lastSeen: connected ? Date.now() : timestamp(stats?.lastSeen),
+        completion: typeof completion?.completion === "number" ? completion.completion : -1,
+        needed: Math.max(0, Number(completion?.needItems || 0) + Number(completion?.needDeletes || 0))
+    };
+}
+
+function folder(config, status, stats) {
     const needed = Math.max(0, Number(status.needTotalItems || 0));
     const total = Math.max(0, Number(status.globalBytes || 0));
     const remaining = Math.max(0, Number(status.needBytes || 0));
@@ -34,6 +58,8 @@ function folder(config, status) {
         id: config.id, name: config.label || config.id, path: config.path,
         paused: config.paused === true, state: state, needed: needed,
         remaining: remaining, errors: errors,
+        lastScan: timestamp(stats?.lastScan), lastChange: timestamp(stats?.lastFile?.at),
+        lastFile: stats?.lastFile?.filename || "",
         progress: config.paused || status.error ? 0 : total ? Math.max(0, Math.min(1, (total - remaining) / total)) : needed ? 0 : 1
     };
 }
@@ -54,5 +80,6 @@ function validResponse(path, data) {
     if (path === "config/devices") return Array.isArray(data) && data.every(d => typeof d.deviceID === "string");
     if (path === "config/folders") return Array.isArray(data) && data.every(f => typeof f.id === "string");
     if (path.startsWith("db/status?")) return typeof data.state === "string";
+    if (path.startsWith("db/completion?")) return typeof data.completion === "number";
     return true;
 }

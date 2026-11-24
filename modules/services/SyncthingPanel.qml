@@ -24,9 +24,11 @@ ColumnLayout {
             StyledText { text: "Syncthing"; font: Tokens.font.title.medium }
             StyledText {
                 Layout.fillWidth: true
-                text: Syncthing.summary + " · " + qsTr("%1 connected").arg(Syncthing.connectedCount)
+                text: [Syncthing.summary,
+                    Syncthing.available ? qsTr("%1/%2 devices online").arg(Syncthing.connectedCount).arg(Syncthing.devices.length) : "",
+                    Syncthing.updatedAt ? qsTr("checked %1").arg(Syncthing.ago(Syncthing.updatedAt)) : ""].filter(t => t).join(" · ")
                 color: Colours.palette.m3onSurfaceVariant
-                elide: Text.ElideRight
+                wrapMode: Text.Wrap
             }
         }
         ServiceActionButton {
@@ -61,7 +63,10 @@ ColumnLayout {
                 last: true
                 icon: folder.modelData.state === "Error" ? "sync_problem" : folder.modelData.paused ? "pause" : "folder"
                 label: folder.modelData.name
-                subtext: root.compact ? folder.modelData.state : folder.modelData.needed ? qsTr("%1 items remaining · %2 errors").arg(folder.modelData.needed).arg(folder.modelData.errors) : folder.modelData.path
+                subtext: [root.compact && folder.modelData.state !== "Up to date" ? folder.modelData.state : "",
+                    folder.modelData.needed ? qsTr("%1 items remaining · %2 errors").arg(folder.modelData.needed).arg(folder.modelData.errors)
+                    : folder.modelData.lastChange ? qsTr("changed %1").arg(Syncthing.ago(folder.modelData.lastChange)) : qsTr("no changes yet"),
+                    !root.compact && folder.modelData.lastScan ? qsTr("scanned %1").arg(Syncthing.ago(folder.modelData.lastScan)) : ""].filter(t => t).join(" · ")
                 value: root.compact ? "" : folder.modelData.state
                 trailingComponent: RowLayout {
                     spacing: Tokens.spacing.extraSmall
@@ -99,11 +104,11 @@ ColumnLayout {
         text: qsTr("No shared folders configured")
     }
     SectionHeader {
-        visible: !root.compact
+        visible: Syncthing.devices.length > 0
         text: qsTr("Devices")
     }
     Repeater {
-        model: root.compact ? [] : Syncthing.devices
+        model: Syncthing.devices
         delegate: ColumnLayout {
             id: device
             required property var modelData
@@ -112,9 +117,14 @@ ColumnLayout {
                 first: true
                 last: true
                 label: device.modelData.name
-                subtext: device.modelData.address
-                value: device.modelData.paused ? qsTr("Paused") : device.modelData.connected ? qsTr("Connected") : qsTr("Disconnected")
-                icon: "devices"
+                subtext: [device.modelData.connected ? qsTr("Online") : device.modelData.lastSeen ? qsTr("Last seen %1").arg(Syncthing.ago(device.modelData.lastSeen)) : qsTr("Never seen"),
+                    root.compact ? "" : device.modelData.address].filter(t => t).join(" · ")
+                value: device.modelData.paused ? qsTr("Paused")
+                    : device.modelData.completion < 0 ? ""
+                    : device.modelData.completion >= 100 ? qsTr("Up to date")
+                    : qsTr("%1% · %2 items behind").arg(Math.floor(device.modelData.completion)).arg(device.modelData.needed)
+                icon: device.modelData.connected ? "devices" : "devices_off"
+                iconColour: device.modelData.connected ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
                 trailingComponent: ServiceActionButton {
                     icon: device.modelData.paused ? "play_arrow" : "pause"
                     description: device.modelData.paused ? qsTr("Resume device") : qsTr("Pause device")

@@ -24,7 +24,10 @@ test('actual service QML reads status, confirms actions and clears stale data on
                 '/rest/system/connections': {connections: {peer: {connected: true, address: '100.2.2.2:22000'}}},
                 '/rest/config/devices': [{deviceID: 'self'}, {deviceID: 'peer', name: 'Laptop'}],
                 '/rest/config/folders': [{id: 'doc / test', label: 'Notes', path: '/tmp/docs', paused}],
-                '/rest/db/status?folder=doc%20%2F%20test': {state: 'idle', globalBytes: 100, needBytes: 0, needTotalItems: 0}
+                '/rest/db/status?folder=doc%20%2F%20test': {state: 'idle', globalBytes: 100, needBytes: 0, needTotalItems: 0},
+                '/rest/stats/device': {peer: {lastSeen: '2026-11-24T09:00:00-05:00'}},
+                '/rest/stats/folder': {'doc / test': {lastScan: '2026-11-24T09:00:00-05:00', lastFile: {at: '2026-11-24T08:00:00-05:00', filename: 'a.org'}}},
+                '/rest/db/completion?device=peer': {completion: 100, needItems: 0}
             };
             if (req.method === 'PATCH') { paused = JSON.parse(body).paused; res.end('{}'); return; }
             res.end(JSON.stringify(responses[req.url] || {}));
@@ -74,6 +77,7 @@ ShellRoot {
             if (root.step === 0 && Syncthing.available && Tailscale.connected) {
                 root.check(Syncthing.folders.length === 1 && Syncthing.folders[0].state === "Up to date", "folders");
                 root.check(Syncthing.connectedCount === 1 && Syncthing.devices.length === 1, "devices exclude self");
+                root.check(Syncthing.devices[0].completion === 100 && Syncthing.folders[0].lastScan > 0 && Syncthing.updatedAt > 0, "timestamps and completion");
                 root.check(Tailscale.onlineCount === 1, "peers");
                 Tailscale.setExitNode("100.2.2.2");
                 Syncthing.pauseFolder(Syncthing.folders[0]);

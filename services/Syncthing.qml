@@ -21,6 +21,8 @@ Singleton {
     property bool refreshing: false
     property var requests: []
     property int generation: 0
+    property real updatedAt: 0
+    property real now: Date.now()
     readonly property string summary: !enabled ? qsTr("Disabled") : error ? qsTr("Unavailable") : !available ? qsTr("Connecting")
         : folders.some(f => f.state === "Error") ? qsTr("Sync errors")
         : folders.some(f => ["Syncing", "Scanning"].includes(f.state)) ? qsTr("Syncing")
@@ -28,6 +30,10 @@ Singleton {
         : folders.some(f => f.state === "Local changes") ? qsTr("Local changes")
         : folders.some(f => f.paused) ? qsTr("Paused") : folders.length ? qsTr("Up to date") : qsTr("No folders")
     readonly property int connectedCount: devices.filter(d => d.connected).length
+
+    function ago(ms): string {
+        return Status.ago(ms, now);
+    }
 
     function cancel(): void {
         generation++;
@@ -44,6 +50,7 @@ Singleton {
         available = false;
         folders = [];
         devices = [];
+        updatedAt = 0;
         error = "";
         actionError = "";
         if (enabled) Qt.callLater(refresh);
@@ -99,37 +106,57 @@ Singleton {
                 if (problem) { fail(problem); return; }
                 request("GET", "system/connections", null, (connections, problem) => {
                     if (problem) { fail(problem); return; }
-                    const peers = configs.filter(d => d.deviceID !== system.myID).map(d => ({
-                        id: d.deviceID, name: d.name || d.deviceID, paused: d.paused === true,
-                        connected: connections.connections?.[d.deviceID]?.connected === true,
-                        address: connections.connections?.[d.deviceID]?.address || ""
-                    }));
-                    request("GET", "config/folders", null, (configs, problem) => {
+                    request("GET", "stats/device", null, (deviceStats, problem) => {
                         if (problem) { fail(problem); return; }
-                        const results = [];
-                        function next(index) {
-                            if (index === configs.length) {
-                                root.folders = results;
-                                root.devices = peers;
-                                root.available = true;
-                                root.error = "";
-                                root.refreshing = false;
-                                return;
-                            }
-                            const config = configs[index];
-                            if (config.paused) {
-                                results.push(Status.folder(config, {}));
-                                next(index + 1);
-                                return;
-                            }
-                            request("GET", "db/status?folder=" + encodeURIComponent(config.id), null, (status, problem) => {
-                                results.push(Status.folder(config, problem ? {error: problem} : status));
-                                next(index + 1);
-                            });
+                        const peers = configs.filter(d => d.deviceID !== system.myID);
+                        const devices = [];
+                        function nextPeer(index) {
+                            if (index === peers.length) { loadFolders(devices); return; }
+                            const config = peers[index];
+                            const add = completion => {
+                                devices.push(Status.peer(config, connections.connections?.[config.deviceID], deviceStats[config.deviceID], completion));
+                                nextPeer(index + 1);
+                            };
+                            if (config.paused) { add(null); return; }
+                            request("GET", "db/completion?device=" + encodeURIComponent(config.deviceID), null, (completion, problem) => add(problem ? null : completion));
                         }
-                        next(0);
+                        nextPeer(0);
                     });
                 });
+            });
+        });
+    }
+
+    function loadFolders(peers): void {
+        request("GET", "config/folders", null, (configs, problem) => {
+            if (problem) { fail(problem); return; }
+            request("GET", "stats/folder", null, (folderStats, problem) => {
+                if (problem) { fail(problem); return; }
+                const results = [];
+                function next(index) {
+                    if (index === configs.length) {
+                        root.folders = results;
+                        root.devices = peers;
+                        root.available = true;
+                        root.error = "";
+                        root.refreshing = false;
+                        root.updatedAt = Date.now();
+                        root.now = root.updatedAt;
+                        return;
+                    }
+                    const config = configs[index];
+                    const stats = folderStats[config.id];
+                    if (config.paused) {
+                        results.push(Status.folder(config, {}, stats));
+                        next(index + 1);
+                        return;
+                    }
+                    request("GET", "db/status?folder=" + encodeURIComponent(config.id), null, (status, problem) => {
+                        results.push(Status.folder(config, problem ? {error: problem} : status, stats));
+                        next(index + 1);
+                    });
+                }
+                next(0);
             });
         });
     }
@@ -172,6 +199,13 @@ Singleton {
         onFileChanged: reload()
         onLoaded: root.reset()
         onLoadFailed: if (root.enabled) root.fail(qsTr("Cannot read the Syncthing configuration file"))
+    }
+
+    Timer {
+        interval: 15000
+        repeat: true
+        running: root.enabled
+        onTriggered: root.now = Date.now()
     }
 
     Timer {
