@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import "lock"
+import "../services/IdlePolicy.js" as IdlePolicy
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
@@ -87,7 +88,7 @@ Scope {
     }
 
     Variants {
-        model: GlobalConfig.general.idle.timeouts
+        model: IdlePolicy.monitors(GlobalConfig.general.idle)
 
         IdleMonitor {
             required property var modelData

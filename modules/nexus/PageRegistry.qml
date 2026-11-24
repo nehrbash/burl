@@ -93,6 +93,14 @@ QtObject {
         },
 
         {
+            id: "power",
+            component: root.powerPage,
+            label: qsTr("Power & idle"),
+            icon: "bedtime",
+            description: qsTr("Lock, screen off, sleep"),
+            category: "system"
+        },
+        {
             id: "guix",
             component: root.guixPage,
             label: qsTr("Guix"),
@@ -204,6 +212,8 @@ QtObject {
     }
 
     readonly property Component hyprlandPage: Component { HyprlandPage {} }
+
+    readonly property Component powerPage: Component { PowerPage {} }
 
     readonly property Component mousePage: Component {
         MousePage {}

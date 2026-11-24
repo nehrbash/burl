@@ -34,22 +34,13 @@ class GeneralIdle : public ConfigObject {
     CONFIG_GLOBAL_PROPERTY(bool, lockBeforeSleep, true)
     CONFIG_GLOBAL_PROPERTY(bool, inhibitWhenAudio, true)
     CONFIG_GLOBAL_PROPERTY(bool, inhibitWhenCharging, false)
-    CONFIG_GLOBAL_PROPERTY(QVariantList, timeouts,
-        {
-            vmap({
-                { u"timeout"_s, 180 },
-                { u"idleAction"_s, u"lock"_s },
-            }),
-            vmap({
-                { u"timeout"_s, 300 },
-                { u"idleAction"_s, u"dpms off"_s },
-                { u"returnAction"_s, u"dpms on"_s },
-            }),
-            vmap({
-                { u"timeout"_s, 600 },
-                { u"idleAction"_s, QStringList{ u"suspendThenHibernate"_s } },
-            }),
-        })
+    CONFIG_GLOBAL_PROPERTY(int, lockAfter, 300)
+    CONFIG_GLOBAL_PROPERTY(int, screenOffAfter, 600)
+    CONFIG_GLOBAL_PROPERTY(int, sleepAfter, 0)
+    // suspend | suspendThenHibernate | hibernate
+    CONFIG_GLOBAL_PROPERTY(QString, sleepAction, u"suspend"_s)
+    // Advanced: a non-empty list replaces the three stages above.
+    CONFIG_GLOBAL_PROPERTY(QVariantList, timeouts)
 
 public:
     explicit GeneralIdle(QObject* parent = nullptr)
