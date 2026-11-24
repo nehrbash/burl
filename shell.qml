@@ -17,6 +17,7 @@ import "modules/cheatsheet"
 import "modules/switcher"
 import "modules/sharepicker"
 import "modules/tasknudge"
+import "modules/auth"
 import QtQuick
 import Quickshell
 import qs.services
@@ -47,6 +48,7 @@ ShellRoot {
     Switcher {}
     SharePicker {}
     Cheatsheet {}
+    Auth {}
 
     ConfigToasts {}
     Shortcuts {}

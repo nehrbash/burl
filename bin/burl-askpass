@@ -1,0 +1,20 @@
+#!/bin/sh
+# SUDO_ASKPASS helper: asks the running Burl shell for a password over
+# $XDG_RUNTIME_DIR/burl/askpass.sock. Protocol: send the prompt as one line;
+# Burl replies with one line (the password) or closes without data to cancel.
+sock="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/burl/askpass.sock"
+[ -S "$sock" ] || exit 1
+
+prompt=$(printf '%s' "${1:-Password:}" | tr '\n\r' '  ')
+
+# shut-none: socat must not half-close on stdin EOF, which Qt reads as a disconnect.
+# The trailing "." survives command substitution so an empty reply is distinguishable.
+reply=$(printf '%s\n' "$prompt" | socat -t 600 - "UNIX-CONNECT:$sock,shut-none" 2>/dev/null; echo .) || exit 1
+reply=${reply%.}
+
+case $reply in
+*'
+'*) printf '%s\n' "${reply%%
+*}" ;;
+*) exit 1 ;;
+esac
