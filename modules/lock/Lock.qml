@@ -14,6 +14,10 @@ Scope {
 
         signal unlock
 
+        // The flag outlives the shell, so a restart or crash while locked re-locks at startup
+        // (Hyprland's allow_session_lock_restore hands the held lock to the new client).
+        onLockedChanged: Quickshell.execDetached(["sh", "-c", locked ? `touch "$XDG_RUNTIME_DIR/burl-lock-on-start"` : `rm -f "$XDG_RUNTIME_DIR/burl-lock-on-start"`])
+
         LockSurface {
             lock: lock
             pam: pam
@@ -27,11 +31,8 @@ Scope {
     }
 
     Process {
-        // Warm login: greetd's initial session (systems/oceania.scm)
-        // drops this flag before exec'ing Hyprland; consuming it locks
-        // the auto-logged-in session on the shell's first start. rm
-        // doubles as an atomic claim so quickshell restarts don't
-        // re-lock mid-session.
+        // greetd's warm login (systems/oceania.scm) and a lock held when the
+        // previous shell exited both leave this flag; rm doubles as an atomic claim.
         id: bootLockCheck
 
         command: ["sh", "-c", `rm "$XDG_RUNTIME_DIR/burl-lock-on-start" 2> /dev/null && echo locked || true`]
