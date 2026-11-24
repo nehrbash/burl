@@ -47,6 +47,23 @@ public:
         : ConfigObject(parent) {}
 };
 
+class GeneralLid : public ConfigObject {
+    Q_OBJECT
+    QML_ANONYMOUS
+
+    // false: Burl takes no logind inhibitor and logind's own lid policy applies.
+    CONFIG_GLOBAL_PROPERTY(bool, handle, true)
+    // sleep | lock | screenOff | nothing. `sleep` follows general.idle.sleepAction.
+    CONFIG_GLOBAL_PROPERTY(QString, action, u"sleep"_s)
+    CONFIG_GLOBAL_PROPERTY(QString, actionOnPower, u"sleep"_s)
+    // Used whenever an external monitor is connected, on battery or not.
+    CONFIG_GLOBAL_PROPERTY(QString, actionDocked, u"nothing"_s)
+
+public:
+    explicit GeneralLid(QObject* parent = nullptr)
+        : ConfigObject(parent) {}
+};
+
 class GeneralBattery : public ConfigObject {
     Q_OBJECT
     QML_ANONYMOUS
@@ -89,6 +106,7 @@ class GeneralConfig : public ConfigObject {
     CONFIG_PROPERTY(qreal, mediaGifSpeedAdjustment, 300)
     CONFIG_SUBOBJECT(GeneralApps, apps)
     CONFIG_SUBOBJECT(GeneralIdle, idle)
+    CONFIG_SUBOBJECT(GeneralLid, lid)
     CONFIG_SUBOBJECT(GeneralBattery, battery)
 
 public:
@@ -96,6 +114,7 @@ public:
         : ConfigObject(parent)
         , m_apps(new GeneralApps(this))
         , m_idle(new GeneralIdle(this))
+        , m_lid(new GeneralLid(this))
         , m_battery(new GeneralBattery(this)) {}
 };
 

@@ -55,6 +55,11 @@ ShellRoot {
     BatteryMonitor {}
     Resizer {}
     IdleMonitors {
+        id: idleMonitors
+
         lock: lock
+    }
+    LidMonitor {
+        idle: idleMonitors
     }
 }

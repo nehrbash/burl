@@ -6,6 +6,7 @@
 #include <QtDBus/qdbuspendingcall.h>
 #include <QtDBus/qdbuspendingreply.h>
 #include <QtDBus/qdbusreply.h>
+#include <QtDBus/qdbusunixfiledescriptor.h>
 #include <qloggingcategory.h>
 
 #include "../toaster.hpp"
@@ -20,6 +21,17 @@ constexpr const char* LOGIN_SERVICE = "org.freedesktop.login1";
 constexpr const char* LOGIN_PATH = "/org/freedesktop/login1";
 constexpr const char* LOGIN_IFACE = "org.freedesktop.login1.Manager";
 constexpr const char* SESSION_IFACE = "org.freedesktop.login1.Session";
+constexpr const char* UPOWER_SERVICE = "org.freedesktop.UPower";
+constexpr const char* UPOWER_PATH = "/org/freedesktop/UPower";
+constexpr const char* UPOWER_IFACE = "org.freedesktop.UPower";
+constexpr const char* PROPERTIES_IFACE = "org.freedesktop.DBus.Properties";
+
+QVariant getProperty(QDBusConnection& bus, const char* service, const char* path, const char* iface, const char* name) {
+    auto msg = QDBusMessage::createMethodCall(service, path, PROPERTIES_IFACE, "Get");
+    msg.setArguments({ QString::fromLatin1(iface), QString::fromLatin1(name) });
+    const QDBusReply<QDBusVariant> reply = bus.call(msg);
+    return reply.isValid() ? reply.value().variant() : QVariant();
+}
 
 } // namespace
 
@@ -33,6 +45,8 @@ SessionManager::SessionManager(QObject* parent)
         LOGIN_SERVICE, LOGIN_PATH, LOGIN_IFACE, "PrepareForSleep", this, SLOT(handlePrepareForSleep(bool)));
     if (!ok)
         qCWarning(lcSessionManager) << "Failed to connect to PrepareForSleep signal:" << bus->lastError().message();
+
+    initLid(*bus);
 
     auto sessionMsg = QDBusMessage::createMethodCall(LOGIN_SERVICE, LOGIN_PATH, LOGIN_IFACE, "GetSession");
     sessionMsg.setArguments({ "auto" });
@@ -50,6 +64,77 @@ SessionManager::SessionManager(QObject* parent)
     ok = bus->connect(LOGIN_SERVICE, m_sessionPath, SESSION_IFACE, "Unlock", this, SLOT(handleUnlockRequested()));
     if (!ok)
         qCWarning(lcSessionManager) << "Failed to connect to Unlock signal:" << bus->lastError().message();
+}
+
+void SessionManager::initLid(QDBusConnection& bus) {
+    // UPower owns LidIsPresent (logind reports LidClosed even on desktops). Closure is
+    // taken from whichever of the two reports last, since UPower's feed can lag logind's.
+    const auto present = getProperty(bus, UPOWER_SERVICE, UPOWER_PATH, UPOWER_IFACE, "LidIsPresent");
+    m_lidPresent = present.toBool();
+    if (!m_lidPresent)
+        qCInfo(lcSessionManager) << "No lid reported by UPower; lid handling disabled";
+
+    m_lidClosed = getProperty(bus, UPOWER_SERVICE, UPOWER_PATH, UPOWER_IFACE, "LidIsClosed").toBool()
+        || getProperty(bus, LOGIN_SERVICE, LOGIN_PATH, LOGIN_IFACE, "LidClosed").toBool();
+
+    const char* slot = SLOT(handlePropertiesChanged(QString,QVariantMap,QStringList));
+    if (!bus.connect(UPOWER_SERVICE, UPOWER_PATH, PROPERTIES_IFACE, "PropertiesChanged", this, slot))
+        qCWarning(lcSessionManager) << "Failed to watch UPower properties:" << bus.lastError().message();
+    if (!bus.connect(LOGIN_SERVICE, LOGIN_PATH, PROPERTIES_IFACE, "PropertiesChanged", this, slot))
+        qCWarning(lcSessionManager) << "Failed to watch login1 properties:" << bus.lastError().message();
+}
+
+void SessionManager::setLidInhibited(bool inhibited) {
+    if (inhibited == m_lidInhibitor.isValid())
+        return;
+
+    if (!inhibited) {
+        m_lidInhibitor = QDBusUnixFileDescriptor();
+        qCInfo(lcSessionManager) << "Released handle-lid-switch inhibitor";
+        emit lidInhibitedChanged();
+        return;
+    }
+
+    auto bus = getSystemBus();
+    if (!bus)
+        return;
+
+    auto msg = QDBusMessage::createMethodCall(LOGIN_SERVICE, LOGIN_PATH, LOGIN_IFACE, "Inhibit");
+    msg.setArguments({ "handle-lid-switch", "Burl", "Burl handles the lid", "block" });
+    const QDBusReply<QDBusUnixFileDescriptor> reply = bus->call(msg);
+    if (!reply.isValid() || !reply.value().isValid()) {
+        qCWarning(lcSessionManager) << "Failed to inhibit handle-lid-switch:" << reply.error().message();
+        return;
+    }
+
+    m_lidInhibitor = reply.value();
+    qCInfo(lcSessionManager) << "Holding handle-lid-switch inhibitor";
+    emit lidInhibitedChanged();
+}
+
+void SessionManager::setLidClosed(bool closed) {
+    if (closed == m_lidClosed)
+        return;
+    m_lidClosed = closed;
+    emit lidClosedChanged();
+}
+
+void SessionManager::setLidPresent(bool present) {
+    if (present == m_lidPresent)
+        return;
+    m_lidPresent = present;
+    emit lidPresentChanged();
+}
+
+void SessionManager::handlePropertiesChanged(const QString& iface, const QVariantMap& changed, const QStringList&) {
+    if (iface == UPOWER_IFACE) {
+        if (changed.contains("LidIsPresent"))
+            setLidPresent(changed.value("LidIsPresent").toBool());
+        if (changed.contains("LidIsClosed"))
+            setLidClosed(changed.value("LidIsClosed").toBool());
+    } else if (iface == LOGIN_IFACE && changed.contains("LidClosed")) {
+        setLidClosed(changed.value("LidClosed").toBool());
+    }
 }
 
 bool SessionManager::exec(const QStringList& command) {

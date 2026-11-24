@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Burl.Config
+import Burl.Services
 import qs.components.controls
 import qs.services
 import qs.modules.nexus.common
@@ -47,11 +48,30 @@ PageBase {
         }
     ]
     readonly property list<string> sleepValues: ["suspend", "suspendThenHibernate", "hibernate"]
+    readonly property list<MenuItem> lidItems: [
+        MenuItem {
+            text: qsTr("Sleep")
+        },
+        MenuItem {
+            text: qsTr("Lock")
+        },
+        MenuItem {
+            text: qsTr("Turn screen off")
+        },
+        MenuItem {
+            text: qsTr("Do nothing")
+        }
+    ]
+    readonly property list<string> lidValues: ["sleep", "lock", "screenOff", "nothing"]
     readonly property bool customTimeouts: (GlobalConfig.general.idle.timeouts ?? []).length > 0
 
     function delayItem(seconds: int): var {
         const i = delays.indexOf(seconds);
         return i < 0 ? null : delayItems[i];
+    }
+
+    function lidItem(value: string): var {
+        return lidItems[Math.max(0, lidValues.indexOf(value))];
     }
 
     function customText(seconds: int): string {
@@ -145,6 +165,54 @@ PageBase {
             subtext: qsTr("Lock the screen whenever the system suspends")
             checked: GlobalConfig.general.idle.lockBeforeSleep
             onToggled: GlobalConfig.general.idle.lockBeforeSleep = checked
+        }
+
+        ColumnLayout {
+            Layout.fillWidth: true
+            visible: SessionManager.lidPresent
+            spacing: Tokens.spacing.extraSmall / 2
+
+            SectionHeader {
+                text: qsTr("Lid")
+            }
+
+            ToggleRow {
+                first: true
+                text: qsTr("Handle lid in Burl")
+                subtext: qsTr("Off leaves the lid to the system's own setting")
+                checked: GlobalConfig.general.lid.handle
+                onToggled: GlobalConfig.general.lid.handle = checked
+            }
+
+            SelectRow {
+                enabled: GlobalConfig.general.lid.handle
+                label: qsTr("On battery")
+                subtext: qsTr("When the lid closes")
+                menuItems: root.lidItems
+                active: root.lidItem(GlobalConfig.general.lid.action)
+                onSelected: item => GlobalConfig.general.lid.action = root.lidValues[root.lidItems.indexOf(item)]
+            }
+
+            SelectRow {
+                enabled: GlobalConfig.general.lid.handle
+                label: qsTr("On power")
+                subtext: qsTr("When the lid closes while charging")
+                menuOnTop: true
+                menuItems: root.lidItems
+                active: root.lidItem(GlobalConfig.general.lid.actionOnPower)
+                onSelected: item => GlobalConfig.general.lid.actionOnPower = root.lidValues[root.lidItems.indexOf(item)]
+            }
+
+            SelectRow {
+                last: true
+                enabled: GlobalConfig.general.lid.handle
+                label: qsTr("With external monitor")
+                subtext: qsTr("When the lid closes while docked")
+                menuOnTop: true
+                menuItems: root.lidItems
+                active: root.lidItem(GlobalConfig.general.lid.actionDocked)
+                onSelected: item => GlobalConfig.general.lid.actionDocked = root.lidValues[root.lidItems.indexOf(item)]
+            }
         }
     }
 }
