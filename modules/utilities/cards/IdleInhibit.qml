@@ -9,9 +9,8 @@ import qs.services
 StyledRect {
     id: root
 
-    property bool hibernateSetting: false
-    readonly property bool checked: hibernateSetting ? IdleInhibitor.hibernateAfterSleep : IdleInhibitor.enabled
-    readonly property bool showActiveSince: !hibernateSetting && IdleInhibitor.enabled
+    readonly property bool checked: IdleInhibitor.enabled
+    readonly property bool showActiveSince: IdleInhibitor.enabled
 
     readonly property real nonAnimHeight: layout.implicitHeight + (showActiveSince ? activeChip.implicitHeight + activeChip.anchors.topMargin : 0) + Tokens.padding.extraLargeIncreased
 
@@ -52,7 +51,7 @@ StyledRect {
                 id: icon
 
                 anchors.centerIn: parent
-                text: root.hibernateSetting ? "downloading" : "coffee"
+                text: "coffee"
                 color: root.checked ? Colours.palette.m3onPrimary : Woodland.ivory
                 fontStyle: Tokens.font.icon.large
             }
@@ -64,16 +63,14 @@ StyledRect {
 
             StyledText {
                 Layout.fillWidth: true
-                text: root.hibernateSetting ? qsTr("Auto Hibernate") : qsTr("Keep Awake")
+                text: qsTr("Keep Awake")
                 font: Tokens.font.body.medium
                 elide: Text.ElideRight
             }
 
             StyledText {
                 Layout.fillWidth: true
-                text: root.hibernateSetting
-                    ? (root.checked ? qsTr("Hibernate after sleeping") : qsTr("Sleep only"))
-                    : (root.checked ? qsTr("Prevent lock and sleep") : qsTr("Normal power management"))
+                text: root.checked ? qsTr("Prevent lock and sleep") : qsTr("Normal power management")
                 color: Colours.palette.m3onSurfaceVariant
                 font: Tokens.font.body.small
                 elide: Text.ElideRight
@@ -82,12 +79,7 @@ StyledRect {
 
         StyledSwitch {
             checked: root.checked
-            onToggled: {
-                if (root.hibernateSetting)
-                    IdleInhibitor.hibernateAfterSleep = checked;
-                else
-                    IdleInhibitor.enabled = checked;
-            }
+            onToggled: IdleInhibitor.enabled = checked
         }
     }
 

@@ -11,7 +11,6 @@ Singleton {
     id: root
 
     property bool enabled: false
-    property bool hibernateAfterSleep: true
     property date enabledSince: new Date()
     property bool _loaded: false
 
@@ -21,25 +20,15 @@ Singleton {
         save();
     }
 
-    onHibernateAfterSleepChanged: save()
-
     function save(): void {
         if (_loaded)
             storage.setText(JSON.stringify({
                 enabled: enabled,
-                enabledSince: enabledSince.toISOString(),
-                hibernateAfterSleep: hibernateAfterSleep
+                enabledSince: enabledSince.toISOString()
             }));
     }
 
     function execSessionAction(command: list<string>): bool {
-        let action = command[0] ?? "";
-        if ((action === "loginctl" || action === "systemctl") && command.length === 2)
-            action = command[1];
-        if (!hibernateAfterSleep && action.replace(/[-_]/g, "").toLowerCase() === "suspendthenhibernate") {
-            SessionManager.suspend();
-            return true;
-        }
         return SessionManager.exec(command);
     }
 
@@ -51,7 +40,6 @@ Singleton {
             try {
                 const data = JSON.parse(text());
                 root.enabled = !!data.enabled;
-                root.hibernateAfterSleep = data.hibernateAfterSleep ?? true;
                 if (data.enabledSince)
                     root.enabledSince = new Date(data.enabledSince);
             } catch (e) {

@@ -19,7 +19,7 @@ Item {
     required property BarPopouts.Wrapper popouts
     required property matrix4x4 deformMatrix
 
-    readonly property real nonAnimHeight: idleInhibit.nonAnimHeight + hibernateAfterSleep.nonAnimHeight + record.nonAnimHeight + screenshots.nonAnimHeight + toggles.implicitHeight + layout.spacing * 4
+    readonly property real nonAnimHeight: idleInhibit.nonAnimHeight + record.nonAnimHeight + screenshots.nonAnimHeight + toggles.implicitHeight + layout.spacing * 4
 
     implicitWidth: layout.implicitWidth
     implicitHeight: layout.implicitHeight
@@ -34,13 +34,6 @@ Item {
             id: idleInhibit
 
             objectName: "utilitiesKeepAwake"
-        }
-
-        IdleInhibit {
-            id: hibernateAfterSleep
-
-            objectName: "utilitiesHibernateAfterSleep"
-            hibernateSetting: true
         }
 
         Record {
