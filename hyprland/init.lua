@@ -81,7 +81,7 @@ function M.layer_rules()
   hl.layer_rule({ name = "burl-noanim",
     match = { namespace = "qs-(border-exclusion|area-picker)" }, no_anim = true })
   hl.layer_rule({ name = "burl-fade",
-    match = { namespace = "qs-(drawers|background|task-nudge)" }, animation = "fade" })
+    match = { namespace = "qs-(drawers|background|task-nudge|auth)" }, animation = "fade" })
   hl.layer_rule({ name = "burl-blur", match = { namespace = "qs-drawers" },
     blur = true, ignore_alpha = 0.57 })
 end
